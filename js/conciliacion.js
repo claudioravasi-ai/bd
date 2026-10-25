@@ -120,7 +120,7 @@ function conciliarExtracto(gid, lineas, moneda) {
         var q = quienEs(usuario(sid), l.desc), per = null, k, n = g.inicio ? mesesEntre(g.inicio, l.fecha) : -1;
         for (k = 0; k <= n + 1; k++) { var p = mesDe(sumarMeses(g.inicio, k)); if (!pagos[sid + '|' + p]) { per = p; break; } }
         if (!per) return;
-        var vence = per + '-05', dias = l.fecha > vence ? diasEntre(vence, l.fecha) : 0, interes = Math.round(g.aporte * TASA_MORA * dias / 365 * 100) / 100;
+        var vence = venceDe(per), dias = l.fecha > vence ? diasEntre(vence, l.fecha) : 0, interes = Math.round(g.aporte * TASA_MORA * dias / 365 * 100) / 100;
         var ok = Math.abs(usdL - g.aporte) <= tol(g.aporte) || (interes > 0 && Math.abs(usdL - g.aporte - interes) <= tol(g.aporte));
         var pts = q.pts + (ok ? 30 : 0); if (ok) q.por.push('importe');
         if (!mejor || pts > mejor.pts) mejor = { sid: sid, per: per, pts: pts, por: q.por, interes: interes, ok: ok };

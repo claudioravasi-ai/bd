@@ -42,14 +42,22 @@ var MATERIAS = {
 };
 function requeridos(materia, N) { return Math.ceil(N * MATERIAS[materia].f - 1e-9); }
 var TASA_MORA = 0.12;           /* interés anual en dólares por mora (compensatorio + 50% punitorio). Lo fija la Asamblea (art. 23) */
+var DIA_VENCE = 10;             /* el aporte se paga del 1 al 10 de cada mes; la mora corre desde el 11 a las 0 h */
+var M2_MINIMO = 24;             /* ningún departamento del fideicomiso tiene menos de 24 m² */
+function venceDe(periodo) { return periodo + '-' + pad(DIA_VENCE); }
+/* política de inversión de espera vigente (Adenda 1): reserva en cuenta y el resto repartido con tope de 30% */
+var REPARTO_VIGENTE = [{ id: 'cuenta', pct: 0.1 }, { id: 'fcimm', pct: 0.3 }, { id: 'tbill', pct: 0.3 }, { id: 'on', pct: 0.3 }];
+function instrumento(id) { var l = (typeof RADAR !== 'undefined' && RADAR) ? RADAR.lista : RADAR_BASE, i; for (i = 0; i < l.length; i++) if (l[i].id === id) return l[i]; return null; }
+function rendimientoDe(reparto, base) { return reparto.reduce(function (s, p) { var x = base ? RADAR_BASE.filter(function (y) { return y.id === p.id; })[0] : instrumento(p.id); return s + p.pct * (x ? x.y : 0); }, 0); }
 var ALICUOTA_IIBB = 0.05;       /* supuesto del simulador para Ushuaia; el contador la confirma con la AREF */
 var EUR_USD_HIST = 1.105;       /* referencia para los pagos de prueba en euros */
 
 var CLAVE_DATOS = 'bd.prueba.datos.v1';
 var D = null;
 function cargarDatos() {
-  D = leer(CLAVE_DATOS, null); if (!D || D.v !== 1 || !D.documentos) reiniciarDemo();
+  D = leer(CLAVE_DATOS, null); if (!D || D.v !== 6 || !D.documentos) reiniciarDemo();
   if (!D.lineasBanco) { D.lineasBanco = []; D.conciliaciones = []; }
+  if (!D.mensajes) D.mensajes = []; if (!D.oportunidades) D.oportunidades = []; if (!D.leidos) D.leidos = {}; if (!D.pagosPendientes) D.pagosPendientes = [];
   return D;
 }
 function guardarDatos() { if (!guardar(CLAVE_DATOS, D)) tostada('No se pudo guardar en este equipo (memoria llena o modo privado).'); }
@@ -82,7 +90,8 @@ function fichaDemo(i, nombre, mujer) {
 }
 
 function generarDemo() {
-  var hoy = hoyISO(), mesHoy = mesDe(hoy), inicio = sumarMeses(mesHoy + '-01', -11);
+  /* hoy es el mes 13 de Alfa: compra 1 en el mes 10 (24 m² a USD 2.000 el m²), tres meses de alquiler y el ciclo 2 ya invertido */
+  var hoy = hoyISO(), mesHoy = mesDe(hoy), inicio = sumarMeses(mesHoy + '-01', -12), N_MESES = 13;
   var gente = [['Claudio A. Ravasi', 'claudio@demo.bd', 0], ['María Laura Benítez', 'mlaura@demo.bd', 1], ['Javier Ocampo', 'javier@demo.bd', 0],
     ['Sofía Lanús', 'sofia@demo.bd', 1], ['Martín Aguirre', 'martin@demo.bd', 0], ['Paula Ferreyra', 'paula@demo.bd', 1],
     ['Diego Salvatierra', 'diego@demo.bd', 0], ['Valeria Quiroga', 'valeria@demo.bd', 1], ['Nicolás Ibarra', 'nicolas@demo.bd', 0],
@@ -91,65 +100,80 @@ function generarDemo() {
     var f = fichaDemo(i, x[0], x[2]); f.consentimiento.fecha = inicio;
     return { id: 'u' + (i + 1), nombre: x[0], email: x[1], rol: i === 0 ? 'fundador' : 'socio', alta: inicio, invitadoPor: i === 0 ? null : 'u1', ficha: f, demo: true };
   });
+  /* el socio fundador NO entra con un botón: crea su cuenta con CUIL, correo, clave y Google Authenticator */
+  usuarios[0].sinActivar = true;
+  var M = MARKETS.ushuaia, tasa = rendimientoDe(REPARTO_VIGENTE, true);
   var g = {
-    id: 'alfa', letra: 'Alfa', simbolo: 'Α', estado: 'activo', N: 10, aporte: 500, ciclo: 10, mercado: 'ushuaia', modo: 'mensual',
-    fee: 0, reserva: 5000, tasaEspera: 0.04, inicio: inicio, socios: usuarios.map(function (u) { return u.id; }), creadoPor: 'u1',
-    estructura: 'A · club cerrado por invitación', creado: inicio, fiduciario: 'B&D Fiduciaria SAS (en formación)'
+    id: 'alfa', letra: 'Alfa', simbolo: 'Α', estado: 'activo', N: 10, aporte: 500, ciclo: 10, mercado: 'ushuaia', modo: 'mensual', m2min: M2_MINIMO,
+    fee: 0, reserva: 1000, tasaEspera: tasa, inicio: inicio, socios: usuarios.map(function (u) { return u.id; }), creadoPor: 'u1',
+    estructura: 'A · club cerrado por invitación', creado: inicio, fiduciario: 'B&D Fiduciaria SAS (en formación)', reparto: REPARTO_VIGENTE
   };
   var movs = [], seq = 0, caja = 0, inv = 0, props = [], recibo = 0, t;
   function mov(o) { if (o.fecha > hoy) return null; o.id = 'm' + (++seq); o.g = 'alfa'; o.tc = o.tc || tcDelMes(mesDe(o.fecha)); movs.push(o); return o; }
-  for (t = 1; t <= 12; t++) {
-    var mes = mesDe(sumarMeses(inicio, t - 1)), tc = tcDelMes(mes), colchon = props.length ? g.reserva : 1000;
+  for (t = 1; t <= N_MESES; t++) {
+    var mes = mesDe(sumarMeses(inicio, t - 1)), esCompra = t % g.ciclo === 0, colchon = props.length ? g.reserva : 300;
     usuarios.forEach(function (u, i) {
-      var dia = 1 + ((i * 7 + t * 3) % 5);
-      if (i === 6 && t === 6) dia = 12;
-      if (i === 8 && t === 12) return;
+      var dia = 1 + ((i * 7 + t * 3) % DIA_VENCE);
+      if (i === 6 && t === 6) dia = 17;
+      if (i === 8 && t === N_MESES) return;
       var metodo = ['transferencia', 'mercadopago', 'transferencia', 'tarjeta'][(i + t) % 4];
       var moneda = i % 4 === 1 ? 'EUR' : (metodo === 'transferencia' && i % 3 === 0 ? 'USD' : 'ARS');
-      var monto = moneda === 'ARS' ? 500 * tc : moneda === 'EUR' ? 500 / EUR_USD_HIST : 500;
+      var monto = moneda === 'ARS' ? 500 * tcDelMes(mes) : moneda === 'EUR' ? 500 / EUR_USD_HIST : 500;
       var f = mes + '-' + pad(dia);
       if (mov({ fecha: f, tipo: 'aporte', usd: 500, socio: u.id, periodo: mes, pago: { moneda: moneda, monto: Math.round(monto * 100) / 100, metodo: metodo }, recibo: 'ALFA-' + mes.replace('-', '') + '-' + pad(++recibo % 100) })) {
         caja += 500;
-        if (dia > 5) { var pu = Math.round(500 * TASA_MORA * (dia - 5) / 365 * 100) / 100; mov({ fecha: f, tipo: 'punitorio', usd: pu, socio: u.id, periodo: mes }); caja += pu; }
+        if (dia > DIA_VENCE) { var pu = Math.round(500 * TASA_MORA * (dia - DIA_VENCE) / 365 * 100) / 100; mov({ fecha: f, tipo: 'punitorio', usd: pu, socio: u.id, periodo: mes }); caja += pu; }
       }
     });
-    if (t >= 11) props.forEach(function (p) {
-      var r = Math.round(p.m2 * 330 / 24);
+    props.forEach(function (p) {
+      var r = p.alquiler;
       if (mov({ fecha: mes + '-08', tipo: 'renta', usd: r, prop: p.id, desc: 'Alquiler de ' + p.nombre + ' · ' + nombreMes(mes) })) caja += r;
       if (mov({ fecha: mes + '-15', tipo: 'gasto', usd: 42, prop: p.id, desc: 'Expensas y seguro de ' + p.nombre })) caja -= 42;
       var ii = Math.round(r * ALICUOTA_IIBB * 100) / 100;
       if (mov({ fecha: mes + '-15', tipo: 'impuesto', usd: ii, prop: p.id, desc: 'Ingresos brutos (AREF) sobre alquileres · estimado' })) caja -= ii;
     });
-    var aInv = Math.floor(caja - colchon);
-    if (t !== 10 && aInv > 0 && mov({ fecha: mes + '-16', tipo: 'inversion', usd: aInv, desc: 'Fondo de dinero en dólares y letras del Tesoro' })) { caja -= aInv; inv += aInv; }
-    if (t === 10) {
-      if (inv > 0 && mov({ fecha: mes + '-18', tipo: 'rescate', usd: Math.round(inv * 100) / 100, desc: 'Rescate de la caja de espera para la compra' })) { caja += inv; inv = 0; }
-      var disp = Math.floor(caja - g.reserva), precio = Math.round(disp / 1.05), m2 = Math.round(precio / 2339 * 10) / 10;
-      var p = { id: 'p1', g: 'alfa', nombre: 'Departamento 1', direccion: 'Ushuaia · dirección de prueba', m2: m2, precio: precio, gastos: disp - precio, fecha: mes + '-20', modo: 'mensual', estado: 'alquilado' };
-      if (mov({ fecha: mes + '-20', tipo: 'compra', usd: disp, prop: 'p1', desc: 'Compra de ' + p.nombre + ' (' + num(m2, 1) + ' m²): precio ' + usd(precio) + ' + gastos ' + usd(disp - precio) })) { caja -= disp; props.push(p); }
+    if (esCompra) {
+      /* mes 10: se rescata la inversión de espera y se compra (la compra es cada 10 meses, sin excepción) */
+      if (inv > 0 && mov({ fecha: mes + '-18', tipo: 'rescate', usd: Math.round(inv * 100) / 100, desc: 'Rescate de la inversión de espera para la compra' })) { caja += inv; inv = 0; }
+      var tope = Math.floor(caja - 150), precio = Math.min(M2_MINIMO * M.m2, Math.round(tope / (1 + M.setup / 100))), m2 = Math.round(precio / M.m2 * 10) / 10, gastos = Math.round(precio * M.setup / 100);
+      var p = { id: 'p' + (props.length + 1), g: 'alfa', nombre: 'Departamento ' + (props.length + 1), direccion: 'Ushuaia · dirección de prueba', m2: m2, precio: precio, gastos: gastos, fecha: mes + '-20', modo: 'mensual', estado: 'alquilado', alquiler: Math.round(m2 * 300 / 25) };
+      if (mov({ fecha: mes + '-20', tipo: 'compra', usd: precio + gastos, prop: p.id, desc: 'Compra de ' + p.nombre + ' (' + num(m2, 1) + ' m²): precio ' + usd(precio) + ' + gastos ' + usd(gastos) })) { caja -= precio + gastos; props.push(p); }
+    } else {
+      var aInv = Math.floor(caja - colchon);
+      if (aInv > 0 && mov({ fecha: mes + '-' + pad(DIA_VENCE + 1), tipo: 'inversion', usd: aInv, reparto: REPARTO_VIGENTE, desc: 'Política vigente: 10% cuenta remunerada, 30% fondo de dinero en dólares, 30% letras del Tesoro de EE. UU., 30% obligaciones negociables' })) { caja -= aInv; inv += aInv; }
     }
     var fin = finDeMes(mes);
     if (fin < hoy && inv > 0) {
-      var it = Math.round(inv * (Math.pow(1 + g.tasaEspera, 1 / 12) - 1) * 100) / 100;
+      var it = Math.round(inv * (Math.pow(1 + tasa, 1 / 12) - 1) * 100) / 100;
       if (mov({ fecha: fin, tipo: 'interes', usd: it, desc: 'Rendimiento de ' + nombreMes(mes) })) inv += it;
     }
   }
-  var mesCompra = mesDe(sumarMeses(inicio, 9));
+  var mesCompra = mesDe(sumarMeses(inicio, g.ciclo - 1));
   var votaciones = [
-    { id: 'v1', g: 'alfa', titulo: 'Compra del Departamento 1', materia: 'compra', detalle: 'Monoambiente en Ushuaia, tasación independiente, renta bruta estimada mayor a 5% anual. Se usa toda la caja menos la reserva de USD 5.000.', abre: mesCompra + '-10', cierra: mesCompra + '-15', votos: { u1: 'si', u2: 'si', u3: 'si', u4: 'si', u5: 'si', u6: 'si', u7: 'si', u8: 'si', u9: 'si', u10: 'si' }, por: 'u1' },
+    { id: 'v1', g: 'alfa', titulo: 'Compra del Departamento 1', materia: 'compra', detalle: 'Monoambiente de 24 m² en Ushuaia (USD 2.000 el m²), tasación independiente, alquiler de mercado USD 288 por mes. Se compra en el mes 10, como dice el contrato.', abre: mesCompra + '-11', cierra: mesCompra + '-16', votos: { u1: 'si', u2: 'si', u3: 'si', u4: 'si', u5: 'si', u6: 'si', u7: 'si', u8: 'si', u9: 'si', u10: 'si' }, por: 'u1' },
     { id: 'v2', g: 'alfa', titulo: 'Alquilar el Departamento 1 por mes, con contrato en dólares', materia: 'ordinaria', detalle: 'Contrato a 2 años, garantía de caución, actualización pactada. Administra un socio sin comisión.', abre: mesCompra + '-21', cierra: mesCompra + '-26', votos: { u1: 'si', u2: 'si', u3: 'si', u4: 'abst', u5: 'si', u6: 'si', u7: 'si', u8: 'si', u9: 'si', u10: 'si' }, por: 'u5' },
-    { id: 'v3', g: 'alfa', titulo: 'Inversión de espera del ciclo 2', materia: 'inversion', detalle: 'Reserva en cuenta inmediata y el resto en fondo de dinero en dólares, letras del Tesoro de EE. UU. y obligaciones negociables, con tope de 30% por instrumento.', abre: sumarDias(hoy, -2), cierra: sumarDias(hoy, 5), votos: { u2: 'si', u3: 'si', u4: 'si', u6: 'si', u7: 'no', u10: 'si' }, por: 'u2' }
+    { id: 'v3', g: 'alfa', titulo: 'Inversión de espera del ciclo 2 (antes del primer aporte)', materia: 'inversion', detalle: 'Se mantiene la política vigente desde el primer aporte del ciclo 2: así ningún dólar queda quieto.', cartera: REPARTO_VIGENTE, abre: mesCompra + '-21', cierra: mesCompra + '-27', votos: { u1: 'si', u2: 'si', u3: 'si', u4: 'si', u6: 'si', u7: 'no', u8: 'si', u10: 'si' }, por: 'u2' },
+    { id: 'v4', g: 'alfa', titulo: 'Más rendimiento para la espera del ciclo 2', materia: 'inversion', detalle: 'Bajar la cuenta remunerada al 10% y repartir el resto en partes iguales entre letras del Tesoro de EE. UU., obligaciones negociables y fondo de dinero, con tope de 30% por instrumento.', cartera: [{ id: 'cuenta', pct: 0.1 }, { id: 'tbill', pct: 0.3 }, { id: 'on', pct: 0.3 }, { id: 'pfusd', pct: 0.3 }], abre: sumarDias(hoy, -2), cierra: sumarDias(hoy, 5), votos: { u2: 'si', u3: 'si', u4: 'si', u6: 'si', u7: 'no', u10: 'si' }, por: 'u2' }
   ];
   var grupos = [g,
-    { id: 'beta', letra: 'Beta', simbolo: 'Β', estado: 'propuesto', N: 10, aporte: 300, ciclo: 10, mercado: 'buenosaires', modo: 'temporario', fee: 0.05, reserva: 5000, tasaEspera: 0.04, inicio: null, socios: ['u3'], creadoPor: 'u3', estructura: 'B · fiduciaria autorizada (a definir)', creado: sumarDias(hoy, -12) },
-    { id: 'delta', letra: 'Delta', simbolo: 'Δ', estado: 'abierto', N: 8, aporte: 1000, ciclo: 10, mercado: 'ushuaia', modo: 'mixto', fee: 0.05, reserva: 8000, tasaEspera: 0.04, inicio: null, socios: ['u1', 'u5', 'u8', 'u10', 'u4'], creadoPor: 'u1', estructura: 'B · fiduciaria autorizada (a definir)', creado: sumarDias(hoy, -30) }
+    { id: 'beta', letra: 'Beta', simbolo: 'Β', estado: 'propuesto', N: 10, aporte: 300, ciclo: 10, mercado: 'buenosaires', modo: 'temporario', fee: 0.05, reserva: 1000, tasaEspera: tasa, inicio: null, socios: ['u3'], creadoPor: 'u3', estructura: 'B · fiduciaria autorizada (a definir)', creado: sumarDias(hoy, -12) },
+    { id: 'gamma', letra: 'Gamma', simbolo: 'Γ', estado: 'completo', N: 4, aporte: 1000, ciclo: 10, mercado: 'ushuaia', modo: 'mensual', fee: 0.05, reserva: 1000, tasaEspera: tasa, inicio: null, socios: ['u1', 'u2', 'u6', 'u7'], creadoPor: 'u2', estructura: 'B · fiduciaria autorizada (a definir)', creado: sumarDias(hoy, -20), completo: sumarDias(hoy, -1) },
+    { id: 'delta', letra: 'Delta', simbolo: 'Δ', estado: 'abierto', N: 8, aporte: 1000, ciclo: 10, mercado: 'ushuaia', modo: 'mixto', fee: 0.05, reserva: 1000, tasaEspera: tasa, inicio: null, socios: ['u1', 'u5', 'u8', 'u10', 'u4'], creadoPor: 'u1', estructura: 'B · fiduciaria autorizada (a definir)', creado: sumarDias(hoy, -84) }
   ];
   return {
-    v: 1, creado: hoy, usuarios: usuarios, grupos: grupos, movimientos: movs, propiedades: props, votaciones: votaciones,
+    v: 6, creado: hoy, usuarios: usuarios, grupos: grupos, movimientos: movs, propiedades: props, votaciones: votaciones,
     invitaciones: [{ codigo: 'BD7K4M', email: 'invitado@demo.bd', nombre: 'Invitado de ejemplo', g: 'delta', por: 'u1', fecha: sumarDias(hoy, -1), vence: sumarDias(hoy, 6), usada: false }],
     bitacora: [{ f: new Date().toISOString(), quien: 'sistema', que: 'Se armaron los datos de prueba' }],
-    lineasBanco: [], conciliaciones: []
+    lineasBanco: [], conciliaciones: [], mensajes: mensajesDemo(hoy), leidos: {}, pagosPendientes: [], oportunidades: oportunidadesDemo(hoy), oportVistas: {}, radarUltima: new Date().toISOString().slice(0, 16)
   };
+}
+function mensajesDemo(hoy) {
+  return [
+    { id: 'c1', g: 'alfa', de: 'u5', a: 'todos', f: sumarDias(hoy, -3) + 'T10:12', t: 'El inquilino del Depto 1 pagó el 8, todo en orden.' },
+    { id: 'c2', g: 'alfa', de: 'u2', a: 'todos', f: sumarDias(hoy, -2) + 'T18:40', t: 'Abrí la votación para subir el rendimiento de la espera del ciclo 2. ¿La miran?' },
+    { id: 'c3', g: 'alfa', de: 'u3', a: 'u1', f: sumarDias(hoy, -1) + 'T09:05', t: 'Claudio, ¿me pasás la constancia de la escritura del Depto 1 para mi contador?' },
+    { id: 'c4', g: 'alfa', de: 'u4', a: 'todos', f: sumarDias(hoy, -1) + 'T20:30', t: '¿Probamos alquiler temporario en el Depto 2 cuando lo compremos?', encuesta: { opciones: ['Sí, probemos', 'No, mensual fijo', 'Lo charlamos en la reunión'], votos: { u4: 0, u5: 0, u2: 2, u7: 1, u10: 0 }, formal: null } }
+  ];
 }
 
 /* ---------- cálculo del estado de un grupo a una fecha ---------- */
@@ -194,9 +218,9 @@ function cicloInfo(g, fecha) {
   return { mesN: mesN, ciclo: ciclo, enCiclo: enCiclo, mesCompra: mesCompra, faltan: mesCompra - mesN, fechaCompra: sumarMeses(g.inicio, mesCompra - 1), conRenta: mesN > g.ciclo };
 }
 
-/* El interés por mora corre en tiempo real desde el día 6 a las 0 h (art. 21 y 23): cada segundo que pasa suma.
+/* El interés por mora corre en tiempo real desde el día 11 a las 0 h (art. 21 y 23): cada segundo que pasa suma.
    Lo que se cobra al pagar es exactamente lo que marca el contador en ese momento. */
-function inicioMora(periodo) { return deISO(periodo + '-06').getTime(); }
+function inicioMora(periodo) { return deISO(periodo + '-' + pad(DIA_VENCE + 1)).getTime(); }
 function interesMora(monto, periodo, ahoraMs) {
   var ms = (ahoraMs || Date.now()) - inicioMora(periodo);
   return ms > 0 ? monto * TASA_MORA * ms / (365 * 864e5) : 0;
@@ -210,13 +234,13 @@ function deudaDe(gid, sid, fecha) {
   var dias = ms.reduce(function (x, m) { return Math.max(x, m.dias); }, 0);
   return { meses: ms, aportes: aportes, interes: interes, total: aportes + interes, dias: dias, suspendido: dias > 30 };
 }
-/* aportes vencidos sin pagar: la mora es automática el día 6 (art. 21) */
+/* aportes vencidos sin pagar: la mora es automática el día 11 (art. 21) */
 function moraDe(gid, fecha) {
   var g = grupo(gid); fecha = fecha || hoyISO(); if (!g.inicio) return [];
   var pagos = {}, out = [], n = mesesEntre(g.inicio, fecha), k;
   movsDe(gid).forEach(function (m) { if (m.tipo === 'aporte' && m.fecha <= fecha) pagos[m.socio + '|' + m.periodo] = m; });
   for (k = 0; k <= n; k++) {
-    var per = mesDe(sumarMeses(g.inicio, k)), vence = per + '-05';
+    var per = mesDe(sumarMeses(g.inicio, k)), vence = venceDe(per);
     if (fecha <= vence) continue;
     g.socios.forEach(function (sid) {
       if (!pagos[sid + '|' + per]) {
@@ -233,14 +257,14 @@ function pagoDe(gid, sid, periodo) {
 }
 
 /* registrar el pago de un aporte (en la app real lo confirma el banco o Mercado Pago, no el teléfono del socio) */
-function registrarAporte(gid, sid, periodo, moneda, metodo) {
-  var g = grupo(gid), hoy = hoyISO(), tc = COT.usdOficial, vence = periodo + '-05';
+function registrarAporte(gid, sid, periodo, moneda, metodo, datos) {
+  var g = grupo(gid), hoy = hoyISO(), tc = COT.usdOficial, vence = venceDe(periodo);
   if (pagoDe(gid, sid, periodo)) return null;
   var pu = hoy > vence ? Math.round(interesMora(g.aporte, periodo, Date.now()) * 100) / 100 : 0, total = g.aporte + pu;
   var monto = moneda === 'ARS' ? total * tc : moneda === 'EUR' ? total / COT.eurUsd : total;
   var n = D.movimientos.filter(function (m) { return m.g === gid && m.tipo === 'aporte'; }).length + 1;
   var m = { id: 'm' + (Date.now() % 1e9), g: gid, fecha: hoy, tipo: 'aporte', usd: g.aporte, socio: sid, periodo: periodo, tc: tc,
-    pago: { moneda: moneda, monto: Math.round(monto * 100) / 100, metodo: metodo }, recibo: g.letra.toUpperCase() + '-' + periodo.replace('-', '') + '-' + n };
+    pago: Object.assign({ moneda: moneda, monto: Math.round(monto * 100) / 100, metodo: metodo }, datos || {}), recibo: g.letra.toUpperCase() + '-' + periodo.replace('-', '') + '-' + n };
   D.movimientos.push(m);
   if (pu > 0) {
     D.movimientos.push({ id: 'm' + (Date.now() % 1e9 + 1), g: gid, fecha: hoy, tipo: 'punitorio', usd: pu, socio: sid, periodo: periodo, tc: tc });
@@ -341,8 +365,9 @@ function capitalComparado(gid, sid) {
   var g = grupo(gid), ci = cicloInfo(g), hoy = hoyISO(), aportes = movsDe(gid).filter(function (m) { return m.tipo === 'aporte' && m.socio === sid; }), filas = [], k;
   for (k = 0; k < ci.mesN; k++) {
     var mes = mesDe(sumarMeses(g.inicio, k)), f = k === ci.mesN - 1 ? hoy : finDeMes(mes), e = estadoGrupo(gid, f), ap = 0, ref = 0;
-    aportes.forEach(function (m) { if (m.fecha <= f) { ap += m.usd; ref += m.usd * Math.pow(1 + REFERENCIA_ANUAL, diasEntre(m.fecha, f) / 365); } });
-    filas.push({ n: k + 1, mes: mes, fecha: f, aportado: ap, capital: (e.upSocio[sid] || 0) * e.vup, ref: ref, tir: tirSocio(gid, sid, f), ciclo: Math.ceil((k + 1) / g.ciclo), cierraCiclo: (k + 1) % g.ciclo === 0 || k === ci.mesN - 1 });
+    var pf = 0, tpf = tasaPlazoFijoUsd();
+    aportes.forEach(function (m) { if (m.fecha <= f) { ap += m.usd; ref += m.usd * Math.pow(1 + REFERENCIA_ANUAL, diasEntre(m.fecha, f) / 365); pf += m.usd * Math.pow(1 + tpf, diasEntre(m.fecha, f) / 365); } });
+    filas.push({ n: k + 1, mes: mes, fecha: f, aportado: ap, capital: (e.upSocio[sid] || 0) * e.vup, ref: ref, pf: pf, tir: tirSocio(gid, sid, f), ciclo: Math.ceil((k + 1) / g.ciclo), cierraCiclo: (k + 1) % g.ciclo === 0 || k === ci.mesN - 1 });
   }
   estadoGrupo(gid);
   return filas;
@@ -362,4 +387,22 @@ function ruedaSola(g) {
   var p = parametrosDe(g); p.years = 25; var r = simulate(p), meta = 50000 * (1 + p.setup / 100), s = r.series, t, k;
   for (t = 10; t < s.length; t++) { var sum = 0; for (k = t - 9; k <= t; k++) sum += s[k].rent + s[k].int; if (sum >= meta) return t + 1; }
   return null;
+}
+
+/* Rendimiento del fideicomiso medido por tiempo (TWR, idea de Ghostfolio y Portfolio Performance).
+   Como la UP es una cuota, su valor ya descuenta los aportes: lo que sube la UP es lo que ganó la gestión,
+   igual para todos, sin importar cuándo ni cuánto aportó cada uno. La TIR de cada socio, en cambio, depende
+   de las fechas de sus aportes. */
+function rendimientoUP(gid, fecha) {
+  var g = grupo(gid); fecha = fecha || hoyISO();
+  var e = estadoGrupo(gid, fecha), primero = movsDe(gid).filter(function (m) { return m.tipo === 'aporte'; })[0];
+  if (!primero) return { total: 0, anual: NaN, dias: 0, vup: 100 };
+  var dias = Math.max(1, diasEntre(primero.fecha, fecha)), total = e.vup / 100 - 1;
+  return { total: total, anual: dias >= 60 ? Math.pow(1 + total, 365 / dias) - 1 : NaN, dias: dias, vup: e.vup };
+}
+function serieUP(gid) {
+  var g = grupo(gid), ci = cicloInfo(g), out = [], k;
+  for (k = 0; k < ci.mesN; k++) { var mes = mesDe(sumarMeses(g.inicio, k)), f = k === ci.mesN - 1 ? hoyISO() : finDeMes(mes); out.push({ mes: mes, vup: estadoGrupo(gid, f).vup }); }
+  estadoGrupo(gid);
+  return out;
 }

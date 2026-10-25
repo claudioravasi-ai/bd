@@ -1,6 +1,6 @@
 /* ===== Modelo B&D v2 (USD): mercados, mensual vs temporal, N bienes, ciclos ===== */
 var MARKETS = {
-  ushuaia: { label: 'Ushuaia', grp: 'Argentina', m2: 2339, rent24: 330, mult: 3, setup: 5, lag: 1, opex: 18, iibb: 5, gan: 0, tOpex: 40, tIibb: 5, tGan: 20, risk: 3, acc: 'libre' },
+  ushuaia: { label: 'Ushuaia', grp: 'Argentina', m2: 2000, rent24: 288, mult: 3, setup: 5, lag: 1, opex: 18, iibb: 5, gan: 0, tOpex: 40, tIibb: 5, tGan: 20, risk: 3, acc: 'libre' },
   buenosaires: { label: 'Buenos Aires (CABA)', grp: 'Argentina', m2: 2471, rent24: 300, mult: 3, setup: 7, lag: 1, opex: 20, iibb: 3, gan: 0, tOpex: 40, tIibb: 3, tGan: 20, risk: 3, acc: 'libre' },
   murcia: { label: 'España · Murcia', grp: 'España', m2: 2083, rent24: 292, mult: 1.5, setup: 12, lag: 2, opex: 20, iibb: 24, gan: 0, tOpex: 40, tIibb: 24, tGan: 0, risk: 1, acc: 'libre (NIE)' },
   zamora: { label: 'España interior · Zamora', grp: 'España', m2: 1461, rent24: 219, mult: 1.5, setup: 12, lag: 2, opex: 20, iibb: 24, gan: 0, tOpex: 40, tIibb: 24, tGan: 0, risk: 1, acc: 'libre (NIE)' },
@@ -32,7 +32,7 @@ var MKEYS = ['m2','rent24','mult','setup','lag','opex','iibb','gan','tOpex','tIi
 function applyMarket(p, key) { var m = MARKETS[key]; MKEYS.forEach(function (k) { p[k] = m[k]; }); p.market = key; return p; }
 var DEFAULTS = applyMarket({
   members: 10, monthly: 500, contribGrowth: 0, years: 10, stopAt: 0, fee: 0,
-  strategy: 'ciclo', cycle: 10, targetM2: 25, unitUSD: 50000, unitAdjust: true, mix: 0, mult: 3, furnish: 4, noBuyLast: 0,
+  strategy: 'ciclo', cycle: 10, targetM2: 24, unitUSD: 50000, unitAdjust: true, mix: 0, mult: 3, furnish: 4, noBuyLast: 0,
   appreciation: 3, cashYield: 4, factor: 1,
   usInfl: 3, saleCost: 5, cgTax: 0, reserve: 0, bench: 6
 }, 'ushuaia');

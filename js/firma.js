@@ -52,11 +52,11 @@ function textoContrato(g, socios, fecha) {
     'ART. 1. OBJETO. Reunir aportes mensuales de los fiduciantes para comprar, alquilar y administrar inmuebles destinados a vivienda, y reinvertir la renta y el interés de la caja (arts. 1666 y siguientes del Código Civil y Comercial).',
     'ART. 2. PLAZO. ' + (g.anios || 10) + ' años desde la firma, prorrogable por unanimidad, con el máximo de 30 años del art. 1668.',
     'ART. 3. OFERTA PÚBLICA. Prohibida. El fideicomiso es privado y cerrado; se admite un socio nuevo solo por unanimidad.',
-    'ART. 4. APORTES. Cada fiduciante aporta USD ' + num(g.aporte) + ' entre los días 1 y 5 de cada mes, desde una cuenta a su nombre. Si paga en pesos se convierte al dólar oficial vendedor del Banco Nación del día de pago.',
+    'ART. 4. APORTES. Cada fiduciante aporta USD ' + num(g.aporte) + ' entre los días 1 y 10 de cada mes, desde una cuenta a su nombre. Si paga en pesos se convierte al dólar oficial vendedor del Banco Nación del día de pago.',
     'ART. 5. UNIDADES DE PARTICIPACIÓN. Cada aporte compra UP al valor del día: patrimonio (caja, inversiones e inmuebles a tasación, menos pasivos) dividido por las UP en circulación. Valor inicial: USD 100.',
-    'ART. 6. MORA. Automática el día 6. Devenga interés compensatorio y punitorio que fija la Asamblea una vez por año. Pasados 30 días se suspenden el voto y la renta del socio.',
-    'ART. 7. CICLO DE COMPRA. Cada ' + g.ciclo + ' meses se compra un inmueble con la caja disponible menos la reserva de USD ' + num(g.reserva) + ', o antes si la caja alcanza un inmueble que cumpla las reglas. Mercado: ' + M.label + '. Alquiler: ' + g.modo + '.',
-    'ART. 8. REGLAS DE COMPRA. Unidad de 20 a 30 m² para vivienda; estudio de títulos, informe de dominio e inhibiciones; tasación independiente y precio no mayor a ella; renta bruta estimada mínima de 5% anual; seguro antes de la entrega.',
+    'ART. 6. MORA. Automática el día 11 (el aporte se paga del 1 al 10 de cada mes). Devenga interés compensatorio y punitorio que fija la Asamblea una vez por año. Pasados 30 días se suspenden el voto y la renta del socio.',
+    'ART. 7. CICLO DE COMPRA. Cada ' + g.ciclo + ' meses, sin excepción, se compra un inmueble con la caja disponible. La inversión de espera del ciclo siguiente se decide antes de su primer aporte; mientras tanto rige la política vigente, para que ningún aporte quede sin invertir.',
+    'ART. 8. REGLAS DE COMPRA. Unidad de 24 m² como mínimo para vivienda; estudio de títulos, informe de dominio e inhibiciones; tasación independiente y precio no mayor a ella; renta bruta estimada mínima de 5% anual; seguro antes de la entrega.',
     'ART. 9. INVERSIÓN DE ESPERA. Instrumentos de bajo riesgo con vencimiento menor a 12 meses, máximo 30% por emisor o instrumento salvo plazo fijo bancario. Sin apalancamiento, derivados ni criptoactivos.',
     'ART. 10. ASAMBLEA. Un socio, un voto. Ordinarias: 6 de cada 10. Compra dentro de las reglas y política de inversión: 7 de cada 10. Vender, gravar, endeudarse o comprar fuera de las reglas: 8 de cada 10. Cambiar aporte, ciclo, contrato o admitir socios: unanimidad. Las mayorías se cuentan sobre el total de socios.',
     'ART. 11. HONORARIO DEL FIDUCIARIO. ' + (g.fee ? num(g.fee, 2) + '% mensual sobre el patrimonio, informado cada mes.' : 'Sin honorario; el fiduciario es una sociedad de los propios socios.'),
@@ -74,8 +74,8 @@ function textoCarta(g, fecha) {
   return ['CARTA DE LA COMUNIDAD DE CEOs · B&D ' + g.letra.toUpperCase(), 'Versión 1 · ' + fechaLarga(fecha), '',
     'PRINCIPIOS. 1) Un CEO, un voto. 2) Transparencia total: todo socio ve todo, siempre. 3) Responsabilidad individual. 4) Un solo patrimonio. 5) Salida ordenada.',
     'DERECHOS. Votar con igual peso; acceder a toda la documentación en 5 días hábiles; proponer temas y convocar asambleas; recibir la renta en proporción a sus UP; ceder o heredar su participación; ser oído antes de cualquier sanción.',
-    'DEBERES. Aportar del 1 al 5 de cada mes; acreditar el origen de los fondos; declarar todo interés personal; participar de 3 de cada 4 asambleas; guardar confidencialidad; cumplir sus obligaciones tributarias.',
-    'SANCIONES GRADUALES. Intimación automática el día 6; suspensión de voto y renta con anticipo vencido más de 30 días; exclusión con más de 90 días de mora o falta grave, con debido proceso y apelación ante la Asamblea.',
+    'DEBERES. Aportar del 1 al 10 de cada mes; acreditar el origen de los fondos; declarar todo interés personal; participar de 3 de cada 4 asambleas; guardar confidencialidad; cumplir sus obligaciones tributarias.',
+    'SANCIONES GRADUALES. Intimación automática el día 11; suspensión de voto y renta con anticipo vencido más de 30 días; exclusión con más de 90 días de mora o falta grave, con debido proceso y apelación ante la Asamblea.',
     'CONFLICTOS. Negociación 15 días, mediación y, si no alcanza, arbitraje o tribunales de Ushuaia.', '', 'FIN DEL DOCUMENTO'].join('\n');
 }
 function textoAdhesion(g, fecha) {
@@ -88,6 +88,20 @@ function textoAdhesion(g, fecha) {
 function nuevoDocumento(g, tipo, titulo, texto, fecha) {
   var d = { id: 'd' + (D.documentos.length + 1) + '-' + g.id, g: g.id, tipo: tipo, titulo: titulo, version: 1, fecha: fecha, texto: texto, hash: sha256(texto) };
   D.documentos.push(d); return d;
+}
+/* qué firma pide cada documento: el contrato (y la adhesión a un fideicomiso) necesita firma DIGITAL o la certificación
+   del escribano; la Carta, las adendas, las actas y los votos alcanzan con la firma electrónica de la app */
+var TIPOS_DIGITAL = ['contrato', 'adhesion'];
+function nivelDe(d) { return d.nivel || (TIPOS_DIGITAL.indexOf(d.tipo) >= 0 ? 'digital' : 'electronica'); }
+function firmasDigitalesDe(d) { return (D.pdfsFirmados || []).filter(function (x) { return x.doc === d.id && x.valida && x.licenciado; }); }
+function firmoDigital(d, uid) { return firmasDigitalesDe(d).some(function (x) { return x.uid === uid; }); }
+/* un documento que pide firma digital queda completo cuando todos los firmantes subieron su PDF firmado o hay certificación de escribano */
+function completoDigital(d) {
+  var g = grupo(d.g), quienes = d.orden || (g ? g.socios : []);
+  return !!d.escribano || quienes.every(function (id) { return firmoDigital(d, id); });
+}
+function faltaDigital(u) {
+  return D.documentos.filter(function (d) { var g = grupo(d.g); return g && g.socios.indexOf(u.id) >= 0 && nivelDe(d) === 'digital' && !d.escribano && !firmoDigital(d, u.id); });
 }
 function firmasDe(docId) { return D.firmas.filter(function (f) { return f.doc === docId; }); }
 function firmar(doc, u, fechaHora) {
@@ -107,10 +121,30 @@ function verificarCadena(doc) {
   });
   return { ok: !fallas.length, fallas: fallas, sello: anterior };
 }
-function pendientesDeFirma(u) {
-  return D.documentos.filter(function (d) {
-    var g = grupo(d.g); return g && g.socios.indexOf(u.id) >= 0 && !firmasDe(d.id).some(function (f) { return f.uid === u.id; });
-  });
+/* firma por orden (idea de DocuSeal y Documenso): si el documento tiene «orden», firma de a uno y solo el que le toca */
+function aQuienLeToca(d) {
+  if (!d.orden) return null;
+  var ya = firmasDe(d.id).map(function (f) { return f.uid; });
+  for (var i = 0; i < d.orden.length; i++) if (ya.indexOf(d.orden[i]) < 0) return d.orden[i];
+  return null;
+}
+function desdeCuandoEspera(d) {
+  var fs = firmasDe(d.id); return fs.length ? fs[fs.length - 1].fecha.slice(0, 10) : d.fecha;
+}
+function puedeFirmar(d, u) {
+  var g = grupo(d.g); if (!g || g.socios.indexOf(u.id) < 0 || firmasDe(d.id).some(function (f) { return f.uid === u.id; })) return false;
+  if (d.orden) return aQuienLeToca(d) === u.id;
+  return true;
+}
+function pendientesDeFirma(u) { return D.documentos.filter(function (d) { return puedeFirmar(d, u); }); }
+/* registro de auditoría: lo que pasó con cada documento (creación, recordatorios, firmas) */
+function eventoDoc(d, que, uid) { d.eventos = d.eventos || []; d.eventos.push({ f: new Date().toISOString().slice(0, 19), que: que, uid: uid || null }); }
+function auditoriaDe(d) {
+  var ev = [{ f: d.fecha + 'T00:00:00', que: 'Documento creado (versión ' + d.version + '), huella ' + d.hash.slice(0, 16) + '…' }];
+  if (d.orden) ev.push({ f: d.fecha + 'T00:00:01', que: 'Orden de firma: ' + d.orden.map(function (id, i) { return (i + 1) + '. ' + nombreCorto(usuario(id)); }).join(', ') });
+  firmasDe(d.id).forEach(function (f) { ev.push({ f: f.fecha, que: 'Firmó ' + f.nombre + ' · huella de la firma ' + f.huella.slice(0, 16) + '…' }); });
+  (d.eventos || []).forEach(function (e) { ev.push({ f: e.f, que: e.que + (e.uid ? ' (' + nombreCorto(usuario(e.uid)) + ')' : '') }); });
+  return ev.sort(function (a, b) { return a.f < b.f ? -1 : 1; });
 }
 
 /* documentos y firmas de los datos de prueba */
@@ -120,9 +154,12 @@ function documentosDemo() {
   var c = nuevoDocumento(a, 'contrato', 'Contrato de fideicomiso B&D Alfa', textoContrato(a, socios, a.inicio), a.inicio);
   var k = nuevoDocumento(a, 'carta', 'Carta de la comunidad de CEOs', textoCarta(a, a.inicio), a.inicio);
   socios.forEach(function (u, i) { firmar(c, u, sumarDias(a.inicio, -3) + 'T1' + i + ':' + pad(10 + i * 3) + ':00'); });
+  c.escribano = { nombre: 'Escribanía de prueba', registro: '0', fecha: sumarDias(a.inicio, -2), acta: 'certificación de firmas (modo prueba)' };
   socios.forEach(function (u, i) { firmar(k, u, sumarDias(a.inicio, -3) + 'T1' + i + ':' + pad(12 + i * 3) + ':30'); });
-  var ad = nuevoDocumento(a, 'adenda', 'Adenda 1: política de inversión de espera', textoAdenda(a), sumarDias(hoyISO(), -2));
-  socios.slice(1, 7).forEach(function (u, i) { firmar(ad, u, sumarDias(hoyISO(), -1) + 'T0' + (8 + i) + ':15:00'); });
+  var ad = nuevoDocumento(a, 'adenda', 'Adenda 1: política de inversión de espera', textoAdenda(a), sumarDias(hoyISO(), -4));
+  ad.orden = ['u2', 'u3', 'u4', 'u5', 'u6', 'u7', 'u8', 'u9', 'u10', 'u1'];
+  socios.slice(1, 7).forEach(function (u, i) { firmar(ad, u, sumarDias(hoyISO(), -4 + Math.floor(i / 2)) + 'T0' + (8 + i) + ':15:00'); });
+  ad.eventos = [{ f: sumarDias(hoyISO(), -1) + 'T10:00:00', que: 'Recordatorio enviado a Valeria Q.', uid: 'u2' }];
   var dl = grupo('delta');
   var pd = nuevoDocumento(dl, 'adhesion', 'Pre-acuerdo de adhesión al fideicomiso Delta', textoAdhesion(dl, dl.creado), dl.creado);
   dl.socios.forEach(function (sid, i) { firmar(pd, usuario(sid), sumarDias(dl.creado, i) + 'T19:0' + i + ':00'); });

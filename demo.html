@@ -1,0 +1,75 @@
+<!doctype html>
+<html lang="es-AR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>B&amp;D · Demo con cuatro celulares</title>
+<meta name="robots" content="noindex, nofollow">
+<link rel="icon" href="icono.svg" type="image/svg+xml">
+<link href="https://fonts.googleapis.com/css2?family=EB+Garamond:wght@400;500&family=IBM+Plex+Sans:wght@400;600&display=swap" rel="stylesheet">
+<style>
+:root { --noche: #0D1824; --oro: #C9A24B; --oro2: #E6C979; --crema: #F6F3EC; --gris: #B4C2D2; }
+* { box-sizing: border-box; }
+body { margin: 0; background: radial-gradient(1000px 500px at 80% -10%, rgba(201, 162, 75, .16), transparent 60%), var(--noche); color: var(--crema); font-family: 'IBM Plex Sans', system-ui, sans-serif; padding: 24px 16px 48px; }
+h1, h2 { font-family: 'EB Garamond', Georgia, serif; font-weight: 500; margin: 0; }
+h1 { font-size: clamp(2rem, 5vw, 3rem); }
+.sub { color: var(--gris); max-width: 900px; margin: 8px 0 0; }
+.pasos { display: flex; flex-wrap: wrap; gap: 8px; margin: 18px 0 24px; }
+.pasos span { border: 1px solid rgba(201, 162, 75, .35); border-radius: 999px; padding: 6px 12px; font-size: .9rem; }
+.pasos b { color: var(--oro2); }
+.moviles { display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 28px; align-items: start; }
+.movil { display: flex; flex-direction: column; gap: 12px; }
+.movil h2 { font-size: 1.5rem; }
+.movil h2 i { font-style: normal; color: var(--oro2); margin-right: 8px; }
+.movil p { margin: 0; color: var(--gris); font-size: .92rem; line-height: 1.45; }
+.movil ul { margin: 0; padding-left: 18px; color: var(--gris); font-size: .9rem; line-height: 1.45; }
+.marco { width: 100%; max-width: 340px; aspect-ratio: 390 / 800; border: 10px solid #05090e; border-radius: 42px; overflow: hidden; background: #000; box-shadow: 0 24px 50px rgba(0, 0, 0, .5), 0 0 0 1px rgba(201, 162, 75, .3); position: relative; }
+.marco iframe { width: 390px; height: 800px; border: 0; transform-origin: 0 0; }
+.recargar { align-self: flex-start; background: none; border: 1px solid rgba(201, 162, 75, .4); color: var(--crema); border-radius: 999px; padding: 6px 12px; cursor: pointer; font: inherit; font-size: .85rem; }
+.nota { margin-top: 28px; padding: 12px 14px; border-left: 3px solid var(--oro); background: rgba(201, 162, 75, .08); border-radius: 0 12px 12px 0; color: var(--gris); font-size: .9rem; max-width: 900px; }
+</style>
+</head>
+<body>
+<h1>B&amp;D · Así entra cada uno</h1>
+<p class="sub">Cuatro celulares con la app de verdad, en modo prueba. Cada uno se maneja con el dedo o el mouse, como un teléfono. El orden es el de la vida real: primero el socio fundador, después los socios de Alfa, después quien se suma a otro fideicomiso y, por último, quien solo quiere mirar.</p>
+<div class="pasos"><span><b>1.</b> El fundador crea su cuenta</span><span><b>2.</b> Invita a los socios por correo</span><span><b>3.</b> Cada socio se da de alta con el código</span><span><b>4.</b> Para otro grupo, invita a esa gente a ese grupo</span><span><b>5.</b> A quien solo quiere conocer, le da un pase para mirar</span></div>
+<div class="moviles">
+  <section class="movil">
+    <h2><i>1</i>Vos, el socio fundador</h2>
+    <p><b>Cómo entra:</b> la primera vez, «Crear la cuenta del socio fundador»: nombre, CUIL, correo, clave y Google Authenticator (se escanea un QR). Después, siempre correo + clave + el código de 6 números del teléfono.</p>
+    <ul><li>Ve todos los fideicomisos (Alfa, Beta, Gamma, Delta).</li><li>Invita socios y personas que solo miran, da de baja grupos, registra al escribano y pide reservas del radar.</li><li>Ve las fichas completas (queda anotado en la bitácora) y la carpeta contable.</li></ul>
+    <div class="marco"><iframe data-src="./?demo=fundador#/inicio" title="Celular del socio fundador"></iframe></div>
+    <button class="recargar" data-k="0">Volver a empezar este celular</button>
+  </section>
+  <section class="movil">
+    <h2><i>2</i>Una socia de Alfa</h2>
+    <p><b>Cómo entra:</b> le llega un correo con un código de 6 letras que vence en 7 días. Elige «Tengo una invitación», completa sus datos en 6 pasos (personales, fiscales, origen de fondos, CBU) y después activa Google Authenticator en Mis datos.</p>
+    <ul><li>Ve solo Alfa: su parte, sus pagos, las inversiones en vivo, votaciones, chat y su carpeta impositiva.</li><li>De los otros socios ve nombre, aportes y participación; nunca sus datos personales.</li><li>No ve los fideicomisos cerrados de otros grupos.</li></ul>
+    <div class="marco"><iframe data-src="./?demo=socia#/inicio" title="Celular de una socia"></iframe></div>
+    <button class="recargar" data-k="1">Volver a empezar este celular</button>
+  </section>
+  <section class="movil">
+    <h2><i>3</i>Alguien que se suma a otro grupo</h2>
+    <p><b>Cómo entra:</b> el fundador lo invita a un grupo nuevo (en el ejemplo, Delta). En la pantalla de entrada ya están el correo y el código de prueba: tocá «Entrar» y seguí los 6 pasos del alta.</p>
+    <ul><li>Ve las propuestas abiertas y el grupo al que entró, con su proyección.</li><li>Ese grupo tiene 90 días para completarse; una semana antes, aviso; si no, se disuelve solo.</li><li>Cuando se completa, la app agenda la reunión virtual de inicio.</li></ul>
+    <div class="marco"><iframe data-src="./?demo=invitacion#/" title="Celular de una persona invitada a otro grupo"></iframe></div>
+    <button class="recargar" data-k="2">Volver a empezar este celular</button>
+  </section>
+  <section class="movil">
+    <h2><i>4</i>Alguien que solo mira</h2>
+    <p><b>Cómo entra:</b> el fundador le genera una invitación de tipo «Solo mirar». Con el código elige una clave y entra directo a la vitrina.</p>
+    <ul><li>Ve los fideicomisos que funcionan: números del grupo, rendimiento de la UP, dónde invierten, qué compraron y sus reglas.</li><li>No ve nombres ni datos personales y no puede cambiar nada.</li><li>Puede copiar una cartera en proporción a las UP que tendría.</li></ul>
+    <div class="marco"><iframe data-src="./?demo=mira#/vitrina" title="Celular de alguien que solo mira"></iframe></div>
+    <button class="recargar" data-k="3">Volver a empezar este celular</button>
+  </section>
+</div>
+<p class="nota">Modo prueba: los datos son inventados y quedan en este equipo; los cuatro celulares comparten los mismos datos de prueba. En el celular del fundador, la cuenta ya aparece abierta para mostrarla; en la vida real se crea una sola vez con CUIL, correo, clave y Google Authenticator.</p>
+<script>
+function ajustar() { document.querySelectorAll('.marco').forEach(function (m) { var f = m.querySelector('iframe'), k = m.clientWidth / 390; f.style.transform = 'scale(' + k + ')'; m.style.height = (800 * k) + 'px'; }); }
+var marcos = document.querySelectorAll('.marco iframe');
+marcos.forEach(function (f, i) { setTimeout(function () { f.src = f.dataset.src; }, i * 700); });
+document.querySelectorAll('.recargar').forEach(function (b) { b.onclick = function () { var f = marcos[+b.dataset.k]; f.src = 'about:blank'; setTimeout(function () { f.src = f.dataset.src; }, 50); }; });
+window.addEventListener('resize', ajustar); ajustar();
+</script>
+</body>
+</html>

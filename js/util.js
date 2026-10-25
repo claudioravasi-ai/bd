@@ -1,5 +1,5 @@
 /* ===== Utilidades comunes: formato argentino, fechas, guardado y pantalla ===== */
-var VERSION_APP = '0.1.8';
+var VERSION_APP = '0.2.2';
 
 function $(id) { return document.getElementById(id); }
 function esc(s) {

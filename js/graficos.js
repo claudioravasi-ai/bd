@@ -78,14 +78,14 @@ function svgTorre(propias, proyectadas, etiquetas, obra) {
   }
   var desc = propias + ' departamento' + (propias === 1 ? '' : 's') + ' comprado' + (propias === 1 ? '' : 's') + (conObra ? '; el departamento ' + (propias + 1) + ' va por el mes ' + obra.mes + ' de ' + obra.de : '') +
     (total > propias + (conObra ? 1 : 0) ? ' y ' + (total - propias - (conObra ? 1 : 0)) + ' más proyectados' : '') + '.';
-  return '<svg class="torre" viewBox="0 ' + (yJ - 30) + ' 360 ' + (base - yJ + 44) + '" role="img" aria-label="' + desc + '">' +
+  return '<svg class="torre" viewBox="0 ' + (yJ - 30) + ' 392 ' + (base - yJ + 44) + '" role="img" aria-label="' + desc + '">' +
     '<defs><linearGradient id="oroTorre" x1="0" x2="1"><stop offset="0" stop-color="#B98F3A"/><stop offset=".5" stop-color="#E6C979"/><stop offset="1" stop-color="#B98F3A"/></linearGradient></defs>' +
     h + '<rect x="8" y="' + base + '" width="340" height="6" rx="3" fill="rgba(201,211,223,.25)"/></svg>';
 }
 
 /* Rueda de aportes del ciclo: cada socio es una porción, cada mes un anillo (adentro el mes 1, afuera el último).
    En el centro, cuánto del ciclo ya se cobró. Cada tramo se puede tocar para ver el detalle. */
-var ETQ_APORTE = { pago: 'pagado a tiempo', tarde: 'pagado tarde', mora: 'vencido sin pagar', pendiente: 'vence el día 5', futuro: 'todavía no corresponde' };
+var ETQ_APORTE = { pago: 'pagado a tiempo', tarde: 'pagado tarde', mora: 'vencido sin pagar', pendiente: 'vence el día 10', futuro: 'todavía no corresponde' };
 function svgRuedaAportes(g, d) {
   var N = d.filas.length, M = d.meses.length, cx = 180, cy = 180, r0 = 54, r1 = 148, w = (r1 - r0) / M, gap = N > 1 ? 0.035 : 0, h = '';
   function P(r, a) { return (cx + r * Math.cos(a)).toFixed(2) + ' ' + (cy + r * Math.sin(a)).toFixed(2); }
