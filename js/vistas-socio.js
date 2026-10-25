@@ -10,7 +10,7 @@ function vistaInversiones(u) {
   var et = [], cajaV = [], invV = [], inmV = [], k;
   for (k = 0; k < ci.mesN; k++) { var mes = mesDe(sumarMeses(g.inicio, k)), s = estadoGrupo(g.id, k === ci.mesN - 1 ? hoyISO() : finDeMes(mes)); et.push(nombreMesCorto(mes)); cajaV.push(s.caja); invV.push(s.inv); inmV.push(s.inm); }
   estadoGrupo(g.id);
-  var props = D.propiedades.filter(function (q) { return q.g === g.id; }), ultimaInv = movsDe(g.id).filter(function (m) { return m.tipo === 'inversion'; }).pop(), tot = e.caja + e.inv + e.inm;
+  var props = propiedadesActivas(g.id), ultimaInv = movsDe(g.id).filter(function (m) { return m.tipo === 'inversion'; }).pop(), tot = e.caja + e.inv + e.inm;
   var tabla = SES.tablaCapital || 'ciclo';
 
   /* tres escenarios a la vez (idea de la app de inversiones) y opción de subir el aporte */
@@ -115,7 +115,7 @@ function vistaContratos(u) {
         '<div class="fila" style="margin-top:10px"><button class="btn btn-chico" data-leer="' + d.id + '">Leer</button>' + (puedeFirmar(d, u) ? '<button class="btn btn-oro btn-chico" data-firmar="' + d.id + '">Firmar</button>' : '') +
         '<button class="btn btn-chico" data-constancia="' + d.id + '">Constancia de firmas</button><button class="btn btn-chico" data-auditoria="' + d.id + '">Auditoría (PDF)</button><button class="btn btn-chico" data-bajar="' + d.id + '">Bajar el documento (.txt)</button></div></div>';
     }).join('') + '</section>' +
-    (u.rol === 'fundador' ? '<div class="fila seccion"><button class="btn btn-oro" id="btnNuevoDoc">Mandar un documento a firmar, en orden</button></div>' : '') +
+    '<div class="fila seccion">' + (u.rol === 'fundador' ? '<button class="btn btn-oro" id="btnNuevoDoc">Mandar un documento a firmar, en orden</button>' : '') + (u.rol !== 'observador' ? '<button class="btn" id="btnAdhesion">' + (u.rol === 'fundador' ? 'Contrato de adhesión de cada socio' : 'Mi contrato de adhesión') + '</button>' : '') + '<a class="btn" href="#/ayuda?t=estatuto">Derechos y deberes</a></div>' +
     '<section class="tarjeta seccion"><h2>Verificar un documento</h2><p class="gris">Para el escribano o cualquier socio: elegí el archivo .txt que bajaste y la app calcula su huella y la compara con la registrada. Si coincide, el texto es exactamente el que se firmó.</p>' +
     '<div class="campo"><label for="archVerif">Archivo a verificar</label><input type="file" id="archVerif" accept=".txt,text/plain"></div><div id="resVerif" aria-live="polite" style="margin-top:10px"></div>' +
     '<p class="chico gris" style="margin-top:12px">También se puede verificar fuera de la app: en una Mac, Terminal → <code class="mono">shasum -a 256 archivo.txt</code>; en Windows → <code class="mono">certutil -hashfile archivo.txt SHA256</code>.</p></section>' +
@@ -251,6 +251,7 @@ function ganchoContratos() {
   document.querySelectorAll('[data-auditoria]').forEach(function (b) { b.onclick = function () { verAuditoria(b.dataset.auditoria); }; });
   document.querySelectorAll('[data-recordar]').forEach(function (b) { b.onclick = function () { recordarFirma(b.dataset.recordar); }; });
   if ($('btnNuevoDoc')) $('btnNuevoDoc').onclick = function () { ventana(ventanaNuevoDoc); };
+  if ($('btnAdhesion')) $('btnAdhesion').onclick = function () { ventana(function () { ventanaAdhesionSocio(); }); };
   document.querySelectorAll('[data-constancia]').forEach(function (b) { b.onclick = function () { verConstancia(b.dataset.constancia); }; });
   document.querySelectorAll('[data-bajar]').forEach(function (b) {
     b.onclick = function () { var d = D.documentos.filter(function (x) { return x.id === b.dataset.bajar; })[0]; descargar(d.titulo.replace(/[^\wáéíóúñÁÉÍÓÚÑ ]+/g, '').replace(/\s+/g, '-') + '-v' + d.version + '.txt', d.texto, 'text/plain;charset=utf-8', true); };

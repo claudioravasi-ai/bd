@@ -12,25 +12,31 @@ var CUENTAS = {
   '1.1.01': { n: 'Caja y bancos (cuenta del fideicomiso)', t: 'A' },
   '1.1.02': { n: 'Inversiones transitorias (caja de espera)', t: 'A' },
   '1.2.01': { n: 'Inmuebles (precio más gastos de compra)', t: 'A' },
+  '2.1.01': { n: 'Saldo de precio con vendedores (deuda)', t: 'P' },
   '3.1.01': { n: 'Aportes de los fiduciantes', t: 'PN' },
+  '3.1.02': { n: 'Retiros de participaciones (inmueble vendido a un socio)', t: 'PN' },
   '4.1.01': { n: 'Alquileres ganados', t: 'I' },
   '4.1.02': { n: 'Rendimientos de la caja de espera', t: 'I' },
   '4.1.03': { n: 'Intereses por mora cobrados', t: 'I' },
+  '4.1.04': { n: 'Resultado por venta de inmuebles', t: 'I' },
   '5.1.01': { n: 'Honorarios del fiduciario', t: 'E' },
   '5.1.02': { n: 'Gastos de los inmuebles (expensas, seguros)', t: 'E' },
   '5.1.03': { n: 'Impuestos y tasas (AREF, Municipalidad)', t: 'E' },
-  '5.1.04': { n: 'Gastos bancarios (comisiones)', t: 'E' }
+  '5.1.04': { n: 'Gastos bancarios (comisiones)', t: 'E' },
+  '5.1.05': { n: 'Intereses del saldo de precio', t: 'E' }
 };
 /* qué cuenta va al Debe y cuál al Haber en cada tipo de movimiento */
 var PARTIDA = {
   aporte: ['1.1.01', '3.1.01'], punitorio: ['1.1.01', '4.1.03'], inversion: ['1.1.02', '1.1.01'], rescate: ['1.1.01', '1.1.02'],
   interes: ['1.1.02', '4.1.02'], compra: ['1.2.01', '1.1.01'], renta: ['1.1.01', '4.1.01'], gasto: ['5.1.02', '1.1.01'],
-  impuesto: ['5.1.03', '1.1.01'], honorario: ['5.1.01', '1.1.01'], banco: ['5.1.04', '1.1.01']
+  impuesto: ['5.1.03', '1.1.01'], honorario: ['5.1.01', '1.1.01'], banco: ['5.1.04', '1.1.01'], ventaSocio: ['1.1.01', '1.2.01'],
+  deudaAlta: ['1.2.01', '2.1.01'], cuotaDeuda: ['2.1.01', '1.1.01'], interesDeuda: ['5.1.05', '1.1.01']
 };
 var TIPO_TXT = {
   aporte: 'Aporte mensual', punitorio: 'Interés por mora', inversion: 'Inversión de espera', rescate: 'Rescate para compra',
   interes: 'Rendimiento de la caja', compra: 'Compra de inmueble', renta: 'Alquiler cobrado', gasto: 'Gastos del inmueble',
-  impuesto: 'Impuestos y tasas', honorario: 'Honorario del fiduciario', banco: 'Gastos bancarios'
+  impuesto: 'Impuestos y tasas', honorario: 'Honorario del fiduciario', banco: 'Gastos bancarios', ventaSocio: 'Venta de un inmueble a un socio',
+  deudaAlta: 'Saldo de precio financiado por el vendedor', cuotaDeuda: 'Cuota del saldo de precio', interesDeuda: 'Interés del saldo de precio'
 };
 /* mayorías de la Carta de la comunidad (sobre el total de socios, no sobre presentes) */
 var MATERIAS = {
@@ -55,7 +61,7 @@ var EUR_USD_HIST = 1.105;       /* referencia para los pagos de prueba en euros 
 var CLAVE_DATOS = 'bd.prueba.datos.v1';
 var D = null;
 function cargarDatos() {
-  D = leer(CLAVE_DATOS, null); if (!D || D.v !== 6 || !D.documentos) reiniciarDemo();
+  D = leer(CLAVE_DATOS, null); if (!D || D.v !== 8 || !D.documentos) reiniciarDemo();
   if (!D.lineasBanco) { D.lineasBanco = []; D.conciliaciones = []; }
   if (!D.mensajes) D.mensajes = []; if (!D.oportunidades) D.oportunidades = []; if (!D.leidos) D.leidos = {}; if (!D.pagosPendientes) D.pagosPendientes = [];
   return D;
@@ -64,6 +70,7 @@ function guardarDatos() { if (!guardar(CLAVE_DATOS, D)) tostada('No se pudo guar
 function reiniciarDemo() { D = generarDemo(); documentosDemo(); guardarDatos(); }
 function usuario(id) { for (var i = 0; i < D.usuarios.length; i++) if (D.usuarios[i].id === id) return D.usuarios[i]; return null; }
 function usuarioPorCorreo(e) { e = String(e).trim().toLowerCase(); for (var i = 0; i < D.usuarios.length; i++) if (D.usuarios[i].email === e) return D.usuarios[i]; return null; }
+function propiedadesActivas(gid) { return D.propiedades.filter(function (p) { return p.g === gid && !p.vendido; }); }
 function grupo(id) { for (var i = 0; i < D.grupos.length; i++) if (D.grupos[i].id === id) return D.grupos[i]; return null; }
 function gruposDe(uid) { return D.grupos.filter(function (g) { return g.socios.indexOf(uid) >= 0; }); }
 function esFundador(uid) { var a = grupo('alfa'); return !!a && a.socios.indexOf(uid) >= 0; }
@@ -127,7 +134,8 @@ function generarDemo() {
     });
     props.forEach(function (p) {
       var r = p.alquiler;
-      if (mov({ fecha: mes + '-08', tipo: 'renta', usd: r, prop: p.id, desc: 'Alquiler de ' + p.nombre + ' · ' + nombreMes(mes) })) caja += r;
+      /* el inquilino de prueba todavía no pagó el mes actual: así se ve cómo avisa la app un atraso */
+      if (t < N_MESES && mov({ fecha: mes + '-08', tipo: 'renta', usd: r, prop: p.id, periodo: mes, recibo: 'ALQ-' + mes.replace('-', '') + '-' + p.id.toUpperCase(), inquilino: 'iq1', desc: 'Alquiler de ' + p.nombre + ' · ' + nombreMes(mes) })) caja += r;
       if (mov({ fecha: mes + '-15', tipo: 'gasto', usd: 42, prop: p.id, desc: 'Expensas y seguro de ' + p.nombre })) caja -= 42;
       var ii = Math.round(r * ALICUOTA_IIBB * 100) / 100;
       if (mov({ fecha: mes + '-15', tipo: 'impuesto', usd: ii, prop: p.id, desc: 'Ingresos brutos (AREF) sobre alquileres · estimado' })) caja -= ii;
@@ -153,7 +161,7 @@ function generarDemo() {
     { id: 'v1', g: 'alfa', titulo: 'Compra del Departamento 1', materia: 'compra', detalle: 'Monoambiente de 24 m² en Ushuaia (USD 2.000 el m²), tasación independiente, alquiler de mercado USD 288 por mes. Se compra en el mes 10, como dice el contrato.', abre: mesCompra + '-11', cierra: mesCompra + '-16', votos: { u1: 'si', u2: 'si', u3: 'si', u4: 'si', u5: 'si', u6: 'si', u7: 'si', u8: 'si', u9: 'si', u10: 'si' }, por: 'u1' },
     { id: 'v2', g: 'alfa', titulo: 'Alquilar el Departamento 1 por mes, con contrato en dólares', materia: 'ordinaria', detalle: 'Contrato a 2 años, garantía de caución, actualización pactada. Administra un socio sin comisión.', abre: mesCompra + '-21', cierra: mesCompra + '-26', votos: { u1: 'si', u2: 'si', u3: 'si', u4: 'abst', u5: 'si', u6: 'si', u7: 'si', u8: 'si', u9: 'si', u10: 'si' }, por: 'u5' },
     { id: 'v3', g: 'alfa', titulo: 'Inversión de espera del ciclo 2 (antes del primer aporte)', materia: 'inversion', detalle: 'Se mantiene la política vigente desde el primer aporte del ciclo 2: así ningún dólar queda quieto.', cartera: REPARTO_VIGENTE, abre: mesCompra + '-21', cierra: mesCompra + '-27', votos: { u1: 'si', u2: 'si', u3: 'si', u4: 'si', u6: 'si', u7: 'no', u8: 'si', u10: 'si' }, por: 'u2' },
-    { id: 'v4', g: 'alfa', titulo: 'Más rendimiento para la espera del ciclo 2', materia: 'inversion', detalle: 'Bajar la cuenta remunerada al 10% y repartir el resto en partes iguales entre letras del Tesoro de EE. UU., obligaciones negociables y fondo de dinero, con tope de 30% por instrumento.', cartera: [{ id: 'cuenta', pct: 0.1 }, { id: 'tbill', pct: 0.3 }, { id: 'on', pct: 0.3 }, { id: 'pfusd', pct: 0.3 }], abre: sumarDias(hoy, -2), cierra: sumarDias(hoy, 5), votos: { u2: 'si', u3: 'si', u4: 'si', u6: 'si', u7: 'no', u10: 'si' }, por: 'u2' }
+    { id: 'v4', g: 'alfa', argumentos: [{ id: 'a1', uid: 'u2', lado: 'favor', t: 'Con las tasas de hoy rinde casi un punto más por año que la cartera vigente y sigue con tope de 30% por instrumento.', f: sumarDias(hoy, -2) + 'T10:12', apoyos: { u3: true, u4: true, u6: true } }, { id: 'a2', uid: 'u7', lado: 'contra', t: 'El plazo fijo en dólares traba la plata hasta el vencimiento: si aparece una oportunidad en el radar, no la podemos usar.', f: sumarDias(hoy, -1) + 'T18:40', apoyos: { u10: true } }, { id: 'a3', uid: 'u3', lado: 'favor', t: 'La cuenta remunerada queda en 10%: alcanza para la reserva del mes.', f: sumarDias(hoy, -1) + 'T20:05', apoyos: {} }], motivos: { u2: 'Más rendimiento sin más riesgo.', u7: 'Prefiero liquidez para el radar.' }, titulo: 'Más rendimiento para la espera del ciclo 2', materia: 'inversion', detalle: 'Bajar la cuenta remunerada al 10% y repartir el resto en partes iguales entre letras del Tesoro de EE. UU., obligaciones negociables y fondo de dinero, con tope de 30% por instrumento.', cartera: [{ id: 'cuenta', pct: 0.1 }, { id: 'tbill', pct: 0.3 }, { id: 'on', pct: 0.3 }, { id: 'pfusd', pct: 0.3 }], abre: sumarDias(hoy, -2), cierra: sumarDias(hoy, 5), votos: { u2: 'si', u3: 'si', u4: 'si', u6: 'si', u7: 'no', u10: 'si' }, por: 'u2' }
   ];
   var grupos = [g,
     { id: 'beta', letra: 'Beta', simbolo: 'Β', estado: 'propuesto', N: 10, aporte: 300, ciclo: 10, mercado: 'buenosaires', modo: 'temporario', fee: 0.05, reserva: 1000, tasaEspera: tasa, inicio: null, socios: ['u3'], creadoPor: 'u3', estructura: 'B · fiduciaria autorizada (a definir)', creado: sumarDias(hoy, -12) },
@@ -161,9 +169,10 @@ function generarDemo() {
     { id: 'delta', letra: 'Delta', simbolo: 'Δ', estado: 'abierto', N: 8, aporte: 1000, ciclo: 10, mercado: 'ushuaia', modo: 'mixto', fee: 0.05, reserva: 1000, tasaEspera: tasa, inicio: null, socios: ['u1', 'u5', 'u8', 'u10', 'u4'], creadoPor: 'u1', estructura: 'B · fiduciaria autorizada (a definir)', creado: sumarDias(hoy, -84) }
   ];
   return {
-    v: 6, creado: hoy, usuarios: usuarios, grupos: grupos, movimientos: movs, propiedades: props, votaciones: votaciones,
+    v: 8, creado: hoy, usuarios: usuarios, grupos: grupos, movimientos: movs, propiedades: props, votaciones: votaciones,
     invitaciones: [{ codigo: 'BD7K4M', email: 'invitado@demo.bd', nombre: 'Invitado de ejemplo', g: 'delta', por: 'u1', fecha: sumarDias(hoy, -1), vence: sumarDias(hoy, 6), usada: false }],
     bitacora: [{ f: new Date().toISOString(), quien: 'sistema', que: 'Se armaron los datos de prueba' }],
+    inquilinos: props.length ? [{ id: 'iq1', g: 'alfa', prop: props[0].id, nombre: 'Ana Torres (inquilina de prueba)', dni: '', tel: '+5492901000000', email: 'inquilina@example.com', creado: props[0].fecha, contrato: { inicio: props[0].fecha, fin: sumarDias(props[0].fecha, 730), monto: props[0].alquiler, moneda: 'USD', diaPago: 10, ajuste: 'Fijo en dólares, sin ajuste', deposito: props[0].alquiler, garantia: 'Seguro de caución' } }] : [],
     lineasBanco: [], conciliaciones: [], mensajes: mensajesDemo(hoy), leidos: {}, pagosPendientes: [], oportunidades: oportunidadesDemo(hoy), oportVistas: {}, radarUltima: new Date().toISOString().slice(0, 16)
   };
 }
@@ -183,7 +192,7 @@ function movsDe(gid) {
   });
 }
 function estadoGrupo(gid, hasta) {
-  var s = { caja: 0, inv: 0, inm: 0, up: 0, upSocio: {}, aportado: 0, aportadoSocio: {}, renta: 0, intereses: 0, gastos: 0, impuestos: 0, punitorios: 0, honorarios: 0, nCompras: 0 };
+  var s = { caja: 0, inv: 0, inm: 0, up: 0, upSocio: {}, aportado: 0, aportadoSocio: {}, renta: 0, intereses: 0, gastos: 0, impuestos: 0, punitorios: 0, honorarios: 0, nCompras: 0, nVentas: 0, resultadoVentas: 0, deuda: 0 };
   movsDe(gid).forEach(function (m) {
     if (hasta && m.fecha > hasta) return;
     var u = m.usd;
@@ -202,9 +211,15 @@ function estadoGrupo(gid, hasta) {
       case 'impuesto': s.caja -= u; s.impuestos += u; break;
       case 'honorario': s.caja -= u; s.honorarios += u; break;
       case 'banco': s.caja -= u; s.gastos += u; break;
+      /* venta de un inmueble a un socio: entra lo que le paga a los demás y se le dan de baja las UP de su propia parte */
+      /* compra con saldo financiado: el inmueble entra completo y la deuda queda como pasivo hasta pagar las cuotas */
+      case 'deudaAlta': s.inm += u; s.deuda += u; break;
+      case 'cuotaDeuda': s.caja -= u; s.deuda -= u; break;
+      case 'interesDeuda': s.caja -= u; s.gastos += u; break;
+      case 'ventaSocio': s.caja += u; s.inm -= m.base; s.up -= m.upBaja; s.upSocio[m.socio] = (s.upSocio[m.socio] || 0) - m.upBaja; s.nVentas++; s.resultadoVentas += m.precio - m.base; break;
     }
   });
-  s.patrimonio = s.caja + s.inv + s.inm;
+  s.patrimonio = s.caja + s.inv + s.inm - s.deuda;
   s.vup = s.up > 0 ? s.patrimonio / s.up : 100;
   return s;
 }
@@ -279,6 +294,19 @@ function asientoDe(m, n) {
   var p = PARTIDA[m.tipo], desc = m.desc || (TIPO_TXT[m.tipo] + (m.socio ? ' · ' + usuario(m.socio).nombre + (m.periodo ? ' · ' + nombreMes(m.periodo) : '') : ''));
   return { n: n, fecha: m.fecha, tipo: m.tipo, desc: desc, debe: p[0], haber: p[1], usd: m.usd, tc: m.tc, ars: m.usd * m.tc, recibo: m.recibo || '' };
 }
+/* la venta a un socio lleva tres líneas: el inmueble se lleva al precio de tasación (resultado), entra lo que pagó
+   a los demás y su propia parte se cancela con sus UP (retiro de participaciones) */
+function asientosDe(m, n) {
+  if (m.tipo !== 'ventaSocio') return [asientoDe(m, n)];
+  var nom = usuario(m.socio) ? usuario(m.socio).nombre : '', res = Math.round((m.precio - m.base) * 100) / 100;
+  var l = function (debe, haber, usdL, desc) { return { n: n, fecha: m.fecha, tipo: m.tipo, desc: desc, debe: debe, haber: haber, usd: usdL, tc: m.tc, ars: usdL * m.tc, recibo: m.recibo || '' }; };
+  var out = [];
+  if (res > 0) out.push(l('1.2.01', '4.1.04', res, 'Inmueble llevado al precio de tasación antes de venderlo a ' + nom));
+  if (res < 0) out.push(l('4.1.04', '1.2.01', -res, 'Inmueble llevado al precio de tasación antes de venderlo a ' + nom));
+  out.push(l('1.1.01', '1.2.01', m.usd, (m.desc || 'Venta de un inmueble a ' + nom) + ': lo que pagó a los demás socios'));
+  out.push(l('3.1.02', '1.2.01', m.parte, 'Parte de ' + nom + ' en el inmueble, cancelada con ' + num(m.upBaja, 4) + ' UP'));
+  return out;
+}
 function saldosCuentas(asientos) {
   var s = {}; Object.keys(CUENTAS).forEach(function (k) { s[k] = { debe: 0, haber: 0, debeArs: 0, haberArs: 0 }; });
   asientos.forEach(function (a) { s[a.debe].debe += a.usd; s[a.haber].haber += a.usd; s[a.debe].debeArs += a.ars; s[a.haber].haberArs += a.ars; });
@@ -288,18 +316,20 @@ function saldoDe(cod, x) { var t = CUENTAS[cod].t; return (t === 'A' || t === 'E
 
 /* Carpeta contable de un período (día, semana o mes) */
 function informe(gid, desde, hasta) {
-  var g = grupo(gid), todos = movsDe(gid).map(function (m, i) { return asientoDe(m, i + 1); });
+  var g = grupo(gid), todos = [];
+  movsDe(gid).forEach(function (m, i) { asientosDe(m, i + 1).forEach(function (a) { todos.push(a); }); });
   var antes = todos.filter(function (a) { return a.fecha < desde; }), dentro = todos.filter(function (a) { return a.fecha >= desde && a.fecha <= hasta; });
   var sIni = saldosCuentas(antes), sMov = saldosCuentas(dentro), sFin = saldosCuentas(antes.concat(dentro));
   var cuentas = Object.keys(CUENTAS).map(function (k) {
     return { cod: k, n: CUENTAS[k].n, t: CUENTAS[k].t, ini: saldoDe(k, sIni[k]), debe: sMov[k].debe, haber: sMov[k].haber, fin: saldoDe(k, sFin[k]), debeArs: sMov[k].debeArs, haberArs: sMov[k].haberArs };
   });
-  var ing = 0, egr = 0, act = 0, pn = 0;
+  var ing = 0, egr = 0, act = 0, pn = 0, pas = 0;
   cuentas.forEach(function (c) {
     var mov = c.t === 'I' ? c.haber - c.debe : c.t === 'E' ? c.debe - c.haber : 0;
     if (c.t === 'I') ing += mov; if (c.t === 'E') egr += mov;
     if (c.t === 'A') act += c.fin;
     if (c.t === 'PN') pn += c.fin;
+    if (c.t === 'P') pas += c.fin;
   });
   var resAcum = 0; cuentas.forEach(function (c) { if (c.t === 'I') resAcum += c.fin; if (c.t === 'E') resAcum -= c.fin; });
   var eIni = estadoGrupo(gid, sumarDias(desde, -1)), eFin = estadoGrupo(gid, hasta);
@@ -311,10 +341,10 @@ function informe(gid, desde, hasta) {
   var tcCierre = hasta >= hoyISO() ? COT.usdOficial : tcDelMes(mesDe(hasta));
   return {
     g: g, desde: desde, hasta: hasta, asientos: dentro, cuentas: cuentas, ingresos: ing, egresos: egr, resultado: ing - egr,
-    activo: act, pnAportes: pn, resultadosAcum: resAcum, eIni: eIni, eFin: eFin, ups: ups,
+    activo: act, pasivo: pas, pnAportes: pn, resultadosAcum: resAcum, eIni: eIni, eFin: eFin, ups: ups,
     aportes: dentro.filter(function (a) { return a.tipo === 'aporte'; }), mora: moraDe(gid, hasta),
     iibb: rentasPeriodo * ALICUOTA_IIBB, rentasPeriodo: rentasPeriodo, tcCierre: tcCierre,
-    cuadra: Math.abs(act - (pn + resAcum)) < 0.01
+    cuadra: Math.abs(act - (pas + pn + resAcum)) < 0.01
   };
 }
 
@@ -348,7 +378,7 @@ var CALENDARIO_FISCAL = [
 /* TIR real de un socio: sus aportes con fecha exacta contra lo que valen hoy sus UP (XIRR anual) */
 function tirSocio(gid, sid, fecha) {
   var hoy = fecha || hoyISO(), e = estadoGrupo(gid, hoy), flujos = [];
-  movsDe(gid).forEach(function (m) { if (m.tipo === 'aporte' && m.socio === sid && m.fecha <= hoy) flujos.push([m.fecha, -m.usd]); });
+  movsDe(gid).forEach(function (m) { if (m.socio === sid && m.fecha <= hoy) { if (m.tipo === 'aporte') flujos.push([m.fecha, -m.usd]); if (m.tipo === 'ventaSocio') flujos.push([m.fecha, m.parte]); } });
   if (flujos.length < 2) return NaN;
   flujos.push([hoy, (e.upSocio[sid] || 0) * e.vup]);
   var t0 = flujos[0][0];
@@ -361,13 +391,15 @@ function tirSocio(gid, sid, fecha) {
 
 /* Mi capital mes a mes contra la referencia: los mismos aportes, en las mismas fechas, en un plazo fijo al 6% anual */
 var REFERENCIA_ANUAL = 0.06;
+/* lo que un socio ya recibió en especie (el inmueble que compró, por la parte que era suya) */
+function especieDe(gid, sid, f) { return movsDe(gid).reduce(function (t, m) { return t + (m.tipo === 'ventaSocio' && m.socio === sid && m.fecha <= f ? m.parte : 0); }, 0); }
 function capitalComparado(gid, sid) {
   var g = grupo(gid), ci = cicloInfo(g), hoy = hoyISO(), aportes = movsDe(gid).filter(function (m) { return m.tipo === 'aporte' && m.socio === sid; }), filas = [], k;
   for (k = 0; k < ci.mesN; k++) {
     var mes = mesDe(sumarMeses(g.inicio, k)), f = k === ci.mesN - 1 ? hoy : finDeMes(mes), e = estadoGrupo(gid, f), ap = 0, ref = 0;
     var pf = 0, tpf = tasaPlazoFijoUsd();
     aportes.forEach(function (m) { if (m.fecha <= f) { ap += m.usd; ref += m.usd * Math.pow(1 + REFERENCIA_ANUAL, diasEntre(m.fecha, f) / 365); pf += m.usd * Math.pow(1 + tpf, diasEntre(m.fecha, f) / 365); } });
-    filas.push({ n: k + 1, mes: mes, fecha: f, aportado: ap, capital: (e.upSocio[sid] || 0) * e.vup, ref: ref, pf: pf, tir: tirSocio(gid, sid, f), ciclo: Math.ceil((k + 1) / g.ciclo), cierraCiclo: (k + 1) % g.ciclo === 0 || k === ci.mesN - 1 });
+    filas.push({ n: k + 1, mes: mes, fecha: f, aportado: ap, capital: (e.upSocio[sid] || 0) * e.vup + especieDe(gid, sid, f), ref: ref, pf: pf, tir: tirSocio(gid, sid, f), ciclo: Math.ceil((k + 1) / g.ciclo), cierraCiclo: (k + 1) % g.ciclo === 0 || k === ci.mesN - 1 });
   }
   estadoGrupo(gid);
   return filas;

@@ -1,6 +1,6 @@
 /* B&D · funciona sin internet: primero la red, y si no hay, la última copia guardada.
    Las cotizaciones y tasas (otros dominios) no se guardan acá: la app ya guarda los últimos valores. */
-var CACHE = 'bd-0.2.2';
+var CACHE = 'bd-0.2.4';
 self.addEventListener('install', function (e) { self.skipWaiting(); });
 self.addEventListener('activate', function (e) {
   e.waitUntil(caches.keys().then(function (ks) { return Promise.all(ks.filter(function (k) { return k !== CACHE; }).map(function (k) { return caches.delete(k); })); }).then(function () { return self.clients.claim(); }));
@@ -16,7 +16,7 @@ self.addEventListener('fetch', function (e) {
 /* avisos con la app cerrada (fase 2: el servidor de avisos, Firebase Cloud Messaging, los manda acá) */
 self.addEventListener('push', function (e) {
   var d = {}; try { d = e.data ? e.data.json() : {}; } catch (x) { d = { titulo: e.data ? e.data.text() : 'B&D' }; }
-  e.waitUntil(self.registration.showNotification('B&D · ' + (d.titulo || 'Aviso'), { body: d.texto || 'Abrí la app para ver el detalle.', icon: 'icono.svg', badge: 'icono.svg', tag: d.tag || 'bd-aviso', renotify: true, silent: false, vibrate: [200, 100, 200], data: { ir: d.ir || './#/inicio' } }));
+  e.waitUntil(self.registration.showNotification('B&D · ' + (d.titulo || 'Aviso'), { body: d.texto || 'Abrí la app para ver el detalle.', icon: 'icono-192.png', badge: 'icono-192.png', tag: d.tag || 'bd-aviso', renotify: true, silent: false, vibrate: [200, 100, 200], data: { ir: d.ir || './#/inicio' } }));
 });
 self.addEventListener('notificationclick', function (e) {
   e.notification.close();

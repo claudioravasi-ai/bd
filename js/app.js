@@ -15,6 +15,8 @@ var ICONOS = {
   ayuda: '<circle cx="12" cy="12" r="9.5"/><path d="M9.5 9.5a2.5 2.5 0 1 1 3.6 2.2c-.8.4-1.1 1-1.1 1.8M12 17h.01"/>',
   mas: '<circle cx="5" cy="12" r="1.6"/><circle cx="12" cy="12" r="1.6"/><circle cx="19" cy="12" r="1.6"/>',
   inversiones: '<path d="M12 3v9l7.5 4.5"/><circle cx="12" cy="12" r="9.5"/>',
+  estadisticas: '<path d="M4 20V10M10 20V4M16 20v-7M22 20H2"/>',
+  meta: '<path d="M12 21V11"/><path d="M12 11c0-4 3-7 8-7 0 5-3 8-8 7zM12 14c0-3-2.5-5.5-7-5.5 0 4 2.5 6 7 5.5z"/>',
   contratos: '<path d="M6 3h9l4 4v14H6z"/><path d="M15 3v4h4M9 12h7M9 15h4"/><path d="M13 19l2-2 3 3"/>',
   campana: '<path d="M6 16V11a6 6 0 1 1 12 0v5l1.5 2h-15z"/><path d="M10 20a2 2 0 0 0 4 0"/>',
   chat: '<path d="M4 5h16v11H9l-5 4z"/><path d="M8 10h8M8 13h5"/>',
@@ -25,9 +27,9 @@ var ICONOS = {
 };
 function icono(n) { return '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">' + ICONOS[n] + '</svg>'; }
 
-var MENU = [['inicio', 'Inicio'], ['inversiones', 'Mis inversiones'], ['pagar', 'Pagar'], ['chat', 'Chat de socios'], ['mercado', 'Mercado'], ['oportunidades', 'Oportunidades'], ['impuestos', 'Mi carpeta impositiva'], ['resumen', 'Resumen semanal'], ['carpeta', 'Carpeta contable'], ['contratos', 'Contratos y firmas'], ['grupos', 'Fideicomisos griegos'], ['vitrina', 'Vitrina'], ['votos', 'Votaciones'], ['socios', 'Socios'], ['perfil', 'Mis datos'], ['ayuda', 'Cómo se usa']];
+var MENU = [['inicio', 'Inicio'], ['inversiones', 'Mis inversiones'], ['meta', 'Mi meta de ingresos'], ['estadisticas', 'Estadísticas'], ['pagar', 'Pagar'], ['chat', 'Chat de socios'], ['mercado', 'Mercado'], ['oportunidades', 'Oportunidades'], ['impuestos', 'Mi carpeta impositiva'], ['resumen', 'Resumen semanal'], ['carpeta', 'Carpeta contable'], ['contratos', 'Contratos y firmas'], ['grupos', 'Fideicomisos griegos'], ['vitrina', 'Vitrina'], ['votos', 'Votaciones'], ['socios', 'Socios'], ['perfil', 'Mis datos'], ['ayuda', 'Cómo se usa']];
 var MENU_ABAJO = [['inicio', 'Inicio'], ['inversiones', 'Inversiones'], ['pagar', 'Pagar'], ['chat', 'Chat'], ['mas', 'Más']];
-var MENU_OBSERVADOR = [['vitrina', 'Vitrina de fideicomisos'], ['ayuda', 'Cómo se usa'], ['perfil', 'Mis datos']];
+var MENU_OBSERVADOR = [['vitrina', 'Vitrina de fideicomisos'], ['meta', 'Mi meta de ingresos'], ['ayuda', 'Cómo se usa'], ['perfil', 'Mis datos']];
 
 function yo() { return SES.uid ? usuario(SES.uid) : null; }
 /* cada socio ve solo sus fideicomisos; el socio fundador puede entrar a todos */
@@ -98,13 +100,15 @@ function avisosDe(u) {
     if (ci.faltan <= 1) out.push({ nivel: 'oro', titulo: 'Antes del primer aporte del ciclo ' + (ci.ciclo + 1) + ': ¿dónde se invierte?', texto: 'Para no perder ni un día de inversión, la Asamblea decide la cartera del ciclo que viene antes del día 1. Si no se vota, rige la política vigente.', ir: '#/mercado' });
   });
   avisosGrupos(u).forEach(function (a) { out.push(a); });
+  avisosDeudas(u).forEach(function (a) { out.push(a); });
+  avisosInquilinos(u).forEach(function (a) { out.push(a); });
   gruposDe(u.id).forEach(function (g) {
     if (g.estado !== 'activo' || !D.oportunidades) return;
     excelentesNuevas(u, g).forEach(function (x) { out.push({ nivel: 'oro', titulo: '🚨 ¡Excelente oportunidad! ' + x.o.titulo, texto: num(x.o.m2) + ' m² en ' + x.o.ciudad + ' por ' + usd(x.ev.precio) + ': ' + pct(Math.max(0, x.ev.desc), 0) + ' debajo del valor de la zona, TIR estimada ' + pct(x.ev.tir) + '.', ir: '#/oportunidades?ver=' + x.o.id }); });
   });
   D.votaciones.forEach(function (v) {
     var g = grupo(v.g); if (!g || g.socios.indexOf(u.id) < 0) return;
-    if (hoyISO() <= v.cierra && !v.votos[u.id]) out.push({ nivel: 'azul', titulo: 'Votación abierta: ' + v.titulo, texto: 'Cierra el ' + fechaCorta(v.cierra) + '. Hace falta ' + requeridos(v.materia, g.N) + ' de ' + g.N + '.', ir: '#/votos' });
+    if (hoyISO() <= v.cierra && !v.ejecutada && !v.votos[u.id] && !excluidoDe(v, u.id)) out.push({ nivel: 'azul', titulo: 'Votación abierta: ' + v.titulo, texto: 'Cierra el ' + fechaCorta(v.cierra) + '. Hace falta ' + requeridosVoto(v, g) + ' de ' + baseVoto(v, g) + '.' + (argumentosDe(v).length ? ' Hay ' + argumentosDe(v).length + ' argumento(s) en el debate.' : ''), ir: '#/votos' });
   });
   return out;
 }
@@ -113,7 +117,7 @@ function avisarEnTelefono(u) {
   var hoy = hoyISO(); if (leer('bd.ultimoAviso', '') === hoy) return;
   var a = avisosDe(u).filter(function (x) { return x.periodo; })[0];
   if (!a) return;
-  try { new Notification('B&D · ' + a.titulo, { body: 'Abrí la app para ver el detalle y pagar.', icon: 'icono.svg', tag: 'bd-aporte' }); guardar('bd.ultimoAviso', hoy); } catch (e) {}
+  try { new Notification('B&D · ' + a.titulo, { body: 'Abrí la app para ver el detalle y pagar.', icon: 'icono-192.png', tag: 'bd-aporte' }); guardar('bd.ultimoAviso', hoy); } catch (e) {}
 }
 /* recordatorio mensual para el calendario del teléfono (.ics): del 1 al 10 de cada mes */
 function calendarioAportes(g) {
@@ -255,11 +259,11 @@ function render() {
   }
   var v = r.partes[0] || 'inicio';
   if (!VISTAS[v]) v = 'inicio';
-  if (u.rol === 'observador' && ['vitrina', 'ayuda', 'perfil'].indexOf(v) < 0) v = 'vitrina';
+  if (u.rol === 'observador' && ['vitrina', 'ayuda', 'perfil', 'meta'].indexOf(v) < 0) v = 'vitrina';
   raiz.className = 'marco con-menu' + (PREF.menuFijo === false ? ' menu-oculto' : '') + (u.rol === 'observador' ? ' solo-mirar' : '');
   var nuevos = avisosNuevos(u), nAvisos = nuevos.length;
   raiz.innerHTML = menuLateral(v) +
-    '<main id="principal" tabindex="-1"><div class="fila entre no-imprimir barra-arriba" style="margin-bottom:14px">' +
+    '<main id="principal" tabindex="-1" data-seccion="' + v + '"><div class="fila entre no-imprimir barra-arriba" style="margin-bottom:14px">' +
     '<div class="fila" style="gap:8px"><button class="btn btn-chico hamburguesa" id="btnMenu" aria-label="Menú" aria-expanded="false" aria-controls="menuLateral"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M4 6h16M4 12h16M4 18h16"/></svg></button>' + (st.n > 0 ? '<button class="btn btn-chico" id="btnVolver" aria-label="Volver a la pantalla anterior, donde estabas">← Volver</button>' : '') + (u.rol === 'observador' ? '<span class="chip azul">Solo mirar</span>' : selectorGrupo()) + '</div>' +
     '<button class="btn btn-chico' + (nAvisos ? ' campana-viva' : '') + '" id="btnAvisos" aria-label="Avisos: ' + nAvisos + ' sin leer">' + icono('campana').replace('<svg', '<svg width="20" height="20"') + (nAvisos ? '<span class="chip ' + (nuevos.some(function (a) { return a.nivel === 'mal'; }) ? 'mal' : 'oro') + '" style="padding:0 8px">' + nAvisos + '</span>' : '') + '</button></div>' +
     VISTAS[v](u, r) + '</main>' + menuAbajo(v) + '<div class="velo-menu" id="veloMenu" hidden></div>';
@@ -275,7 +279,7 @@ function menuLateral(v) {
   var fijo = PREF.menuFijo !== false;
   return '<nav class="menu-lateral" id="menuLateral" aria-label="Menú principal"><div class="fila entre" style="flex-wrap:nowrap"><a class="marca" href="#/inicio">' + svgLogo() + '<span><b>B&amp;D</b><small>Building Dreams</small></span></a>' +
     '<button class="btn-texto chico fijar-menu" id="btnFijar" aria-pressed="' + fijo + '" title="' + (fijo ? 'Ocultar el menú solo (se abre con ☰)' : 'Dejar el menú siempre a la vista') + '">' + (fijo ? '📌 Fijo' : '📌 Fijar') + '</button></div>' +
-    '<div class="menu-items">' + menuDe(yo()).map(function (m) { return '<a href="#/' + m[0] + '"' + (m[0] === v ? ' aria-current="page"' : '') + '>' + icono(m[0]) + m[1] + '</a>'; }).join('') + '</div>' +
+    '<div class="menu-items">' + menuDe(yo()).map(function (m) { return '<a data-m="' + m[0] + '" href="#/' + m[0] + '"' + (m[0] === v ? ' aria-current="page"' : '') + '>' + icono(m[0]) + m[1] + '</a>'; }).join('') + '</div>' +
     '<div class="pie-menu">Versión ' + VERSION_APP + ' · modo prueba<br>' + esc(yo().nombre) + '</div></nav>';
 }
 /* ☰ abre y cierra el menú; con «Fijar» queda siempre a la vista (en computadora) */
@@ -290,7 +294,7 @@ document.addEventListener('click', function (e) {
   if (e.target.closest('.menu-lateral.abierto a')) setTimeout(function () { alternarMenu(false); }, 0);
 });
 function menuAbajo(v) {
-  var enMas = ['mercado', 'oportunidades', 'impuestos', 'resumen', 'carpeta', 'contratos', 'grupos', 'vitrina', 'votos', 'socios', 'perfil', 'ayuda', 'mas'].indexOf(v) >= 0;
+  var enMas = ['meta', 'estadisticas', 'mercado', 'oportunidades', 'impuestos', 'resumen', 'carpeta', 'contratos', 'grupos', 'vitrina', 'votos', 'socios', 'perfil', 'ayuda', 'mas'].indexOf(v) >= 0;
   if (yo().rol === 'observador') return '';
   return '<nav class="menu-abajo" aria-label="Menú">' + MENU_ABAJO.map(function (m) {
     var act = m[0] === v || (m[0] === 'mas' && enMas);
@@ -338,9 +342,9 @@ function ganchoFrasesGriegas() {
   caja.addEventListener('click', function () { if (quieta) seguir(); else frenar(); });
 }
 function vistaEntrada() {
-  return '<div class="entrada"><div class="entrada-caja entrar">' + svgLogo('logo-grande') +
+  return '<div class="entrada"><div class="entrada-caja entrar">' + svgLogo('logo-completo') +
     '<div class="frases-griegas" id="frasesGr" tabindex="0" role="group" aria-label="Frases en griego. Pasá el mouse, tocá o enfocá para ver la traducción."><p class="fg-griego" id="fgGr" lang="el">' + FRASES_GRIEGAS[0][0] + '</p><p class="fg-trad" id="fgEs" aria-live="polite"></p></div>' +
-    '<h1>B&amp;D <span class="oro">·</span> Building Dreams</h1><p class="gris">Construyendo sueños, un aporte a la vez. Fideicomisos de amigos que compran departamentos, los alquilan y reinvierten.</p>' +
+    '<h1 class="solo-lector">B&amp;D · Building Dreams</h1><p class="gris">Construyendo sueños, un aporte a la vez. Fideicomisos de amigos que compran departamentos, los alquilan y reinvierten.</p>' +
     '<div class="tarjeta dorada" style="text-align:left;margin-top:18px">' +
     '<div class="segmentos" role="group" aria-label="Cómo entrar" style="margin-bottom:14px"><button type="button" aria-pressed="true" data-modo="inv">Tengo una invitación</button><button type="button" aria-pressed="false" data-modo="soc">Ya soy socio</button></div>' +
     '<form id="formEntrada" class="apilar" novalidate>' +
@@ -441,7 +445,7 @@ function vistaInicio(u) {
   if (g.estado !== 'activo') return vistaGrupoConvocando(u, g);
   var e = estadoGrupo(g.id), ci = cicloInfo(g), mesHoy = mesDe(hoyISO()), pagado = pagoDe(g.id, u.id, mesHoy), misUp = e.upSocio[u.id] || 0;
   var mora = moraDe(g.id), miMora = mora.filter(function (m) { return m.socio === u.id; }), pr = proyectar(g), rs = ruedaSola(g), tir = tirSocio(g.id, u.id);
-  var props = D.propiedades.filter(function (p) { return p.g === g.id; }), proyectados = pr.r.purchases.length;
+  var props = propiedadesActivas(g.id), proyectados = pr.r.purchases.length;
   var abiertas = D.votaciones.filter(function (v) { return v.g === g.id && hoyISO() <= v.cierra; });
   var botonPago = miMora.length ? '<a class="btn btn-oro" href="#/pagar?periodo=' + miMora[0].periodo + '">Pagar el aporte vencido de ' + nombreMes(miMora[0].periodo) + '</a>'
     : pagado ? '<span class="chip ok">✓ Aporte de ' + nombreMes(mesHoy) + ' pagado</span><a class="btn btn-chico" href="#/pagar">Adelantar el próximo</a>'
@@ -456,10 +460,11 @@ function vistaInicio(u) {
 
     '<section class="rejilla r4 seccion" aria-label="Números principales">' +
     kpi('Patrimonio del grupo', e.patrimonio, 'usd', 'caja + inversiones + inmuebles') +
-    kpi('Valor de la UP', e.vup, 'usd2', 'empezó en USD 100; lo que pasa de 100 es ganancia') +
+    kpi('Valor de la UP (unidad de participación)', e.vup, 'usd2', 'tu porción del fideicomiso; empezó en USD 100 y lo que pasa de 100 es ganancia') +
     kpiBoton('btnMiParte', 'Mi parte hoy', misUp * e.vup, 'usd', num(misUp, 2) + ' UP · ' + pct(e.up ? misUp / e.up : 0, 2) + ' del grupo · tocá para entenderlo') +
     kpiBoton('btnMiTir', 'Mi rendimiento real (TIR)', null, '', isFinite(tir) ? 'interés anual de mi plata, con alquiler fijo · tocá para ver escenarios' : 'se calcula con más aportes', isFinite(tir) ? pct(tir) : '—') + '</section>' +
 
+    htmlSaldosDeudores(g, u, false) +
     '<section class="rejilla r2 seccion pares">' + tarjetaDepartamentos(g, ci, props, proyectados) + tarjetaRuedaAportes(g, ci) + '</section>' +
     seccionProyeccion(g, ci) +
 
@@ -473,7 +478,7 @@ function tarjetaDepartamentos(g, ci, props, proyectados) {
   return '<div class="tarjeta entrar par"><div class="fila entre"><h3 style="margin:0">Departamentos del fideicomiso</h3><span class="chip oro">' + props.length + ' comprado' + (props.length === 1 ? '' : 's') + '</span></div>' +
     '<p class="gris chico" style="margin:6px 0 0">' + (ci.faltan ? 'La grúa ya levantó ' + ci.enCiclo + ' de ' + g.ciclo + ' tramos del departamento ' + (props.length + 1) + ': uno por mes; en el mes ' + g.ciclo + ' se compra.' : 'Este mes se compra el departamento ' + (props.length + 1) + '.') + ' Tocá un piso para ver el valor del m² hoy.</p>' +
     '<div class="par-visual" id="torreDeptos">' + svgTorre(props.length, 0, props.map(function (p) { return num(p.m2, 1) + ' m² · ' + nombreMesCorto(mesDe(p.fecha)); }), { mes: ci.enCiclo, de: g.ciclo }) + '</div>' +
-    '<div class="par-lista">' + (props.length ? props.map(function (p) { return '<button type="button" class="par-item" data-depto="' + p.id + '"><b>' + esc(p.nombre) + '</b><span>' + num(p.m2, 1) + ' m² · ' + usd(p.precio / p.m2) + '/m² · alquiler ' + usd(p.alquiler || 0) + '</span></button>'; }).join('') : '<p class="chico gris">Todavía no se compró ninguno.</p>') +
+    '<div class="par-lista">' + (props.length ? props.map(function (p) { return '<button type="button" class="par-item" data-depto="' + p.id + '"><b>' + esc(p.nombre) + '</b><span>' + num(p.m2, 1) + ' m² · ' + usd(p.precio / p.m2) + '/m² · alquiler ' + usd(p.alquiler || 0) + ' ' + chipAlquiler(p.id) + '</span></button>'; }).join('') : '<p class="chico gris">Todavía no se compró ninguno.</p>') +
     '<div class="par-item par-futuro"><b>Departamento ' + (props.length + 1) + '</b><span>se compra en ' + nombreMes(mesDe(ci.fechaCompra)) + ' · ' + Math.max(0, proyectados - props.length - 1) + ' más en 10 años</span></div></div>' +
     '<div class="fila par-pie"><button type="button" class="btn btn-chico" id="btnM2">Valor del m² hoy</button></div></div>';
 }
@@ -679,7 +684,7 @@ function vistaCarpeta(u, r) {
     var n = cuenta(p.desde, p.hasta), nombre = tab === 'dias' ? fechaLarga(p.desde) : tab === 'semanas' ? 'Semana del ' + fechaCorta(p.desde) + ' al ' + fechaCorta(p.hasta) : 'Mes de ' + nombreMes(p.mes);
     return '<a class="tarjeta fila entre entrar" style="text-decoration:none;color:inherit;padding:14px 16px" href="#/carpeta/' + p.desde + '/' + p.hasta + '"><span><b>' + nombre + '</b><br><span class="chico gris">' + n + ' asiento' + (n === 1 ? '' : 's') + '</span></span><span class="chip ' + (p.cerrado ? 'ok' : 'oro') + '">' + (p.cerrado ? 'Cerrada sola ✓' : 'En curso') + '</span></a>';
   }).join('');
-  return '<h1>Carpeta contable</h1><p class="gris">Se arma sola, sin cargar nada a mano: cada día, cada semana y cada mes, con libro diario, mayor, balances, registro de UP, aportes y mora, y los impuestos de Ushuaia para el contador.</p>' +
+  return '<h1>Carpeta contable</h1><p class="gris">Se arma sola, sin cargar nada a mano: cada día, cada semana y cada mes, con libro diario, mayor, balances, registro de UP, aportes y mora, y los impuestos de Ushuaia para el contador.</p>' + htmlSaldosDeudores(g, u, true) +
     '<div class="segmentos" role="group" aria-label="Período">' + [['dias', 'Días'], ['semanas', 'Semanas'], ['meses', 'Meses']].map(function (x) { return '<button type="button" data-tabc="' + x[0] + '" aria-pressed="' + (tab === x[0]) + '">' + x[1] + '</button>'; }).join('') + '</div>' +
     '<section class="rejilla r2 seccion">' + (lista || '<p class="gris">Todavía no hay períodos.</p>') + '</section>' +
     (function () {
@@ -707,7 +712,7 @@ function vistaInforme(u, g, desde, hasta) {
     '<tr><td>Patrimonio (USD)</td><td class="n">' + num(inf.eIni.patrimonio, 2) + '</td><td class="n">' + num(inf.eFin.patrimonio, 2) + '</td></tr>' +
     '<tr><td>UP en circulación</td><td class="n">' + num(inf.eIni.up, 4) + '</td><td class="n">' + num(inf.eFin.up, 4) + '</td></tr>' +
     '<tr><td>Valor de la UP (USD)</td><td class="n">' + num(inf.eIni.vup, 4) + '</td><td class="n">' + num(inf.eFin.vup, 4) + '</td></tr></table>' +
-    '<p class="chico" style="margin-top:8px">' + (inf.cuadra ? '✓ El balance cuadra: activo = aportes + resultados acumulados.' : '⚠ El balance no cuadra: revisar.') + '</p>' +
+    '<p class="chico" style="margin-top:8px">' + (inf.cuadra ? '✓ El balance cuadra: activo = deudas + aportes + resultados acumulados.' : '⚠ El balance no cuadra: revisar.') + '</p>' +
     '<h3 style="margin-top:18px">2. Libro diario</h3>' + (filasDiario ? '<div class="tabla-scroll"><table><tr><th class="n">N.º</th><th>Fecha</th><th>Detalle</th><th>Cuentas (Debe / Haber)</th><th class="n">USD</th><th class="n">TC</th><th class="n">ARS</th></tr>' + filasDiario + '<tr class="total"><td colspan="4">Totales del período</td><td class="n">' + num(tot[0], 2) + '</td><td></td><td class="n">' + num(tot[1]) + '</td></tr></table></div>' : '<p class="gris">Sin movimientos en el período.</p>') +
     '<h3 style="margin-top:18px">3. Sumas y saldos (mayor)</h3><div class="tabla-scroll"><table><tr><th>Cuenta</th><th class="n">Saldo inicial</th><th class="n">Debe</th><th class="n">Haber</th><th class="n">Saldo final USD</th><th class="n">Saldo final ARS*</th></tr>' +
     inf.cuentas.map(function (c) { return '<tr><td><span class="mono">' + c.cod + '</span> ' + c.n + '</td><td class="n">' + num(c.ini, 2) + '</td><td class="n">' + num(c.debe, 2) + '</td><td class="n">' + num(c.haber, 2) + '</td><td class="n">' + num(c.fin, 2) + '</td><td class="n">' + num(c.fin * inf.tcCierre) + '</td></tr>'; }).join('') + '</table></div>' +
@@ -715,7 +720,7 @@ function vistaInforme(u, g, desde, hasta) {
     '<h3 style="margin-top:18px">4. Resultados del período</h3><table>' + inf.cuentas.filter(function (c) { return c.t === 'I' || c.t === 'E'; }).map(function (c) { var v = c.t === 'I' ? c.haber - c.debe : -(c.debe - c.haber); return '<tr><td>' + c.n + '</td><td class="n">' + num(v, 2) + '</td></tr>'; }).join('') +
     '<tr class="total"><td>Resultado del período (USD)</td><td class="n">' + num(inf.resultado, 2) + '</td></tr></table>' +
     '<h3 style="margin-top:18px">5. Situación patrimonial al cierre</h3><table>' + inf.cuentas.filter(function (c) { return c.t === 'A'; }).map(function (c) { return '<tr><td>' + c.n + '</td><td class="n">' + num(c.fin, 2) + '</td></tr>'; }).join('') +
-    '<tr class="total"><td>Total del activo</td><td class="n">' + num(inf.activo, 2) + '</td></tr><tr><td>Aportes de los fiduciantes</td><td class="n">' + num(inf.pnAportes, 2) + '</td></tr><tr><td>Resultados acumulados</td><td class="n">' + num(inf.resultadosAcum, 2) + '</td></tr>' +
+    '<tr class="total"><td>Total del activo</td><td class="n">' + num(inf.activo, 2) + '</td></tr>' + (inf.pasivo ? '<tr><td>Deudas (saldo de precio con vendedores)</td><td class="n">' + num(inf.pasivo, 2) + '</td></tr>' : '') + '<tr><td>Aportes de los fiduciantes</td><td class="n">' + num(inf.pnAportes, 2) + '</td></tr><tr><td>Resultados acumulados</td><td class="n">' + num(inf.resultadosAcum, 2) + '</td></tr>' +
     '<tr class="total"><td>Patrimonio fiduciario</td><td class="n">' + num(inf.pnAportes + inf.resultadosAcum, 2) + '</td></tr></table>' +
     '<h3 style="margin-top:18px" class="salto">6. Registro de unidades de participación</h3><div class="tabla-scroll"><table><tr><th>Fiduciante</th><th class="n">UP inicio</th><th class="n">Emitidas</th><th class="n">UP cierre</th><th class="n">Participación</th><th class="n">Valor USD</th><th class="n">Aportado</th><th class="n">Deuda en mora</th><th class="n">Parte neta</th></tr>' +
     inf.ups.map(function (x) { var dd = deudaDe(g.id, x.socio, inf.hasta).total; return '<tr><td>' + esc(x.nombre) + '</td><td class="n">' + num(x.upIni, 4) + '</td><td class="n">' + num(x.upEmit, 4) + '</td><td class="n">' + num(x.upFin, 4) + '</td><td class="n">' + pct(x.part, 2) + '</td><td class="n">' + num(x.valor, 2) + '</td><td class="n">' + num(x.aportado) + '</td><td class="n">' + (dd ? num(dd, 2) : '—') + '</td><td class="n">' + num(x.valor - dd, 2) + '</td></tr>'; }).join('') + '</table></div>' +
@@ -827,20 +832,23 @@ var QUE_ES = {
 };
 function vistaVotos(u) {
   var g = grupoActual(); if (!g) return '<h1>Votaciones</h1><p class="gris">Sin fideicomiso.</p>';
-  var vs = D.votaciones.filter(function (v) { return v.g === g.id; }).sort(function (a, b) { return a.abre < b.abre ? 1 : -1; });
-  return '<div class="fila entre"><div><h1>Votaciones</h1><p class="gris" style="margin:0">Un socio, un voto. Las mayorías se cuentan sobre los ' + g.N + ' socios, no sobre los presentes.</p></div><button class="btn btn-oro" id="btnNuevaVot">Nueva propuesta</button></div>' +
+  var vs = D.votaciones.filter(function (v) { return v.g === g.id; }).sort(function (a, b) { return a.abre < b.abre ? 1 : a.abre > b.abre ? -1 : (a.id < b.id ? 1 : -1); });
+  var hayDeptos = g.estado === 'activo' && propiedadesActivas(g.id).length > 0;
+  return '<div class="fila entre"><div><h1>Votaciones</h1><p class="gris" style="margin:0">Un socio, un voto. Las mayorías se cuentan sobre los ' + g.N + ' socios, no sobre los presentes.</p></div><div class="fila"><button class="btn btn-oro" id="btnNuevaVot">Nueva propuesta</button>' + (hayDeptos && u.rol !== 'observador' ? '<button class="btn" id="btnQuedarme">Quedarme con un departamento</button>' : '') + '</div></div>' +
     '<section class="apilar seccion">' + vs.map(function (v) {
-      var req = requeridos(v.materia, g.N), si = 0, no = 0, ab = 0, abierta = hoyISO() <= v.cierra;
-      Object.keys(v.votos).forEach(function (k) { if (v.votos[k] === 'si') si++; else if (v.votos[k] === 'no') no++; else ab++; });
-      var res = si >= req ? 'Aprobada' : abierta ? (g.N - no - ab < req ? 'Ya no alcanza la mayoría' : 'Abierta') : 'No aprobada';
-      var mio = v.votos[u.id], susp = deudaDe(g.id, u.id).suspendido, puede = abierta && g.socios.indexOf(u.id) >= 0 && !susp;
-      return '<div class="tarjeta entrar' + (abierta ? ' dorada' : '') + '"><div class="fila entre"><div><p class="etiqueta">' + MATERIAS[v.materia].n + '</p><h3 style="margin:2px 0">' + esc(v.titulo) + '</h3></div><span class="chip ' + (res === 'Aprobada' ? 'ok' : abierta ? 'oro' : 'mal') + '">' + res + '</span></div>' +
-        '<p class="gris chico">' + esc(v.detalle) + '</p>' + (v.cartera ? carteraEnVoto(g, v) : '') + '<p class="chico">Propuso ' + esc(usuario(v.por).nombre) + ' · ' + (abierta ? 'cierra el ' + fechaCorta(v.cierra) : 'cerró el ' + fechaCorta(v.cierra)) + ' · necesita <b>' + req + ' de ' + g.N + '</b></p>' +
-        '<div style="position:relative;margin:10px 0"><div class="barra-cartera" style="height:18px" role="img" aria-label="' + si + ' a favor, ' + no + ' en contra, ' + ab + ' abstenciones, ' + (g.N - si - no - ab) + ' sin votar"><span style="width:' + (si / g.N * 100) + '%;background:var(--verde)"></span><span style="width:' + (no / g.N * 100) + '%;background:var(--rojo)"></span><span style="width:' + (ab / g.N * 100) + '%;background:var(--gris-2)"></span></div>' +
-        '<div style="position:absolute;top:-4px;bottom:-4px;left:' + (req / g.N * 100) + '%;border-left:2px dashed var(--crema)" title="mayoría necesaria"></div></div>' +
-        '<p class="chico">' + si + ' a favor · ' + no + ' en contra · ' + ab + ' abstención · ' + (g.N - si - no - ab) + ' sin votar</p>' +
-        (puede ? '<div class="fila" role="group" aria-label="Tu voto">' + [['si', 'A favor'], ['no', 'En contra'], ['abst', 'Me abstengo']].map(function (x) { return '<button class="btn btn-chico' + (mio === x[0] ? ' btn-oro' : '') + '" data-votar="' + v.id + '" data-voto="' + x[0] + '" aria-pressed="' + (mio === x[0]) + '">' + x[1] + '</button>'; }).join('') + '</div>' + (mio ? '<p class="chico gris">Votaste. Podés cambiar tu voto hasta el cierre.</p>' : '') : (abierta && susp ? '<p class="aviso alerta chico">Tu voto está suspendido por tener un aporte vencido hace más de 30 días (art. 26). Se habilita apenas lo pagues.</p>' : '')) + '</div>';
-    }).join('') + '</section><div class="aviso seccion">La abstención no suma a favor. En empate o sin mayoría, todo sigue como estaba. Quien tiene un interés propio en el tema lo declara y no vota.</div>';
+      var r = resultadoVoto(v, g), req = r.req, base = r.base, abierta = r.abierta, res = r.estado;
+      var mio = v.votos[u.id], susp = deudaDe(g.id, u.id).suspendido, fuera = excluidoDe(v, u.id), puede = abierta && !v.ejecutada && g.socios.indexOf(u.id) >= 0 && !susp && !fuera;
+      var opciones = v.opciones ? v.opciones.map(function (o) { return [o[0], o[1]]; }) : [['si', 'A favor'], ['no', 'En contra'], ['abst', 'Me abstengo']];
+      var si = r.si || 0, no = r.no || 0, ab = r.ab || 0, emit = Object.keys(r.conteo).reduce(function (t, k) { return t + r.conteo[k]; }, 0);
+      var chip = res === 'Aprobada' || res === 'Decidido' ? 'ok' : abierta ? 'oro' : res === 'Sin mayoría' ? '' : 'mal';
+      return '<div class="tarjeta entrar' + (abierta ? ' dorada' : '') + '"><div class="fila entre"><div><p class="etiqueta">' + (v.opciones ? 'Decisión con opciones · ' : '') + MATERIAS[v.materia].n + '</p><h3 style="margin:2px 0">' + esc(v.titulo) + '</h3></div><span class="chip ' + chip + '">' + res + '</span></div>' +
+        '<p class="gris chico">' + esc(v.detalle) + '</p>' + (v.cartera ? carteraEnVoto(g, v) : '') + '<p class="chico">Propuso ' + esc(usuario(v.por).nombre) + ' · ' + (abierta ? 'cierra el ' + fechaCorta(v.cierra) : 'cerró el ' + fechaCorta(v.cierra)) + ' · necesita <b>' + req + ' de ' + base + '</b>' + (base < g.N ? ' (sin el voto de quien tiene interés propio)' : '') + '</p>' +
+        (v.opciones ? '' : '<div style="position:relative;margin:10px 0"><div class="barra-cartera" style="height:18px" role="img" aria-label="' + si + ' a favor, ' + no + ' en contra, ' + ab + ' abstenciones, ' + (base - si - no - ab) + ' sin votar"><span style="width:' + (si / base * 100) + '%;background:var(--verde)"></span><span style="width:' + (no / base * 100) + '%;background:var(--rojo)"></span><span style="width:' + (ab / base * 100) + '%;background:var(--gris-2)"></span></div>' +
+        '<div style="position:absolute;top:-4px;bottom:-4px;left:' + (req / base * 100) + '%;border-left:2px dashed var(--crema)" title="mayoría necesaria"></div></div>' +
+        '<p class="chico">' + si + ' a favor · ' + no + ' en contra · ' + ab + ' abstención · ' + (base - si - no - ab) + ' sin votar</p>') +
+        (v.opciones ? '<p class="chico">' + emit + ' de ' + base + ' ya votaron</p>' : '') + extraVoto(v, g, u, r) + htmlDebate(v, g, u, abierta && !v.ejecutada) +
+        (puede ? '<input class="motivo-voto" id="mot_' + v.id + '" maxlength="200" placeholder="Por qué votás así (opcional, lo ven los socios)" value="' + esc((v.motivos || {})[u.id] || '') + '" style="margin-top:10px"><div class="fila" role="group" aria-label="Tu voto" style="margin-top:8px">' + opciones.map(function (x) { return '<button class="btn btn-chico' + (mio === x[0] ? ' btn-oro' : '') + '" data-votar="' + v.id + '" data-voto="' + x[0] + '" aria-pressed="' + (mio === x[0]) + '">' + esc(v.opciones ? x[1].split(' (')[0] : x[1]) + '</button>'; }).join('') + '</div>' + (mio ? '<p class="chico gris">Votaste. Podés cambiar tu voto hasta el cierre.</p>' : '') : (abierta && susp && !fuera ? '<p class="aviso alerta chico">Tu voto está suspendido por tener un aporte vencido hace más de 30 días (art. 26). Se habilita apenas lo pagues.</p>' : '')) + '</div>';
+    }).join('') + '</section><div class="aviso seccion">La abstención no suma a favor. En empate o sin mayoría, todo sigue como estaba. Quien tiene un interés propio en el tema lo declara y no vota: la mayoría se cuenta sin él. Un socio puede pedir quedarse con un departamento por su tasación: vota la Asamblea con mayoría calificada y después se decide qué hacer con la plata.</div>';
 }
 function nuevaVotacion(u) {
   var g = grupoActual();
@@ -907,54 +915,24 @@ function vistaPerfil(u) {
     '<p class="chico gris">El DNI, el CUIT y la condición fiscal se cambian pidiéndoselo al fiduciario, con constancia.</p><button class="btn btn-oro">Guardar cambios</button></form>' +
     '<div class="apilar"><div class="tarjeta"><h3>Tus derechos sobre tus datos</h3><p class="chico gris">Ley 25.326: acceso, corrección, actualización y baja. Respuesta en 10 días hábiles. Autoridad de control: AAIP.</p><div class="fila"><button class="btn btn-chico" id="btnMisDatos">Descargar mis datos</button><button class="btn btn-chico" id="btnBaja">Pedir la baja de mis datos</button></div></div>' +
     '<div class="tarjeta"><h3>Seguridad de la cuenta</h3><p class="chico gris">' + (u.totp ? '<span class="chip ok">Google Authenticator activado ✓</span> Para entrar hacen falta tu clave y el código del teléfono.' : 'Sumá un segundo factor: además de la clave, un código de 6 números de Google Authenticator.') + '</p>' + (u.totp || u.rol === 'observador' ? '' : '<button class="btn btn-oro btn-chico" id="btnTotp">Activar Google Authenticator</button>') + '</div>' +
-    (u.rol === 'observador' ? '' : tarjetaNtfy(u)) +
+    (u.rol === 'observador' ? '' : tarjetaNtfy(u) + tarjetaCanales(u)) +
     '<div class="tarjeta"><h3>Avisos y resumen</h3><label class="casilla"><input type="checkbox" id="chkSon"' + (PREF.sinSonido ? '' : ' checked') + '><span>Sonido de campanita con cada aviso nuevo</span></label><label class="casilla" style="margin-top:10px"><input type="checkbox" id="chkResumen"' + (u.sinResumen ? '' : ' checked') + '><span>Recibir el resumen semanal en PDF a ' + esc(u.email) + '</span></label></div>' +
     '<div class="tarjeta"><h3>Accesibilidad</h3><label class="casilla"><input type="checkbox" id="chkLetra"' + (PREF.letraGrande ? ' checked' : '') + '><span>Letra más grande</span></label><label class="casilla" style="margin-top:10px"><input type="checkbox" id="chkMov"' + (PREF.sinMovimiento ? ' checked' : '') + '><span>Sin animaciones (la cinta de cotizaciones queda quieta)</span></label></div>' +
     '<div class="tarjeta"><h3>Sesión</h3><div class="fila"><button class="btn btn-chico" id="btnSalir">Cerrar sesión</button><button class="btn btn-chico" id="btnReiniciar">Volver a los datos de prueba</button></div></div></div></section>';
 }
 
-/* =================== AYUDA =================== */
-function vistaAyuda() {
-  var sec = [
-    ['Qué es B&D', 'Un fideicomiso de amigos. Cada uno de los 10 socios aporta USD 500 por mes (USD 5.000 el grupo). Cada 10 meses, sin excepción, se compra un departamento de 24 m² o más (el grupo fijó USD 2.000 el m²: 24 m² cuestan USD 48.000 más 5% de gastos, USD 50.400). Se alquila a valor de mercado (unos USD 300 por mes por 25 m²) y la renta y el interés se reinvierten. Desde la segunda compra, los alquileres se suman a los aportes y el crecimiento es compuesto.'],
-    ['Demo con cuatro celulares', 'En demo.html (en la misma dirección de la app, terminada en /demo.html) se ven cuatro celulares a la vez, cada uno con su perfil: el socio fundador, una socia de Alfa, una persona invitada a otro fideicomiso que se está dando de alta y alguien que solo mira la vitrina. Cada celular se usa como un teléfono y tiene su botón para volver a empezar. Es para mostrar la app en una reunión.'],
-    ['Entrar a la app', 'Nadie entra con un botón. El socio fundador crea su cuenta una sola vez con nombre, CUIL (se controla el dígito verificador), correo, clave de al menos 10 caracteres y el código de Google Authenticator: la app muestra un código QR, se escanea con Google Authenticator y se escribe el código de 6 números que aparece. Apenas queda creada, el recuadro «¿Sos el socio fundador?» desaparece de la entrada y esa pantalla se cierra para siempre. Después, para entrar hacen falta correo, clave y el código del teléfono, que cambia cada 30 segundos. Los socios entran con la invitación que les manda el fundador (código de 6 letras, vence a los 7 días) y pueden activar Google Authenticator en Mis datos. Quien recibe un pase «solo mirar» elige una clave y entra a la vitrina. En la entrada pasan frases de aliento en griego; al pasar el mouse, tocarlas o enfocarlas se frenan y abajo aparece la traducción.'],
-    ['Volver y Atrás', 'Arriba a la izquierda de cada pantalla está «← Volver»: te lleva a la pantalla anterior justo donde estabas. Cada ventana que se abre encima tiene «← Atrás»: vuelve a la ventana anterior (por ejemplo, del simulador de carteras a las inversiones de hoy) o la cierra si era la primera. La ✕ cierra todas.'],
-    ['El menú', 'El botón ☰ abre el menú. En la computadora podés dejarlo fijo a la vista con «📌 Fijo», o tocar «📌 Fijar» para que se oculte solo y se abra con ☰. Si la pantalla es baja, el menú se desplaza: siempre se ven todas las opciones.'],
-    ['Pagar el aporte', 'Menú Pagar. Se paga del 1 al 10 de cada mes, en pesos (al dólar oficial vendedor del Banco Nación del día), dólares o euros, con Mercado Pago, tarjeta de crédito (en 1, 3, 6 o 12 cuotas: las financia tu banco y el fideicomiso cobra completo), transferencia o transferencia desde el exterior. La app no guarda el número de la tarjeta: solo la marca y los últimos 4 números en el recibo. Cada pago compra UP al valor del día y genera su recibo.'],
-    ['Si me atraso', 'Desde el día 11 a las 0 h la mora es automática: corre un interés de 12% anual en dólares, segundo a segundo (unos USD 0,16 por día por cada aporte), y se ve en rojo, titilando. Mientras no pagues, lo que debés se descuenta de tu parte en las ganancias (art. 25) y, cuando pagás, tus USD 500 compran UP al valor de ese día, que ya subió: recibís menos UP. A los 30 días se suspenden tu voto y tu parte de los alquileres e intereses (art. 26). Con más de 90 días la Carta prevé la exclusión con aviso y defensa. Opciones: pagar todo junto, tarjeta en cuotas, pagar vencido y mes juntos, compensación con tu parte de las ganancias o un plan especial aprobado por la Asamblea (6 de 10).'],
-    ['Unidades de participación (UP)', 'El patrimonio (caja + inversiones + inmuebles) dividido por las UP da el valor de cada UP. Empezó en USD 100 y cambia todos los días con las ganancias y los gastos. El aporte fijo es de USD 500 por mes; lo que cambia es cuántas UP compra. Así, quien paga tarde o entra después compra al valor indexado por las ganancias del grupo y no se lleva lo que ganaron los demás. Tu parte es tus UP por ese valor. No es 10% justo si alguien no pagó el mes o pagó tarde: tocá «Mi parte hoy» en Inicio para verlo explicado.'],
-    ['Inicio', 'Arriba: el fideicomiso (10 socios · USD 500 por mes · 10 meses · building dreams). Tocando el reloj del ciclo se abren las inversiones de hoy, en vivo. Debajo, dos tarjetas parejas: los departamentos (la torre crece con cada compra; tocá un piso para ver el valor del m² hoy en Buenos Aires, Ushuaia, Córdoba, Rosario y Europa, de mayor a menor) y la rueda de aportes del ciclo (cada porción un socio, cada anillo un mes; «Ver como tabla» abre la tabla). Al final, la proyección a 10 años.'],
-    ['Inversiones de hoy, en vivo', 'Muestra dónde está invertida la espera (cuenta remunerada, fondo de dinero en dólares, letras del Tesoro de EE. UU., obligaciones negociables), cuánto rinde cada parte por año y por día, cuánto vale en este segundo, cuánto habría si la sacáramos hoy (descontado lo que cuesta vender cada instrumento) y cuándo se invirtió. Se ve el total o tu parte, con los descuentos si estás atrasado. «Simular otra cartera» compara carteras modelo o una armada por vos (con los topes del contrato) y la podés proponer a votación.'],
-    ['Proyección compuesta', 'Cuatro maneras de comprar comparadas con la meta del 6% y un plazo fijo en dólares: la regla del contrato (24 m² cada 10 meses, alquiler fijo), la misma con alquiler temporario, y para comparar, comprar apenas alcanza y comprar más grande (40 m²). Con las solapas elegís el escenario (pesimista, básico, optimista) y si ves solo la ganancia (las curvas se separan) o el valor total. Al deslizar el dedo se ve, mes por mes, de dónde sale el valor: aportado + interés + alquileres + suba del m² − gastos de compra − costo de vender, y la TIR hasta ese mes. «Convenceme» muestra por qué comprar le gana al plazo fijo y las palancas para ganar más (temporario, comprar por debajo del valor y arreglar, subir el aporte, revender).'],
-    ['La TIR', 'Es el interés anual compuesto en dólares que ganó tu plata, contando el día exacto de cada aporte: si es 6%, es como si cada dólar hubiera estado a 6% anual desde el día que lo pusiste. El primer año da menos porque la plata espera la compra en instrumentos de bajo riesgo (hoy alrededor de 3,8%) y al comprar se paga 5% de gastos; con los alquileres y la suba del m² sube en los años siguientes. Ninguna inversión de bajo riesgo asegura 6% desde el primer mes; un plazo fijo en dólares paga alrededor de 1,5%. Tocá «Mi rendimiento real» para ver la TIR proyectada por escenario, con alquiler fijo y temporario.'],
-    ['Mis inversiones', 'Dos maneras de medir: «Cómo le va al fideicomiso» es lo que subió la UP desde USD 100 (igual para todos, mide la gestión) con su gráfico mes a mes; «Cómo le va a mi plata» es tu TIR, que depende de cuándo pagaste cada aporte. Además: cuánto aportaste, cuánto vale tu parte, tu ganancia contra la meta del 6% y un plazo fijo en dólares (el gráfico muestra solo la ganancia para que las líneas no se tapen), la tabla mes a mes o cada 10 meses (la diferencia es en dólares), en qué está invertido el fideicomiso (suma 100%), tus escenarios a 10 años y los hitos con los gastos de compra y venta a la vista.'],
-    ['Inversión de espera', 'El día 11 de cada mes lo cobrado se invierte con la política vigente: ningún aporte queda quieto. En el mes 10 se rescata todo para comprar. Antes del primer aporte del ciclo siguiente la campanita pide decidir la cartera del ciclo; si no se vota, sigue la vigente. En Mercado está el radar del día y por qué no todo va a lo que más rinde (la reserva tiene que estar disponible y el contrato pone tope de 30% por instrumento).'],
-    ['Oportunidades', 'Todos los días el radar recorre portales con acceso permitido, remates judiciales y bancarios, y páginas que se vigilan por cambios, en la Argentina y en el exterior. Saca los repetidos y anota si un precio bajó. Cada publicación se mide con las reglas del fideicomiso y recibe un puntaje de 0 a 100: cuánto está por debajo del valor de la zona, la renta neta, la TIR estimada a 10 años, si cumple los 24 m², si alcanza la caja del próximo ciclo y sus riesgos (remate, ocupado, deudas, exterior). Si es excelente, llega a la campanita como «🚨 ¡Excelente oportunidad!» y la ventana se abre sola la primera vez que entrás. Ahí está todo: comparación con el mercado, números de la compra, lo que rendiría, si alcanza la caja, historial del precio, riesgos y qué revisar, y el contacto (publicación, WhatsApp, llamada, correo). Desde la ventana se propone la compra a votación (con la mayoría que corresponda), se agenda la visita o tasación y el fiduciario pide la reserva con una seña sujeta a tasación, estudio de títulos y aprobación de la Asamblea. «Cargar una que vi» suma lo que alguien encontró en una red social, un cartel o un diario (las redes no se recorren solas porque sus reglas lo prohíben). «Qué buscar» cambia los m² mínimos, el precio máximo, el descuento y el puntaje para excelente. Modo prueba: publicaciones de ejemplo con contactos inventados; la búsqueda real la hace el servidor (servidor/radar-oportunidades.gs).'],
-    ['Votaciones', 'Un socio, un voto. Ordinarias 6 de 10; comprar o cambiar la inversión de espera 7 de 10; vender, gravar o endeudarse 8 de 10; cambiar aporte, ciclo o contrato, unanimidad. Una propuesta de inversión muestra su rendimiento con las tasas del día, cuánto daría por mes contra la vigente y qué quiere decir cada parte.'],
-    ['Avisos', 'La campanita muestra los avisos nuevos con un número y suena un «din-don» cuando llega uno (se puede apagar en Mis datos). Al abrirlos se borran; los pagos que siguen pendientes vuelven a avisar al día siguiente. Para que el teléfono suene con la app cerrada: en Mis datos → «Avisos con la app cerrada» se crea un canal secreto y se escucha con la app gratuita ntfy (se escanea el código o se escribe el canal); el botón «Mandarme un aviso de prueba» lo comprueba. Los avisos por ntfy no llevan nombres ni montos. El envío diario lo hace el servidor (servidor/avisos-ntfy.gs).'],
-    ['Chat de socios', 'Cada fideicomiso tiene su chat: el del grupo y uno privado con cada socio. Solo entran sus socios. La app trae los últimos 30 mensajes de cada conversación (y los anteriores si los pedís), para que ande rápida. Con «📊 Encuesta» se pregunta algo con 2 a 5 opciones y cada uno vota con un toque (se puede cambiar el voto); es informal. Quien la creó o el socio fundador la puede pasar a votación formal, con la mayoría y el plazo que corresponden. No mandes datos bancarios ni claves.'],
-    ['Mi carpeta impositiva', 'Según tu situación (monotributo, responsable inscripto, Ganancias inscripto o no) la app arma tus obligaciones del año, tus aportes mes a mes con el dólar del Banco Nación y su equivalente en pesos, tu participación al 31 de diciembre (para Bienes personales) y tu parte del resultado (para Ganancias). Se imprime en PDF, se baja en planilla y se manda a tu contador. No reemplaza al contador.'],
-    ['Resumen semanal', 'Cada lunes, un PDF con tu parte, cómo cambió en la semana, tus aportes, dónde está la plata, los departamentos y lo que hay que votar. En la app se ve y se guarda en PDF; el envío automático por correo lo hace el servidor (fase 2). Se desactiva en Mis datos.'],
-    ['Contratos y firmas', 'Regla de B&D, que la app aplica sola: firma electrónica para votos, actas, la Carta y las adendas; firma digital (firmar.gob.ar) o escribano para el contrato y la adhesión a un fideicomiso. La firma electrónica deja la huella SHA-256 del texto y la cadena de firmas con fecha, hora y CUIT. Un documento puede tener orden de firma: firma de a uno, solo el que le toca; la campanita le avisa y cualquiera puede mandarle un recordatorio. «Auditoría (PDF)» arma la constancia con todo lo que pasó. En los documentos que piden firma digital, cada socio sube su PDF firmado: la app lo valida y lo cuenta solo si el certificado es de un certificador licenciado y el CUIL es el suyo; el fundador puede registrar la certificación del escribano. El contrato queda completo cuando firmaron todos digitalmente o hay certificación.'],
-    ['Validar una firma digital', 'En Contratos → «Subir un PDF firmado digitalmente» la app valida la firma en tu propio teléfono, sin mandar el PDF a ningún lado: que el PDF no cambió desde que se firmó, que la firma corresponde al certificado, que cubre todo el archivo, quién firmó y su CUIL, si el certificado estaba vigente, si el emisor es un certificador licenciado de la Argentina y la cadena de certificados que trae el PDF. Lo único que no puede consultar es si el certificado fue revocado: eso lo muestran el validador de firmar.gob.ar o Adobe Acrobat Reader. Si el certificado no es de un certificador licenciado, la app lo marca: no vale como firma digital.'],
-    ['Fideicomisos griegos', 'Cada socio ve sus fideicomisos y las propuestas abiertas. Un fideicomiso cerrado lo ven solo sus socios y el socio fundador. Un fideicomiso solicitado tiene 90 días para completarse: una semana antes la app avisa a sus integrantes (pueden salir) y al día 90 lo disuelve sola, como aceptaron en el pre-acuerdo. El socio fundador puede darlo de baja antes, con motivo. Cuando se completa, la app agenda una reunión virtual dentro de los primeros 5 días hábiles, con sala, recordatorio de calendario y aviso por correo.'],
-    ['Vitrina para invitados', 'Una persona invitada «solo a mirar» ve la vitrina: los fideicomisos que ya funcionan, con sus números, dónde invierten, qué compraron y su algoritmo, sin nombres ni datos personales y sin poder cambiar nada. Puede copiar una cartera en proporción a las UP que tendría, para usarla en su futuro fideicomiso.'],
-    ['Carpeta contable y conciliación', 'Se arma sola cada día, semana y mes: libro diario por partida doble, mayor, balances, registro de UP, aportes y mora, impuestos estimados de la AREF y datos fiscales. Una vez por mes el fiduciario concilia el extracto del banco: la app reconoce los aportes por CUIT, apellido e importe y compara saldos.'],
-    ['Privacidad', 'Tus datos personales y fiscales los ven vos y el fiduciario; el contador recibe lo fiscal. Los demás socios ven tu nombre, aportes y participación. Los invitados que solo miran no ven ningún dato personal. La clave se guarda como huella y la clave de Google Authenticator nunca se muestra después de activarla. Los mensajes del chat los ven solo los socios de ese fideicomiso y el fiduciario no lee los privados. La tarjeta no se guarda. De las publicaciones del radar se guarda solo lo que el vendedor publicó (incluido su contacto), para evaluar la compra, y lo ven solo los socios del fideicomiso. En este modo prueba todo queda en este equipo; en la versión real viaja cifrado a una base con reglas por usuario.'],
-    ['Lo que falta para usarla de verdad', '1) Servidor y base de datos (Firebase) para que todos vean lo mismo, con la clave de Google Authenticator guardada del lado del servidor. 2) Correos automáticos y resumen semanal (servidor/resumen-semanal.gs). 3) Cuenta de Mercado Pago del fideicomiso y el programa de cobros (servidor/pagos.gs). 4) Avisos diarios con la app cerrada por ntfy (servidor/avisos-ntfy.gs) y el radar de oportunidades (servidor/radar-oportunidades.gs). 5) CUIT y cuenta bancaria del fideicomiso. 6) Revisión de abogado, escribano y contador.']
-  ];
-  return '<h1>Cómo se usa</h1><p class="gris">Versión ' + VERSION_APP + ' · manual corto</p><section class="apilar seccion">' + sec.map(function (s) { return '<details class="tarjeta"><summary style="cursor:pointer;font-weight:600;min-height:28px">' + s[0] + '</summary><p class="gris" style="margin-top:10px">' + s[1] + '</p></details>'; }).join('') + '</section>' +
-    '<div class="aviso seccion">B&amp;D no es una oferta al público ni asesoramiento financiero, legal o impositivo. Las proyecciones son escenarios. Todo lo legal e impositivo lo validan abogado, escribano y contador de Tierra del Fuego.</div>';
-}
+/* =================== AYUDA: ver ayuda.js (manual, preguntas, derechos y deberes, presentación, simulador y demo) =================== */
 function vistaMas() {
   return '<h1>Más</h1><section class="apilar seccion">' + menuDe(yo()).filter(function (m) { return ['inicio', 'inversiones', 'pagar', 'chat'].indexOf(m[0]) < 0; }).map(function (m) { return '<a class="tarjeta fila" style="text-decoration:none;color:inherit" href="#/' + m[0] + '">' + icono(m[0]).replace('<svg', '<svg width="24" height="24"') + '<b>' + m[1] + '</b></a>'; }).join('') + '</section>';
 }
 
-var VISTAS = { oportunidades: vistaOportunidades, chat: vistaChat, impuestos: vistaImpuestos, resumen: vistaResumen, vitrina: vistaVitrina, inversiones: vistaInversiones, contratos: vistaContratos, inicio: vistaInicio, pagar: vistaPagar, mercado: vistaMercado, carpeta: vistaCarpeta, grupos: vistaGrupos, votos: vistaVotos, socios: vistaSocios, perfil: vistaPerfil, ayuda: vistaAyuda, mas: vistaMas };
+var VISTAS = { oportunidades: vistaOportunidades, chat: vistaChat, impuestos: vistaImpuestos, resumen: vistaResumen, vitrina: vistaVitrina, inversiones: vistaInversiones, contratos: vistaContratos, inicio: vistaInicio, pagar: vistaPagar, mercado: vistaMercado, carpeta: vistaCarpeta, grupos: vistaGrupos, votos: vistaVotos, socios: vistaSocios, perfil: vistaPerfil, ayuda: vistaAyuda, meta: vistaMeta, estadisticas: vistaEstadisticas, mas: vistaMas };
 
 /* =================== comportamiento de cada pantalla =================== */
 var GANCHOS = {
+  ayuda: function (r) { ganchoAyuda(r); },
+  meta: function () { ganchoMeta(); },
+  estadisticas: function () { ganchoEstadisticas(); },
   entrada: function () {
     var modo = 'inv';
     ganchoFrasesGriegas();
@@ -1023,7 +1001,8 @@ var GANCHOS = {
     if ($('btnMiTir')) $('btnMiTir').onclick = function () { ventana(ventanaTir); };
     if ($('btnM2')) $('btnM2').onclick = function () { ventana(ventanaM2); };
     if ($('btnTablaAportes')) $('btnTablaAportes').onclick = function () { ventana(ventanaTablaAportes); };
-    document.querySelectorAll('[data-depto], #torreDeptos .piso').forEach(function (el) { el.style.cursor = 'pointer'; el.addEventListener('click', function () { ventana(ventanaM2); }); });
+    document.querySelectorAll('#torreDeptos .piso').forEach(function (el) { el.style.cursor = 'pointer'; el.addEventListener('click', function () { ventana(ventanaM2); }); });
+    document.querySelectorAll('[data-depto]').forEach(function (el) { el.addEventListener('click', function () { ventana(function () { ventanaDepto(el.dataset.depto); }); }); });
     var rd = $('ruedaAportes'), g = grupoActual(); if (!rd || !window.RUEDA) return;
     setTimeout(function () { var p = rd.querySelector('.progreso-r'); if (p) p.setAttribute('stroke-dashoffset', p.dataset.objetivo); }, 80);
     function elegir(el) {
@@ -1122,13 +1101,16 @@ var GANCHOS = {
   },
   votos: function () {
     $('btnNuevaVot').onclick = function () { nuevaVotacion(yo()); };
+    if ($('btnQuedarme')) $('btnQuedarme').onclick = function () { ventana(function () { ventanaQuedarme(); }); };
+    document.querySelectorAll('[data-ejecutar-venta]').forEach(function (b) { b.onclick = function () { if (confirm('¿Ya se firmó la escritura? Se registra la venta en la contabilidad y se abre la votación de qué hacer con la plata.')) ejecutarVentaSocio(b.dataset.ejecutarVenta); }; });
     document.querySelectorAll('[data-votar]').forEach(function (b) {
       b.onclick = function () {
-        var v = D.votaciones.filter(function (x) { return x.id === b.dataset.votar; })[0], u = yo();
-        if (!v || hoyISO() > v.cierra) return;
-        v.votos[u.id] = b.dataset.voto; anotar(u.id, 'Votó en «' + v.titulo + '»'); guardarDatos(); render();
-        var g = grupo(v.g), si = Object.keys(v.votos).filter(function (k) { return v.votos[k] === 'si'; }).length;
-        if (si === requeridos(v.materia, g.N) && b.dataset.voto === 'si') { lluviaDorada(); tostada('¡Se alcanzó la mayoría!'); } else tostada('Voto registrado.');
+        var v = votoPor(b.dataset.votar), u = yo();
+        if (!v || hoyISO() > v.cierra || v.ejecutada || excluidoDe(v, u.id)) return;
+        var g = grupo(v.g), antes = resultadoVoto(v, g).aprobada;
+        v.votos[u.id] = b.dataset.voto; var mt = $('mot_' + v.id); if (mt) { v.motivos = v.motivos || {}; if (mt.value.trim()) v.motivos[u.id] = mt.value.trim().slice(0, 200); else delete v.motivos[u.id]; }
+        anotar(u.id, 'Votó en «' + v.titulo + '»'); guardarDatos(); render();
+        if (!antes && resultadoVoto(v, g).aprobada) { lluviaDorada(); tostada('¡Se alcanzó la mayoría!'); } else tostada('Voto registrado.');
       };
     });
   },
@@ -1149,7 +1131,7 @@ var GANCHOS = {
     if (r.q.invitar && $('invitar') && NAV.nueva) $('invitar').scrollIntoView({ behavior: sinMovimiento() ? 'auto' : 'smooth' });
   },
   perfil: function () {
-    var u = yo();
+    var u = yo(); ganchoCanales();
     $('formPerfil').onsubmit = function (e) {
       e.preventDefault(); var cbu = $('p_cbu').value.trim();
       if (cbu && !cbuValido(cbu)) { tostada('El CBU o CVU no es válido.'); return; }
@@ -1171,7 +1153,7 @@ var GANCHOS = {
     $('btnReiniciar').onclick = function () { reiniciarDemo(); SES = {}; guardarSesion(); tostada('Datos de prueba restablecidos.'); irLimpio('#/'); };
   }
 };
-GANCHOS.mas = GANCHOS.ayuda = function () {};
+GANCHOS.mas = function () {};
 GANCHOS.fundador = ganchoAltaFundador;
 GANCHOS.oportunidades = ganchoOportunidades;
 Object.keys(GANCHOS_EXTRA).forEach(function (k) { GANCHOS[k] = GANCHOS_EXTRA[k]; });

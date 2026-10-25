@@ -229,15 +229,12 @@ function svgApilado(etiquetas, capas, desc) {
 }
 
 /* Logo: tres bloques que se levantan como un edificio, con la B y la D */
+/* logo de B&D (el que eligió Claudio el 25-10-2026: la casa con B&D). Es azul sobre blanco, así que en el fondo
+   oscuro de la app va sobre una placa blanca redondeada; el grande lleva «Building Dreams» abajo. */
 function svgLogo(clase) {
-  return '<svg class="' + (clase || 'marca-logo') + '" viewBox="0 0 64 64" aria-hidden="true">' +
-    '<rect class="bloque" x="8" y="30" width="14" height="26" rx="2" fill="#B98F3A" style="animation-delay:.05s"/>' +
-    '<rect class="bloque" x="25" y="14" width="14" height="42" rx="2" fill="#E6C979" style="animation-delay:.2s"/>' +
-    '<rect class="bloque" x="42" y="22" width="14" height="34" rx="2" fill="#C9A24B" style="animation-delay:.35s"/>' +
-    '<text x="15" y="50" text-anchor="middle" font-family="EB Garamond, Georgia, serif" font-size="13" fill="#12202F">B</text>' +
-    '<text x="32" y="50" text-anchor="middle" font-family="EB Garamond, Georgia, serif" font-size="13" fill="#12202F">&amp;</text>' +
-    '<text x="49" y="50" text-anchor="middle" font-family="EB Garamond, Georgia, serif" font-size="13" fill="#12202F">D</text>' +
-    '<rect x="4" y="56" width="56" height="3" rx="1.5" fill="#C9A24B"/></svg>';
+  clase = clase || 'marca-logo';
+  if (clase === 'logo-completo') return '<span class="logo-bd logo-completo" role="img" aria-label="B&amp;D Building Dreams"><img src="logo-bd.png" alt="" width="512" height="512"><span class="logo-bd-texto" aria-hidden="true">Building Dreams</span></span>';
+  return '<span class="logo-bd ' + clase + '" aria-hidden="true"><img src="logo-bd.png" alt="" width="512" height="512"></span>';
 }
 
 function puntosRiesgo(n) { var s = '', i; for (i = 1; i <= 5; i++) s += i <= n ? '●' : '○'; return '<span class="riesgo" aria-hidden="true">' + s + '</span><span class="solo-lector">riesgo ' + n + ' de 5</span>'; }

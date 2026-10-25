@@ -27,7 +27,7 @@ function sonarSiHayNuevos(nuevos) {
   if (!nuevos.length || antes === claves || (antes && claves.split('§').every(function (k) { return antes.indexOf(k) >= 0; }))) return;
   sonarCampanita();
   if (PREF.avisos && window.Notification && Notification.permission === 'granted' && document.hidden) {
-    try { new Notification('B&D · ' + nuevos[0].titulo, { body: nuevos.length > 1 ? 'Y ' + (nuevos.length - 1) + ' aviso(s) más.' : 'Abrí la app para ver el detalle.', icon: 'icono.svg', tag: 'bd-aviso', silent: false }); } catch (e) {}
+    try { new Notification('B&D · ' + nuevos[0].titulo, { body: nuevos.length > 1 ? 'Y ' + (nuevos.length - 1) + ' aviso(s) más.' : 'Abrí la app para ver el detalle.', icon: 'icono-192.png', tag: 'bd-aviso', silent: false }); } catch (e) {}
   }
 }
 function abrirAvisos() {
@@ -188,7 +188,7 @@ GANCHOS_EXTRA.impuestos = function (r) {
 function vistaResumen(u) {
   var g = grupoActual(); if (!g || g.estado !== 'activo') return '<h1>Resumen semanal</h1><p class="gris">Llega cuando tu fideicomiso empieza a funcionar.</p>';
   var hoy = hoyISO(), hace7 = sumarDias(hoy, -7), e0 = estadoGrupo(g.id, hace7), mis0 = (e0.upSocio[u.id] || 0) * e0.vup, e = estadoGrupo(g.id), mis = (e.upSocio[u.id] || 0) * e.vup, part = e.up ? (e.upSocio[u.id] || 0) / e.up : 0;
-  var ci = cicloInfo(g), deuda = deudaDe(g.id, u.id), tir = tirSocio(g.id, u.id), P = posicionesHoy(g), props = D.propiedades.filter(function (p) { return p.g === g.id; });
+  var ci = cicloInfo(g), deuda = deudaDe(g.id, u.id), tir = tirSocio(g.id, u.id), P = posicionesHoy(g), props = propiedadesActivas(g.id);
   var votos = D.votaciones.filter(function (v) { return v.g === g.id && hoy <= v.cierra; }), proximo = mesDe(sumarMeses(hoy, pagoDe(g.id, u.id, mesDe(hoy)) ? 1 : 0)), tot = e.caja + e.inv + e.inm, pp = porcentajes100([e.inm, e.inv, e.caja]);
   var sec = function (n, t, c) { return '<section class="rs-sec"><p class="rs-num">' + n + '</p><div><h3>' + t + '</h3>' + c + '</div></section>'; };
   return '<div class="fila entre no-imprimir"><div><h1>Resumen semanal</h1><p class="gris" style="margin:0">Lo que te llega cada lunes al correo (' + esc(u.email) + ') en PDF. Se ve de un vistazo cómo va tu plata.</p></div>' +
@@ -232,7 +232,7 @@ function vistaVitrina(u) {
   return '<h1>Vitrina de fideicomisos</h1><p class="gris">Mirás cómo funcionan los fideicomisos que ya están andando: números del grupo, dónde invierten y con qué reglas. <b>Solo mirar:</b> no ves nombres ni datos personales y no podés cambiar nada. Si una cartera te gusta, la copiás para tu futuro fideicomiso en proporción a tus UP.</p>' +
     (copia ? '<div class="aviso seccion">Copiaste la cartera de ' + esc(grupo(copia.g).letra.toUpperCase()) + ' el ' + fechaCorta(copia.fecha) + ': ' + copia.reparto.map(function (p) { return instrumento(p.id).n + ' ' + pct(p.pct, 0); }).join(' · ') + '. Se usa sola si proponés un fideicomiso.</div>' : '') +
     gs.map(function (g) {
-      var e = estadoGrupo(g.id), ci = cicloInfo(g), props = D.propiedades.filter(function (p) { return p.g === g.id; }), rep = g.reparto || REPARTO_VIGENTE, tg = tirGrupo(g), b = simulate(paramsEsc(g, 'basico', { mix: MODE_MIX[g.modo] }));
+      var e = estadoGrupo(g.id), ci = cicloInfo(g), props = propiedadesActivas(g.id), rep = g.reparto || REPARTO_VIGENTE, tg = tirGrupo(g), b = simulate(paramsEsc(g, 'basico', { mix: MODE_MIX[g.modo] }));
       return '<section class="tarjeta dorada seccion entrar"><div class="fila entre"><div class="fila"><span class="letra-griega" style="font-size:3.4rem">' + g.simbolo + '</span><div><h2 style="margin:0">' + esc(g.letra.toUpperCase()) + '</h2><p class="chico gris" style="margin:0">' + g.N + ' socios · ' + usd(g.aporte) + ' por mes · compra cada ' + g.ciclo + ' meses · mes ' + ci.mesN + '</p></div></div><span class="chip ok">funcionando</span></div>' +
         '<div class="rejilla r4" style="margin-top:12px">' + kpi('Patrimonio', e.patrimonio, 'usd', 'caja + inversiones + inmuebles') + kpi('Valor de la UP', e.vup, 'usd2', 'empezó en USD 100') + kpi('Rendimiento de la UP', null, '', 'por año, mide la gestión', (function () { var R = rendimientoUP(g.id); return isFinite(R.anual) ? pct(R.anual, 2) : pct(R.total, 2); })()) + kpi('TIR proyectada', null, '', '10 años, escenario básico', pct(b.irr)) + '</div>' +
         '<div class="rejilla r2" style="margin-top:12px"><div><h3>Dónde invierten la espera</h3>' + barrasVivas(rep.map(function (p) { var x = instrumento(p.id); return { n: esc(x.n), v: p.pct, color: COLORES_VIVOS[p.id], txt: pct(p.pct, 0) + ' · ' + pct(x.y, 2) }; })) + '<p class="chico gris">Rinde hoy ' + pct(rendimientoDe(rep), 2) + ' por año.</p></div>' +

@@ -1,0 +1,658 @@
+<meta charset="utf-8">
+<title>Proyecto B&D</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;700&family=Manrope:wght@400;600;800&display=swap">
+<style>
+:root{--bg:#fbf8ff;--surface:#ffffff;--surface2:#f1ebff;--fg:#1a1233;--muted:#6b6490;--line:#e2d9fb;
+--pink:#ff2e88;--cyan:#00a8e8;--lime:#7fc800;--orange:#ff7a00;--violet:#6a2cff;--bad:#e5173f;
+--grad:linear-gradient(120deg,#6a2cff 0%,#ff2e88 55%,#ff7a00 100%);--shadow:0 10px 30px rgba(106,44,255,.12);
+--hf:'Space Grotesk',system-ui,sans-serif;--bf:'Manrope',system-ui,sans-serif}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){--bg:#0c0920;--surface:#171232;--surface2:#221a48;--fg:#f4f0ff;--muted:#a79fd0;--line:#31285f;
+--pink:#ff4fa0;--cyan:#33cfff;--lime:#b6f400;--orange:#ff9a2e;--violet:#9a73ff;--bad:#ff5d7a;--shadow:0 10px 30px rgba(0,0,0,.45);color-scheme:dark}}
+:root[data-theme="dark"]{--bg:#0c0920;--surface:#171232;--surface2:#221a48;--fg:#f4f0ff;--muted:#a79fd0;--line:#31285f;
+--pink:#ff4fa0;--cyan:#33cfff;--lime:#b6f400;--orange:#ff9a2e;--violet:#9a73ff;--bad:#ff5d7a;--shadow:0 10px 30px rgba(0,0,0,.45);color-scheme:dark}
+*{box-sizing:border-box}
+body{background:var(--bg);color:var(--fg);font:15px/1.5 var(--bf);padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px));padding-block:0}
+.wrap{max-width:1760px;margin:0 auto;padding-block:20px 48px;display:flex;flex-direction:column;gap:20px}
+@media(min-width:1500px){body{font-size:16px}.wrap{gap:24px}.hero{padding:36px 40px}.hero h1{font-size:64px}.card{padding:22px}}
+h1,h2,h3{font-family:var(--hf);margin:0;text-wrap:balance}
+.hero{border-radius:24px;padding:28px;background:var(--grad);color:#fff;position:relative;overflow:hidden;box-shadow:var(--shadow)}
+.hero:after{content:"";position:absolute;right:-60px;top:-60px;width:260px;height:260px;border-radius:50%;background:rgba(255,255,255,.14)}
+.hero:before{content:"";position:absolute;right:120px;bottom:-90px;width:200px;height:200px;border-radius:50%;background:rgba(255,255,255,.1)}
+.hero h1{font-size:clamp(30px,6vw,54px);line-height:1.02;letter-spacing:-.02em;position:relative}
+.hero p{margin:10px 0 0;max-width:62ch;font-size:16px;position:relative;opacity:.95}
+.tag{display:inline-block;font:700 12px var(--hf);letter-spacing:.14em;text-transform:uppercase;background:rgba(255,255,255,.22);padding:4px 10px;border-radius:99px;margin-bottom:12px;position:relative}
+.theme{position:absolute;right:16px;top:16px;z-index:2;border:0;background:rgba(255,255,255,.25);color:#fff;border-radius:99px;padding:6px 12px;font:700 12px var(--hf);cursor:pointer}
+.grid{display:grid;grid-template-columns:clamp(320px,22vw,400px) minmax(0,1fr);gap:20px;align-items:start}
+.grid>#panel{position:sticky;top:12px;max-height:calc(100vh - 24px);overflow-y:auto;overscroll-behavior:contain}
+.grid>#panel::-webkit-scrollbar{width:8px}.grid>#panel::-webkit-scrollbar-thumb{background:var(--line);border-radius:8px}
+.grid>*:not(#panel){display:flex;flex-direction:column;gap:20px;min-width:0}
+@media(max-width:900px){.grid{grid-template-columns:minmax(0,1fr)}.grid>#panel{position:static;max-height:none;overflow:visible}}
+.chart{width:100%;height:auto;max-height:560px}
+@media(min-width:1500px){.paths{grid-template-columns:repeat(3,minmax(0,1fr))}}
+.card{background:var(--surface);border:1px solid var(--line);border-radius:20px;padding:18px;box-shadow:var(--shadow);min-width:0}
+.card h2{font-size:18px;margin-bottom:12px}
+.seg{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:12px}
+.seg button{flex:1;min-width:84px;border:1px solid var(--line);background:var(--surface2);color:var(--fg);border-radius:12px;padding:8px 6px;font:700 13px var(--hf);cursor:pointer}
+.seg button[aria-pressed=true]{background:var(--violet);border-color:var(--violet);color:#fff}
+.lbl{font:700 11px var(--hf);letter-spacing:.1em;text-transform:uppercase;color:var(--muted);margin:6px 0 6px}
+.ctl{display:grid;grid-template-columns:1fr auto;gap:2px 8px;margin-bottom:10px}
+.ctl label{font-size:13px;font-weight:600}
+.ctl output{font:700 13px var(--hf);color:var(--pink)}
+.ctl input[type=range]{grid-column:1/3;width:100%;accent-color:var(--pink)}
+select{width:100%;border:1px solid var(--line);background:var(--surface2);color:var(--fg);border-radius:10px;padding:8px;font:600 13px var(--bf);margin-bottom:10px}
+details{border-top:1px solid var(--line);padding-top:10px;margin-top:6px}
+summary{cursor:pointer;font:700 13px var(--hf);color:var(--violet);margin-bottom:8px}
+.kpis{display:grid;grid-template-columns:repeat(auto-fit,minmax(170px,1fr));gap:12px}
+.kpi{border-radius:18px;padding:14px 16px;color:#fff;min-width:0}
+.kpi small{display:block;font:700 11px var(--hf);letter-spacing:.1em;text-transform:uppercase;opacity:.9}
+.kpi b{display:block;font:700 clamp(20px,3.4vw,28px) var(--hf);margin-top:4px;overflow-wrap:anywhere}
+.kpi span{font-size:12px;opacity:.92}
+.k1{background:linear-gradient(135deg,#6a2cff,#9a73ff)}.k2{background:linear-gradient(135deg,#ff2e88,#ff7a00)}
+.k3{background:linear-gradient(135deg,#0097d8,#00c9a7)}.k4{background:linear-gradient(135deg,#5b8f00,#b6f400);color:#13200a}
+.verdict{border-left:6px solid var(--orange);background:var(--surface2);border-radius:12px;padding:12px 14px;margin-top:12px;font-size:14px}
+.legend{display:flex;gap:14px;flex-wrap:wrap;font-size:12px;font-weight:600;margin:6px 0}
+.legend i{display:inline-block;width:12px;height:12px;border-radius:3px;margin-right:6px;vertical-align:-1px}
+.chart{width:100%;height:auto;display:block;touch-action:pan-y}
+.sub{font-size:13px;color:var(--muted);margin:-4px 0 10px}.warn{border-left:6px solid var(--bad);background:var(--surface2);border-radius:12px;padding:10px 12px;margin-top:10px;font-size:13px}.inl{display:flex;gap:12px;flex-wrap:wrap;align-items:end;margin-bottom:10px}.inl .ctl{flex:1;min-width:200px;margin:0}.read{font:600 13px var(--bf);min-height:20px;color:var(--muted)}
+.tw{overflow-x:auto}
+table{border-collapse:collapse;width:100%;font-size:13px;white-space:nowrap}
+th,td{padding:8px 10px;text-align:right;border-bottom:1px solid var(--line)}
+th:first-child,td:first-child{text-align:left}
+th{font:700 11px var(--hf);letter-spacing:.08em;text-transform:uppercase;color:var(--muted)}
+tr.hl td{background:var(--surface2);font-weight:800}
+.pos{color:var(--lime)}.neg{color:var(--bad)}
+:root:not([data-theme="dark"]) .pos{color:#4f8a00}
+.foot{font-size:12px;color:var(--muted);max-width:90ch}
+.ax{fill:var(--muted);font:600 11px var(--bf)}
+.tabs button{min-width:0;flex:0 1 auto;padding:8px 14px}
+.paths{display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:14px}
+.pcard{border:1px solid var(--line);background:var(--surface2);border-radius:18px;padding:16px;display:flex;flex-direction:column;gap:6px;min-width:0}
+.pc-h{display:flex;justify-content:space-between;align-items:center}
+.badge{font:700 11px var(--hf);letter-spacing:.12em;text-transform:uppercase;color:#fff;padding:4px 10px;border-radius:99px}
+.b0{background:linear-gradient(120deg,#0097d8,#00c9a7)}.b1{background:linear-gradient(120deg,#6a2cff,#ff2e88)}.b2{background:linear-gradient(120deg,#ff2e88,#ff7a00)}
+.pcard h3{font-size:18px}
+.dots{display:inline-flex;gap:3px;vertical-align:middle}.dt{width:8px;height:8px;border-radius:50%;background:var(--line);display:inline-block}.dt.on{background:var(--orange)}
+.rng{display:flex;align-items:center;gap:8px;font:700 12px var(--hf)}.rb{position:relative;flex:1;height:12px;background:var(--line);border-radius:6px}.rb i{position:absolute;top:0;height:12px;border-radius:6px;background:var(--violet);opacity:.45}.rb b{position:absolute;top:-3px;width:18px;height:18px;margin-left:-9px;border-radius:50%;background:var(--pink);border:3px solid var(--surface2)}
+.mini{font-size:12px;color:var(--muted)}.ul{margin:6px 0;padding-left:18px;font-size:13px;display:flex;flex-direction:column;gap:3px}
+.go,.inst{font-family:var(--bf);cursor:pointer;color:var(--fg)}
+.go{margin-top:auto;border:0;border-radius:12px;background:var(--violet);color:#fff;padding:10px;font:700 13px var(--hf)}
+.mapgrid{display:grid;grid-template-columns:minmax(0,1fr);gap:18px}@media(min-width:1000px){.mapgrid{grid-template-columns:minmax(0,5fr) minmax(0,6fr)}}
+table.heat td.cell{text-align:center;font-weight:800;cursor:pointer}table.heat td.acc{font-size:11px;color:var(--muted);white-space:normal;min-width:110px}table.heat td:nth-child(n+4),table.heat th:nth-child(n+4){text-align:center}
+tr.gh td{font:700 11px var(--hf);letter-spacing:.1em;text-transform:uppercase;color:var(--violet);background:var(--surface2)}
+.txs{display:flex;flex-direction:column;gap:6px}.tx{display:grid;grid-template-columns:minmax(120px,190px) minmax(0,1fr) minmax(120px,170px);gap:10px;align-items:center;cursor:pointer;font-size:12px}
+.tx-b{display:flex;height:16px;border-radius:8px;overflow:hidden;background:var(--line)}.tx-v{text-align:right;white-space:nowrap}
+@media(max-width:560px){.tx{grid-template-columns:minmax(0,1fr) auto}.tx-b{grid-column:1/3}}
+.insts{display:grid;grid-template-columns:repeat(auto-fit,minmax(230px,1fr));gap:12px;margin-top:10px}
+.inst{text-align:left;border:2px solid var(--line);background:var(--surface2);border-radius:16px;padding:12px;display:flex;flex-direction:column;gap:6px;min-width:0}.inst.sel{border-color:var(--pink);box-shadow:0 0 0 3px color-mix(in srgb,var(--pink) 25%,transparent)}
+.in-h{display:flex;justify-content:space-between;gap:8px;align-items:start;font-size:14px}.in-d{font-size:12px;color:var(--muted)}.in-m{display:flex;justify-content:space-between;font-size:12px;gap:8px}.in-m b{font-family:var(--hf)}
+.ctlrow{display:grid;grid-template-columns:repeat(auto-fit,minmax(230px,1fr));gap:4px 16px}
+.guia{display:flex;flex-direction:column;gap:16px}
+.pasos8{display:grid;grid-template-columns:repeat(auto-fit,minmax(210px,1fr));gap:12px;counter-reset:p}
+.paso{border:1px solid var(--line);background:var(--surface2);border-radius:16px;padding:14px;display:flex;flex-direction:column;gap:4px;min-width:0}
+.paso b.n{font:700 26px var(--hf);color:var(--pink);line-height:1}
+.paso h3{font-size:16px}.paso p{margin:0;font-size:13.5px}
+.paso .dato{font:700 15px var(--hf);color:var(--violet)}
+.usar{display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:12px}
+.usar div{border-left:5px solid var(--cyan);background:var(--surface2);border-radius:12px;padding:10px 12px;font-size:13.5px}
+.glosa{display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:10px;font-size:13.5px}
+.glosa div{padding:10px 12px;border:1px dashed var(--line);border-radius:12px}
+</style>
+<div class="wrap">
+<header class="hero"><button class="theme" id="th">Claro / oscuro</button>
+<span class="tag">Building Dreams</span>
+<h1>Proyecto B&amp;D</h1>
+<p>Diez socios, USD 500 por mes cada uno, pagados del 1 al 10. Cada 10 meses, sin excepción, se compra un departamento de 24 m² o más (Ushuaia a USD 2.000 el m², alquiler de mercado USD 300 por 25 m²), se pone a trabajar y se reinvierte la renta. Elegí el mercado (Ushuaia, Buenos Aires o Europa), alquiler mensual o temporal, y mirá qué pasa en 10 años para el grupo y para cada socio.</p></header>
+<section class="card guia" id="guia"><h2>El proyecto en 8 pasos (léalo primero)</h2>
+<p class="sub">Con los supuestos de base: Ushuaia a USD 2.000 el m², alquiler mensual fijo, escenario base. Si cambiás los controles de la izquierda, los números de abajo de la página se recalculan; estos pasos explican la idea.</p>
+<div class="pasos8">
+<div class="paso"><b class="n">1</b><h3>Aportamos</h3><p>Cada uno de los 10 socios pone USD 500 entre el día 1 y el 10 de cada mes.</p><span class="dato">USD 5.000 por mes el grupo</span></div>
+<div class="paso"><b class="n">2</b><h3>Compramos UP</h3><p>Cada aporte compra unidades de participación (UP) al valor del día. La UP arrancó en USD 100 y sube con las ganancias: quien paga tarde compra más caro.</p><span class="dato">Tu parte = tus UP × su valor</span></div>
+<div class="paso"><b class="n">3</b><h3>La espera trabaja</h3><p>El día 11 lo cobrado se invierte: cuenta remunerada, fondo de dinero en dólares, letras del Tesoro de EE. UU. y obligaciones negociables, con tope de 30% cada una.</p><span class="dato">≈ 3,8% por año</span></div>
+<div class="paso"><b class="n">4</b><h3>Mes 10: compramos</h3><p>Con la caja de 10 meses (unos USD 50.600) se compra un departamento de 24 m² o más. La compra es cada 10 meses, sin excepción.</p><span class="dato">24 m² × USD 2.000 + 5% = USD 50.400</span></div>
+<div class="paso"><b class="n">5</b><h3>Lo alquilamos</h3><p>Alquiler de mercado, contrato mensual en dólares. Se restan expensas y gastos (18%) e ingresos brutos (5%).</p><span class="dato">USD 300 por 25 m² · neto ≈ USD 220</span></div>
+<div class="paso"><b class="n">6</b><h3>Reinvertimos todo</h3><p>Aportes + alquileres + interés de la espera se juntan para la compra siguiente. Por eso cada departamento sale un poco más grande.</p><span class="dato">De 24 m² a casi 31 m²</span></div>
+<div class="paso"><b class="n">7</b><h3>En 10 años</h3><p>12 departamentos. Si se vendiera todo (descontando el costo de vender), el grupo tendría USD 822.230: USD 82.200 por socio contra USD 60.000 aportados.</p><span class="dato">TIR 6,2% fijo · 8,7% temporario</span></div>
+<div class="paso"><b class="n">8</b><h3>Rueda sola</h3><p>Llega el día en que los alquileres y el interés de 10 meses pagan solos un departamento nuevo: desde ahí se podría dejar de aportar (lo vota la Asamblea).</p><span class="dato">Año 12 fijo · año 8 temporario</span></div>
+</div>
+<h2 style="margin-top:6px">Contra qué lo comparamos</h2>
+<div class="usar"><div><b>Meta del 6% anual:</b> los mismos aportes, en las mismas fechas, ganando 6% por año. Darían USD 812.367 al año 10. Es exigente: es la vara del proyecto.</div><div><b>Plazo fijo en dólares de un banco (≈ 1,5%):</b> darían unos USD 646.570. El proyecto le gana por los dos motores: alquiler y suba del m².</div><div><b>La TIR</b> es el interés anual compuesto que ganó la plata, contando el día de cada aporte. Si da 6,2%, es como un plazo fijo al 6,2% desde el día que pusiste cada dólar.</div></div>
+<h2 style="margin-top:6px">Cómo usar este simulador</h2>
+<div class="usar"><div><b>1. Supuestos (columna izquierda):</b> mercado, escenario, alquiler fijo o temporario, y los controles: aporte, socios, años, meses entre compras, m², costos e impuestos.</div><div><b>2. Los cuatro números de arriba:</b> valor del grupo si se vendiera todo, lo que le toca a cada socio, la TIR y la renta mensual al final.</div><div><b>3. Brújula de decisión:</b> tres caminos (prudente, equilibrado, ambicioso), mapa de mercados, dónde se va la renta en impuestos, dónde esperar la caja, IPC y pesos, rueda sola y grupos griegos.</div><div><b>4. El gráfico:</b> pasá el dedo o el mouse para ver cualquier mes: aportado, inmuebles, caja, total y la referencia.</div><div><b>5. Las tablas:</b> cada ciclo de 10 meses, año por año, mercados lado a lado, escenarios y cada compra con su precio y sus m².</div></div>
+<div class="glosa"><div><b>Valor de liquidación:</b> lo que habría si se vendiera todo ese día, ya descontado el 5% que cuesta vender.</div><div><b>Gastos de compra (5%):</b> escritura y sellos. Por eso el primer año el valor queda un poco debajo de lo aportado: no es plata perdida si no se vende.</div><div><b>Renta neta:</b> el alquiler que queda después de expensas, gastos e impuestos.</div><div><b>Escenarios:</b> conservador (el m² no sube), base (sube 3%) y optimista (5%). Ninguno es una promesa.</div></div>
+</section>
+<div class="grid">
+<aside class="card" id="panel">
+<h2>Supuestos</h2>
+<div class="lbl">Mercado de compra</div>
+<select id="market"></select>
+<div class="lbl">Escenario</div><div class="seg" id="sc"></div>
+<div class="lbl">Modalidad de alquiler</div><div class="seg" id="md"></div>
+<div class="lbl">Estrategia de compra</div>
+<select id="strategy"><option value="ciclo">Cada N meses con toda la caja</option><option value="ticket">Apenas la caja alcanza un departamento de valor fijo (sin esperar los 10 meses)</option><option value="umbral">Cuando la caja alcanza el ticket de la superficie objetivo</option></select><label style="display:flex;gap:8px;align-items:center;font-size:13px;font-weight:600;margin-bottom:10px"><input type="checkbox" id="adj" checked> Ajustar el valor del departamento por la valorización</label>
+<div id="ctls"></div>
+<details><summary>Rentas, costos e impuestos</summary><div id="ctls2"></div></details>
+<details><summary>Mercado y referencia</summary><div id="ctls3"></div></details>
+<div class="foot" id="mnote" style="margin-top:10px"></div>
+</aside>
+<main style="display:flex;flex-direction:column;gap:20px;min-width:0">
+<section class="kpis" id="kpis"></section>
+<section class="card"><h2>Brújula de decisión: IPC, ganancias y dónde invertir</h2><div class="seg tabs" id="labtabs"></div>
+<div id="t_caminos"></div><div id="t_mapa" hidden></div><div id="t_imp" hidden></div><div id="t_caja" hidden></div><div id="t_ipc" hidden></div><div id="t_rueda" hidden></div><div id="t_grupos" hidden></div><div id="t_meta" hidden></div><div id="t_solo" hidden></div><div id="t_reventa" hidden></div></section>
+
+<section class="card"><h2>Patrimonio del grupo mes a mes</h2>
+<div class="legend"><span><i style="background:var(--violet)"></i>Inmuebles</span><span><i style="background:var(--cyan)"></i>Caja en espera</span><span><i style="background:var(--orange)"></i>Lo aportado</span><span><i style="background:var(--lime)"></i>Referencia financiera</span></div>
+<svg class="chart" id="chart" viewBox="0 0 800 340" role="img" aria-label="Evolución del patrimonio"></svg>
+<div class="read" id="read">Pasá el cursor o tocá el gráfico para ver un mes.</div></section>
+<section class="card"><h2>Alquiler de 1 a 10 bienes</h2>
+<p class="sub">Compará un departamento o varios, de la superficie que elijas, con alquiler mensual fijo o temporal por plataformas.</p>
+<div class="inl"><div class="ctl"><label for="un">Cantidad de bienes</label><output id="o_un"></output><input type="range" id="un" min="1" max="10" step="1"></div>
+<div class="ctl"><label for="um">Superficie de cada bien (m²)</label><output id="o_um"></output><input type="range" id="um" min="15" max="40" step="1"></div></div>
+<div class="tw"><table id="unit"></table></div><div id="unote"></div></section>
+<section class="card"><h2>Cada ciclo de calendario: compra y reserva de renta capitalizada</h2>
+<p class="sub">Ventanas consecutivas del largo que elijas. Muestra aportes, renta cobrada, intereses, compra y cuánto de la compra salió de la renta reinvertida.</p>
+<div class="seg" id="wl"></div>
+<div class="tw"><table id="win"></table></div></section>
+<section class="card"><h2>Año por año y cada 10 meses, lado a lado</h2><div class="tw"><table id="yr"></table></div></section>
+<section class="card"><h2>Mercados en paralelo (con tus supuestos)</h2><div class="tw"><table id="mk"></table></div></section>
+<section class="card"><h2>Cruce de mercados: un departamento de USD X en cada lugar</h2>
+<p class="sub">Elegí cuánto vale cada departamento que compra el grupo apenas la caja alcanza (aportes, renta e intereses). La tabla muestra cuántos metros compra ese valor y cuántos departamentos junta el grupo en cada mercado, con la modalidad y el escenario que tengas cargados.</p>
+<div class="lbl">Criterio de comparación</div><div class="seg" id="cxc"></div>
+<div class="inl"><div class="ctl" id="cxvbox"><label for="cx">Valor de cada departamento (USD)</label><output id="o_cx"></output><input type="range" id="cx" min="20000" max="150000" step="5000"></div><div class="ctl" id="cxsbox"><label for="cs">Superficie de cada departamento (m²)</label><output id="o_cs"></output><input type="range" id="cs" min="15" max="40" step="1"></div>
+<label style="display:flex;gap:8px;align-items:center;font-size:13px;font-weight:600"><input type="checkbox" id="cxadj"> Ajustar el valor por la valorización</label></div>
+<div class="lbl">Modalidad de alquiler</div><div class="seg" id="cxmd"></div>
+<div class="tw"><table id="cross"></table></div>
+<h3 style="margin:18px 0 8px;font-size:16px">Cada 10 meses, mercado por mercado</h3><div class="seg" id="cxm"></div><div class="tw"><table id="crosscyc"></table></div><div class="foot" id="cxnote"></div><div id="crossbars"></div><div id="crossnote"></div></section>
+<section class="card"><h2>Escenarios en paralelo (con tu mercado y modalidad)</h2><div class="tw"><table id="cmp"></table></div><div class="verdict" id="verdict"></div></section>
+<section class="card"><h2>¿Cada cuántos meses compramos? Ciclo fijo contra «apenas alcanza»</h2>
+<p class="sub">Si se suman las rentas y los intereses de la caja a lo aportado, el grupo llega a un departamento de valor fijo antes de los 10 meses. Compará cuántos departamentos quedan al final y cada cuántos meses se compró.</p>
+<div class="tw"><table id="cad"></table></div><div id="cadnote"></div></section>
+<section class="card"><h2>Compras del grupo, una por una</h2><div class="tw"><table id="buys"></table></div></section>
+</main></div>
+<p class="foot">Modelo de simulación en USD con capitalización mensual. Son escenarios, no promesas: precios, rentas, costos de compra e impuestos son supuestos editables que deben verificarse con un tasador, un contador y un abogado matriculados. Los precios y rentas de cada mercado salen de extractos de portales y reportes consultados en octubre de 2026. El múltiplo temporal ×3 es la premisa del proyecto; las fuentes consultadas muestran entre 1,6× y 2,2× sobre promedios de todos los tamaños. El valor de liquidación descuenta los costos de venta. Ver el documento «Marco legal, impositivo y financiero» de B&amp;D.</p>
+</div>
+<script>
+/* ===== Modelo B&D v2 (USD): mercados, mensual vs temporal, N bienes, ciclos ===== */
+var MARKETS = {
+  ushuaia: { label: 'Ushuaia', grp: 'Argentina', m2: 2000, rent24: 288, mult: 3, setup: 5, lag: 1, opex: 18, iibb: 5, gan: 0, tOpex: 40, tIibb: 5, tGan: 20, risk: 3, acc: 'libre' },
+  buenosaires: { label: 'Buenos Aires (CABA)', grp: 'Argentina', m2: 2471, rent24: 435, mult: 2, setup: 7, lag: 1, opex: 20, iibb: 3, gan: 0, tOpex: 40, tIibb: 3, tGan: 20, risk: 3, acc: 'libre' },
+  murcia: { label: 'España · Murcia', grp: 'España', m2: 2083, rent24: 292, mult: 1.5, setup: 12, lag: 2, opex: 20, iibb: 24, gan: 0, tOpex: 40, tIibb: 24, tGan: 0, risk: 1, acc: 'libre (NIE)' },
+  zamora: { label: 'España interior · Zamora', grp: 'España', m2: 1461, rent24: 219, mult: 1.5, setup: 12, lag: 2, opex: 20, iibb: 24, gan: 0, tOpex: 40, tIibb: 24, tGan: 0, risk: 1, acc: 'libre (NIE)' },
+  jaen: { label: 'España interior · Jaén', grp: 'España', m2: 1536, rent24: 235, mult: 1.5, setup: 12, lag: 2, opex: 20, iibb: 24, gan: 0, tOpex: 40, tIibb: 24, tGan: 0, risk: 1, acc: 'libre (NIE)' },
+  ciudadreal: { label: 'España interior · Ciudad Real', grp: 'España', m2: 1578, rent24: 235, mult: 1.5, setup: 12, lag: 2, opex: 20, iibb: 24, gan: 0, tOpex: 40, tIibb: 24, tGan: 0, risk: 1, acc: 'libre (NIE)' },
+  madrid: { label: 'España · Madrid (referencia)', grp: 'España', m2: 5485, rent24: 472, mult: 1.5, setup: 12, lag: 2, opex: 20, iibb: 24, gan: 0, tOpex: 40, tIibb: 24, tGan: 0, risk: 1, acc: 'libre (NIE)' },
+  guarda: { label: 'Portugal interior · Guarda', grp: 'Portugal', m2: 978, rent24: 165, mult: 1.5, setup: 10, lag: 2, opex: 20, iibb: 0, gan: 25, tOpex: 40, tIibb: 0, tGan: 25, risk: 1, acc: 'libre (NIF)' },
+  castelobranco: { label: 'Portugal interior · Castelo Branco', grp: 'Portugal', m2: 1324, rent24: 198, mult: 1.5, setup: 10, lag: 2, opex: 20, iibb: 0, gan: 25, tOpex: 40, tIibb: 0, tGan: 25, risk: 1, acc: 'libre (NIF)' },
+  maribor: { label: 'Eslovenia · Maribor', grp: 'Eslovenia', m2: 3119, rent24: 255, mult: 1.5, setup: 10, lag: 2, opex: 20, iibb: 0, gan: 25, tOpex: 40, tIibb: 0, tGan: 25, risk: 2, acc: 'verificar reciprocidad' },
+  ljubljana: { label: 'Eslovenia · Ljubljana', grp: 'Eslovenia', m2: 4900, rent24: 420, mult: 1.5, setup: 10, lag: 2, opex: 20, iibb: 0, gan: 25, tOpex: 40, tIibb: 0, tGan: 25, risk: 2, acc: 'verificar reciprocidad' },
+  osijek: { label: 'Croacia · Osijek', grp: 'Croacia', m2: 1986, rent24: 208, mult: 1.5, setup: 10, lag: 2, opex: 20, iibb: 0, gan: 8.4, tOpex: 40, tIibb: 0, tGan: 8.4, risk: 2, acc: 'verificar autorización' },
+  zagreb: { label: 'Croacia · Zagreb', grp: 'Croacia', m2: 3854, rent24: 400, mult: 1.5, setup: 10, lag: 2, opex: 20, iibb: 0, gan: 8.4, tOpex: 40, tIibb: 0, tGan: 8.4, risk: 2, acc: 'verificar autorización' },
+  patras: { label: 'Grecia · Patras', grp: 'Grecia', m2: 1752, rent24: 165, mult: 1.5, setup: 10, lag: 2, opex: 20, iibb: 0, gan: 15, tOpex: 40, tIibb: 0, tGan: 15, risk: 2, acc: 'libre (salvo zonas de frontera)' },
+  volos: { label: 'Grecia · Volos', grp: 'Grecia', m2: 2102, rent24: 177, mult: 1.5, setup: 10, lag: 2, opex: 20, iibb: 0, gan: 15, tOpex: 40, tIibb: 0, tGan: 15, risk: 2, acc: 'libre (salvo zonas de frontera)' },
+  thessaloniki: { label: 'Grecia · Tesalónica', grp: 'Grecia', m2: 3154, rent24: 265, mult: 1.5, setup: 10, lag: 2, opex: 20, iibb: 0, gan: 15, tOpex: 40, tIibb: 0, tGan: 15, risk: 2, acc: 'libre (salvo zonas de frontera)' },
+  pecs: { label: 'Hungría · Pécs', grp: 'Hungría', m2: 1869, rent24: 211, mult: 1.5, setup: 7, lag: 2, opex: 20, iibb: 0, gan: 15, tOpex: 40, tIibb: 0, tGan: 15, risk: 3, acc: 'requiere permiso' },
+  debrecen: { label: 'Hungría · Debrecen', grp: 'Hungría', m2: 2686, rent24: 258, mult: 1.5, setup: 7, lag: 2, opex: 20, iibb: 0, gan: 15, tOpex: 40, tIibb: 0, tGan: 15, risk: 3, acc: 'requiere permiso' },
+  konya: { label: 'Turquía · Konya', grp: 'Turquía', m2: 800, rent24: 120, mult: 1.5, setup: 8, lag: 2, opex: 20, iibb: 0, gan: 15, tOpex: 40, tIibb: 0, tGan: 15, risk: 5, acc: 'verificar reciprocidad' },
+  ankara: { label: 'Turquía · Ankara', grp: 'Turquía', m2: 850, rent24: 136, mult: 1.5, setup: 8, lag: 2, opex: 20, iibb: 0, gan: 15, tOpex: 40, tIibb: 0, tGan: 15, risk: 5, acc: 'verificar reciprocidad' },
+  izmir: { label: 'Turquía · Esmirna', grp: 'Turquía', m2: 1000, rent24: 140, mult: 1.5, setup: 8, lag: 2, opex: 20, iibb: 0, gan: 15, tOpex: 40, tIibb: 0, tGan: 15, risk: 5, acc: 'verificar reciprocidad' }
+};
+var MODE_MIX = { mensual: 0, mixto: 0.5, temporario: 1 };
+var SCENARIOS = {
+  conservador: { appreciation: 0, cashYield: 2.5, factor: 0.85 },
+  base:        { appreciation: 3, cashYield: 4,   factor: 1 },
+  optimista:   { appreciation: 5, cashYield: 5.5, factor: 1.1 }
+};
+var MKEYS = ['m2','rent24','mult','setup','lag','opex','iibb','gan','tOpex','tIibb','tGan'];
+function applyMarket(p, key) { var m = MARKETS[key]; MKEYS.forEach(function (k) { p[k] = m[k]; }); p.market = key; return p; }
+var DEFAULTS = applyMarket({
+  members: 10, monthly: 500, contribGrowth: 0, years: 10, stopAt: 0, fee: 0,
+  strategy: 'ciclo', cycle: 10, targetM2: 24, unitUSD: 50000, unitAdjust: true, mix: 0, mult: 3, furnish: 4, noBuyLast: 0,
+  appreciation: 3, cashYield: 4, factor: 1,
+  usInfl: 3, saleCost: 5, cgTax: 0, reserve: 0, bench: 6
+}, 'ushuaia');
+function grossOf(p) { return p.rent24 * 12 / 24 / p.m2 * 100; }
+function netYieldOf(p) {
+  var G = grossOf(p);
+  var m = G * (1 - (p.opex + p.iibb) / 100) * (1 - p.gan / 100);
+  var t = G * p.mult * (1 - (p.tOpex + p.tIibb) / 100) * (1 - p.tGan / 100);
+  return p.factor / 100 * ((1 - p.mix) * m + p.mix * t);
+}
+function irrFlows(flows, T) {
+  var f = function (r) { var s = 0, t; for (t = 0; t <= T; t++) s += flows[t] / Math.pow(1 + r, t); return s; };
+  var lo = -0.02, hi = 0.06, i, mid;
+  if (f(lo) * f(hi) > 0) return NaN;
+  for (i = 0; i < 80; i++) { mid = (lo + hi) / 2; if (f(lo) * f(mid) <= 0) hi = mid; else lo = mid; }
+  return Math.pow(1 + (lo + hi) / 2, 12) - 1;
+}
+function simulate(p) {
+  var T = Math.round(p.years * 12);
+  var mG = Math.pow(1 + p.appreciation / 100, 1 / 12) - 1;
+  var mC = Math.pow(1 + p.cashYield / 100, 1 / 12) - 1;
+  var mB = Math.pow(1 + p.bench / 100, 1 / 12) - 1;
+  var netY = netYieldOf(p);
+  var setupE = p.setup + p.mix * p.furnish, lagE = Math.round(p.lag + p.mix);
+  var ticket = p.targetM2 * p.m2 * (1 + setupE / 100);
+  var feeCum = 0, cash = 0, pool = 0, bench = 0, contributed = 0, rentCum = 0, intCum = 0, lastBuy = 0, t, i;
+  var props = [], series = [], purchases = [], flows = [0];
+  for (t = 1; t <= T; t++) {
+    var intr = cash * mC;
+    cash += intr; pool *= 1 + mC; bench *= 1 + mB; intCum += intr;
+    for (i = 0; i < props.length; i++) props[i].value *= 1 + mG;
+    var c = (p.stopAt && t > p.stopAt) ? 0 : p.members * p.monthly * Math.pow(1 + p.contribGrowth / 100, Math.floor((t - 1) / 12));
+    cash += c; bench += c; contributed += c;
+    var rent = 0;
+    for (i = 0; i < props.length; i++) if (t >= props[i].rentStart) rent += props[i].value * netY / 12;
+    cash += rent; pool += rent; rentCum += rent;
+    if (p.fee) { var pvn = 0; for (i = 0; i < props.length; i++) pvn += props[i].value; var fe = Math.min(cash, (cash + pvn) * p.fee / 100); if (cash + fe > 0) pool *= cash / (cash + fe) ; cash -= fe; feeCum += fe; }
+    var spent = 0, rentUsed = 0, nBought = 0;
+    if (T - t >= p.noBuyLast) {
+      if (p.strategy === 'ticket') {
+        var tk = p.unitUSD * (p.unitAdjust ? Math.pow(1 + mG, t) : 1), need = tk * (1 + setupE / 100);
+        while (cash - p.reserve >= need && need > 0) {
+          var fr = need / cash, ru = pool * fr;
+          pool -= ru; rentUsed += ru; spent += need; nBought++;
+          props.push({ value: tk, basis: need, rentStart: t + lagE, month: t });
+          purchases.push({ n: props.length, month: t, price: tk, spent: need, rentUsed: ru, fundUsed: need - ru,
+            m2: tk / (p.m2 * Math.pow(1 + mG, t)), rentMonthly: tk * netY / 12 });
+          cash -= need; lastBuy = t;
+        }
+      } else {
+        var avail = cash - p.reserve, go;
+        if (p.strategy === 'ciclo') go = (t - lastBuy) >= p.cycle;
+        else go = avail >= ticket * Math.pow(1 + mG, t);
+        if (go && avail > 0) {
+          var price = avail / (1 + setupE / 100), frac = avail / cash;
+          rentUsed = pool * frac; pool -= rentUsed; spent = avail; nBought = 1;
+          props.push({ value: price, basis: avail, rentStart: t + lagE, month: t });
+          purchases.push({ n: props.length, month: t, price: price, spent: avail, rentUsed: rentUsed,
+            fundUsed: avail - rentUsed, m2: price / (p.m2 * Math.pow(1 + mG, t)), rentMonthly: price * netY / 12 });
+          cash -= avail; lastBuy = t;
+        }
+      }
+    }
+    var pv = 0, liqP = 0, by = [];
+    for (i = 0; i < props.length; i++) {
+      var v = props[i].value; pv += v; by.push(v);
+      var net = v * (1 - p.saleCost / 100), gain = net - props[i].basis;
+      liqP += net - Math.max(0, gain) * p.cgTax / 100;
+    }
+    var def = Math.pow(1 + p.usInfl / 100, t / 12);
+    series.push({ t: t, cash: cash, pv: pv, by: by, contributed: contributed, bench: bench, rent: rent, int: intr,
+      rentCum: rentCum, intCum: intCum, rentPool: pool, spent: spent, rentUsed: rentUsed, nBought: nBought, nProps: props.length,
+      feeCum: feeCum, total: cash + pv, liq: cash + liqP, liqReal: (cash + liqP) / def });
+    flows.push(-c / p.members);
+  }
+  var last = series[T - 1];
+  flows[T] += last.liq / p.members;
+  return { T: T, series: series, purchases: purchases, netY: netY, last: last, ticket: ticket,
+    irr: irrFlows(flows, T), benchIrr: p.bench / 100 };
+}
+function windows(r, len) {
+  var out = [], s = r.series, a, b, t, end, st;
+  for (a = 0; a < r.T; a += len) {
+    b = Math.min(r.T, a + len); end = s[b - 1]; st = a > 0 ? s[a - 1] : null;
+    var w = { k: out.length + 1, a: a + 1, b: b, nb: 0, bought: 0, ru: 0,
+      contrib: end.contributed - (st ? st.contributed : 0), rentC: end.rentCum - (st ? st.rentCum : 0),
+      intC: end.intCum - (st ? st.intCum : 0), pool: end.rentPool, cash: end.cash, pv: end.pv,
+      liq: end.liq, nProps: end.nProps, rent: end.rent };
+    for (t = a; t < b; t++) if (s[t].nBought > 0) { w.nb += s[t].nBought; w.bought += s[t].spent; w.ru += s[t].rentUsed; }
+    out.push(w);
+  }
+  return out;
+}
+function unitCalc(p, n, m2u, mode) {
+  var mix = MODE_MIX[mode], q = Object.assign({}, p, { mix: mix });
+  var setupE = p.setup + mix * p.furnish, lagE = Math.round(p.lag + mix);
+  var price = m2u * p.m2, cost = price * (1 + setupE / 100), ny = netYieldOf(q);
+  var grossM = price * grossOf(p) * p.factor / 100 / 12 * ((1 - mix) + mix * p.mult), netM = price * ny / 12;
+  var T = Math.round(p.years * 12), mG = Math.pow(1 + p.appreciation / 100, 1 / 12) - 1, flows = [-cost], t, rentSum = 0;
+  for (t = 1; t <= T; t++) { var rr = t > lagE ? price * Math.pow(1 + mG, t) * ny / 12 : 0; rentSum += rr; flows.push(rr); }
+  var sale = price * Math.pow(1 + mG, T) * (1 - p.saleCost / 100); flows[T] += sale;
+  var irr = irrFlows(flows, T);
+  return { price: price, cost: cost, grossM: grossM, netM: netM, n: n, costN: cost * n, grossMN: grossM * n,
+    netMN: netM * n, netYN: netM * 12 / cost * (1), rentSum: rentSum, sale: sale, total: rentSum + sale,
+    gainN: (rentSum + sale - cost) * n, irr: irr };
+}
+
+var P=Object.assign({},DEFAULTS),CUR={mode:'mensual',sc:'base',wl:10},U={n:1,m:24};
+var $=function(i){return document.getElementById(i)};
+var MODES={mensual:'Mensual',mixto:'Mixto',temporario:'Temporal'};
+function usd(n){return 'USD '+Math.round(n).toLocaleString('es-AR')}
+function pct(x){return isFinite(x)?(x*100).toFixed(1).replace('.',',')+'%':'—'}
+function f1(x){return x.toFixed(1).replace('.',',')}
+var NOTES={ushuaia:'Ushuaia: USD 2.000/m², el valor que fijó el grupo para las compras (octubre 2026; los portales publican entre USD 2.145 y 2.339 como precio pedido). Alquiler fijo de mercado USD 300 por 25 m² (USD 288 por 24 m²), bruto; se le restan expensas y gastos (18%) e ingresos brutos (5%). Regla del contrato: se compra cada 10 meses, sin excepción, unidades de 24 m² o más. Aporte del 1 al 10 de cada mes. Costos de compra 5%.',
+buenosaires:'CABA: USD 2.471/m² promedio (Zonaprop, julio 2026). Alquiler fijo de 24 m² entre $450.000 y $900.000 por mes (relevamiento de octubre de 2026): se usa USD 435, unos $686.000. Temporario: unos USD 870 brutos por mes (USD 40 la noche con 72% de ocupación, Airbtics), múltiplo 2, con 40% de gastos de plataforma, limpieza y administración: rinde casi lo mismo que el fijo. Los barrios más baratos están entre USD 1.050 y 1.600/m². Costos de compra 7% supuestos.',
+murcia:'Murcia: 1.783 €/m² (RealAdvisor 3T 2026) a 1,168 USD/€ y renta bruta ~7% (Idealista). El IRNR de no residentes fuera de la UE es 24% sobre la renta bruta, sin deducir gastos. Costos de compra 12% y múltiplo temporal ×1,5 son supuestos.',
+zamora:'Zamora: 1.251 €/m² (referencia de Gibobs) y alquiler de 7,8 €/m² al mes (Idealista, febrero 2026), la capital de provincia con el alquiler más barato de España. Ciudad no turística: el múltiplo temporal ×1,5 es un supuesto prudente. IRNR 24% sobre bruto.',
+jaen:'Jaén: 1.315 €/m² (Gibobs) y alquiler de 8,4 €/m² (Idealista, febrero 2026). Ciudad no turística; múltiplo temporal ×1,5 supuesto. IRNR 24% sobre bruto.',
+ciudadreal:'Ciudad Real: 1.351 €/m² (Gibobs) y alquiler de 8,4 €/m² (Idealista, febrero 2026). Ciudad no turística; múltiplo temporal ×1,5 supuesto. IRNR 24% sobre bruto.',
+guarda:'Guarda (Portugal interior): 837 €/m² de venta y 5,87 €/m² de alquiler (Doutor Finanças, septiembre 2026; promedios del distrito en avisos). Impuesto del no residente 25% sobre la renta neta y costos de compra 10% son supuestos sin verificar.',
+castelobranco:'Castelo Branco (Portugal interior): 1.134 €/m² de venta y 7,06 €/m² de alquiler (Doutor Finanças, septiembre 2026; promedios del distrito). Impuesto del no residente 25% sobre la renta neta y costos de compra 10% son supuestos sin verificar.',
+maribor:'Maribor (Eslovenia): 2.670 €/m² en usados (2025) y rentabilidad ~4,1%, el promedio de los submercados eslovenos (Global Property Guide, fuente sin fecha precisa). Impuesto 25% y costos 10% supuestos. Hay que verificar si un comprador argentino puede adquirir.',
+madrid:'Madrid: 4.696 €/m² y renta bruta 4,3% (RealAdvisor e Idealista, 3T 2026). Con USD 50.000 alcanza para unos 8 m²: no es viable para unidades de 24 m² con este ticket. Se deja como referencia.',
+ljubljana:'Ljubljana (Eslovenia): precio de orden de magnitud ~4.200 €/m² y alquiler ~15 €/m² al mes; estimación propia a partir de reportes de portales, sin verificar. Impuesto 25% supuesto. Verificar si un argentino puede comprar.',
+osijek:'Osijek (Croacia): alquiler pedido ~390 € por mes en departamentos de hasta 55 m² (Njuškalo, septiembre 2024, vía Total Croatia News); precio ~1.700 €/m² estimado. Impuesto 12% sobre 70% de la renta = 8,4% efectivo (supuesto). Un no UE necesita reciprocidad o autorización: verificar.',
+zagreb:'Zagreb (Croacia): alquiler mediano pedido de un ambiente ~600 € (Global Property Guide); precio ~3.300 €/m² estimado. Impuesto efectivo 8,4% supuesto. Un no UE necesita reciprocidad o autorización: verificar.',
+patras:'Patras (Grecia): rendimiento bruto promedio 4,7% (Global Property Guide), precio ~1.500 €/m² estimado. Impuesto de la renta 15% supuesto. Libre para extranjeros salvo zonas de frontera: verificar.',
+volos:'Volos (Grecia): rendimiento bruto promedio 4,2% (Global Property Guide), precio ~1.800 €/m² estimado. Impuesto de la renta 15% supuesto.',
+thessaloniki:'Tesalónica (Grecia): rendimiento bruto promedio 4,2% (Global Property Guide), precio ~2.700 €/m² estimado. Impuesto de la renta 15% supuesto.',
+pecs:'Pécs (Hungría): rendimiento bruto ~4,7% (Global Property Guide; estudio de 101.800 € alquila 410 €), precio ~1.600 €/m² estimado. Un argentino necesita permiso del Ministerio del Interior para comprar. Impuesto 15% supuesto.',
+debrecen:'Debrecen (Hungría): rendimiento bruto ~4,8% (Global Property Guide; estudio de 148.700 € alquila 520 €), precio ~2.300 €/m² estimado. Un argentino necesita permiso del Ministerio del Interior. Impuesto 15% supuesto.',
+konya:'Konya (Turquía): rendimiento bruto ~7,5% (Global Property Guide; 2 ambientes a USD 68.800 alquilan USD 440), precio ~USD 800/m² estimado. Riesgo país alto: lira, alquileres con tope legal y desalojos lentos. Impuesto 15% supuesto.',
+ankara:'Ankara (Turquía): rendimiento bruto ~8% (Global Property Guide; 2 ambientes a USD 80.200 alquilan USD 570), precio ~USD 850/m² estimado. Riesgo país alto. Impuesto 15% supuesto.',
+izmir:'Esmirna (Turquía): rendimiento bruto ~7% (Global Property Guide; 2 ambientes a USD 95.100 alquilan USD 570), precio ~USD 1.000/m² estimado. Riesgo país alto. Impuesto 15% supuesto.'};
+var C1=[['monthly','Aporte mensual por socio (USD)',100,2000,50],['members','Cantidad de socios',2,20,1],['years','Años',5,30,1],['cycle','Meses entre compras',3,36,1],['targetM2','Superficie objetivo (m²)',15,40,1],['unitUSD','Valor de cada departamento en la compra por ticket (USD)',20000,150000,5000],['reserve','Reserva de liquidez (USD)',0,30000,500],['noBuyLast','Meses finales sin comprar',0,12,1],['stopAt','Dejar de aportar desde el mes (0 = nunca)',0,360,1],['fee','Honorario del fiduciario (% mensual del patrimonio)',0,0.3,0.01],['mult','Múltiplo del temporal sobre el mensual',1,4,.1]];
+var C2=[['rent24','Alquiler mensual fijo de 24 m², contrato a 24 meses (USD)',100,800,10],['opex','Gastos operativos mensual (%)',0,60,1],['iibb','Impuestos sobre renta bruta (%)',0,30,.5],['gan','Ganancias mensual (%)',0,35,1],['tOpex','Gastos operativos temporal (%)',0,70,1],['tIibb','Impuestos sobre renta bruta temporal (%)',0,30,.5],['tGan','Ganancias temporal (%)',0,35,1],['setup','Costos de compra (%)',0,20,.5],['furnish','Amoblamiento si es temporal (%)',0,10,.5],['lag','Meses hasta alquilar',0,6,1],['saleCost','Costos de venta (%)',0,10,.5],['cgTax','Impuesto a la ganancia de venta (%)',0,30,1]];
+var C3=[['appreciation','Valorización anual en USD (%)',-5,10,.5],['cashYield','Rendimiento de la caja (% anual)',0,10,.5],['factorPct','Ajuste de renta (%)',70,130,5],['usInfl','Inflación en USD (% anual)',0,10,.5],['bench','Referencia financiera (% anual)',0,12,.5],['m2','Precio por m² (USD)',800,7000,50]];
+var MONEY={reserve:1,monthly:1,m2:1,rent24:1,unitUSD:1};
+function build(list,host){var h='';list.forEach(function(c){h+='<div class="ctl"><label for="c_'+c[0]+'">'+c[1]+'</label><output id="o_'+c[0]+'"></output><input type="range" id="c_'+c[0]+'" min="'+c[2]+'" max="'+c[3]+'" step="'+c[4]+'"></div>'});$(host).innerHTML=h;
+list.forEach(function(c){var el=$('c_'+c[0]);el.addEventListener('input',function(){var v=parseFloat(el.value);if(c[0]==='factorPct')P.factor=v/100;else P[c[0]]=v;render()})})}
+function sync(){[].concat(C1,C2,C3).forEach(function(c){var k=c[0],v=k==='factorPct'?Math.round(P.factor*100):P[k];$('c_'+k).value=v;$('o_'+k).textContent=MONEY[k]?usd(v):String(v).replace('.',',')});
+$('un').value=U.n;$('o_un').textContent=U.n;$('um').value=U.m;$('o_um').textContent=U.m+' m²'}
+function seg(host,key,names){var h='';Object.keys(names).forEach(function(k){h+='<button type="button" data-k="'+k+'" aria-pressed="'+(String(CUR[key])===k)+'">'+names[k]+'</button>'});$(host).innerHTML=h;
+$(host).onclick=function(e){var b=e.target.closest('button');if(!b)return;CUR[key]=key==='wl'?parseInt(b.dataset.k,10):b.dataset.k;
+if(key==='sc'){var s=SCENARIOS[CUR.sc];P.appreciation=s.appreciation;P.cashYield=instY(CUR.inst,CUR.sc);P.factor=s.factor}
+if(key==='mode')P.mix=MODE_MIX[CUR.mode];
+seg(host,key,names);sync();render()}}
+function svgChart(r){var W=800,H=340,L=58,R=12,T=14,B=28,n=r.T,mx=0;r.series.forEach(function(s){mx=Math.max(mx,s.total,s.bench,s.contributed)});mx*=1.08;
+var x=function(t){return L+(W-L-R)*t/n},y=function(v){return H-B-(H-T-B)*v/mx};var o='';
+for(var g=0;g<=4;g++){var v=mx*g/4,yy=y(v);o+='<line x1="'+L+'" x2="'+(W-R)+'" y1="'+yy+'" y2="'+yy+'" stroke="var(--line)"/><text class="ax" x="'+(L-6)+'" y="'+(yy+4)+'" text-anchor="end">'+Math.round(v/1000)+'k</text>'}
+for(var yr=0;yr<=r.T/12;yr+=Math.ceil(r.T/12/10)){o+='<text class="ax" x="'+x(yr*12)+'" y="'+(H-8)+'" text-anchor="'+(yr*12>=n?'end':'middle')+'">Año '+yr+'</text>'}
+var base=r.series.map(function(s){return x(s.t)+','+y(s.pv)}).join(' ');
+var tot=r.series.map(function(s){return x(s.t)+','+y(s.total)}).join(' ');
+o+='<polygon points="'+x(0)+','+y(0)+' '+base+' '+x(n)+','+y(0)+'" fill="var(--violet)" opacity=".85"/>';
+o+='<polygon points="'+base+' '+r.series.slice().reverse().map(function(s){return x(s.t)+','+y(s.total)}).join(' ')+'" fill="var(--cyan)" opacity=".85"/>';
+o+='<polyline points="'+tot+'" fill="none" stroke="var(--pink)" stroke-width="2.5"/>';
+o+='<polyline points="'+r.series.map(function(s){return x(s.t)+','+y(s.contributed)}).join(' ')+'" fill="none" stroke="var(--orange)" stroke-width="2.5" stroke-dasharray="6 4"/>';
+o+='<polyline points="'+r.series.map(function(s){return x(s.t)+','+y(s.bench)}).join(' ')+'" fill="none" stroke="var(--lime)" stroke-width="2.5"/>';
+o+='<line id="cur" x1="0" x2="0" y1="'+T+'" y2="'+(H-B)+'" stroke="var(--fg)" stroke-width="1" opacity="0"/>';
+$('chart').innerHTML=o;
+var sv=$('chart');function at(e){var rc=sv.getBoundingClientRect(),px=(e.clientX-rc.left)/rc.width*W;var t=Math.max(1,Math.min(n,Math.round((px-L)/(W-L-R)*n)));var s=r.series[t-1];var c=$('cur');c.setAttribute('x1',x(t));c.setAttribute('x2',x(t));c.setAttribute('opacity','.6');
+$('read').textContent='Mes '+t+' (año '+f1(t/12)+'): aportado '+usd(s.contributed)+' · inmuebles '+usd(s.pv)+' ('+s.nProps+') · caja '+usd(s.cash)+' · reserva de renta '+usd(s.rentPool)+' · total '+usd(s.total)+' · referencia '+usd(s.bench)}
+sv.onpointermove=at;sv.onpointerdown=at}
+function unitTable(){var N=U.n,m=U.m,h='<tr><th>Concepto ('+N+(N>1?' bienes':' bien')+' de '+m+' m²)</th>';var modes=['mensual','mixto','temporario'],R={};modes.forEach(function(k){R[k]=unitCalc(P,N,m,k);h+='<th>'+MODES[k]+'</th>'});h+='</tr>';
+function row(l,fn,cls){h+='<tr'+(cls?' class="'+cls+'"':'')+'><td>'+l+'</td>';modes.forEach(function(k){h+='<td>'+fn(R[k])+'</td>'});h+='</tr>'}
+row('Precio de cada bien',function(r){return usd(r.price)});
+row('Inversión con costos de compra',function(r){return usd(r.costN)});
+row('Renta bruta mensual',function(r){return usd(r.grossMN)});
+row('Renta neta mensual',function(r){return usd(r.netMN)},'hl');
+row('Renta neta anual',function(r){return usd(r.netMN*12)});
+row('Rendimiento neto anual sobre lo invertido',function(r){return pct(r.netYN)});
+row('Renta neta acumulada en '+P.years+' años',function(r){return usd(r.rentSum*N)});
+row('Valor de venta neto al año '+P.years,function(r){return usd(r.sale*N)});
+row('Ganancia total (renta + venta − inversión)',function(r){return usd(r.gainN)},'hl');
+row('TIR anual',function(r){return pct(r.irr)});
+row('Ganancia por socio ('+P.members+' socios)',function(r){return usd(r.gainN/P.members)});
+$('unit').innerHTML=h;
+var one=R.mensual,warn='';
+if(one.costN>P.members*P.monthly*P.cycle)warn='<div class="warn">'+N+' bien'+(N>1?'es':'')+' de '+m+' m² cuestan '+usd(one.costN)+' con costos, más que los '+usd(P.members*P.monthly*P.cycle)+' que el grupo junta en un ciclo de '+P.cycle+' meses. Con aportes fijos, el grupo necesita unos '+Math.ceil(one.costN/(P.members*P.monthly))+' meses para juntar esa suma sin contar rentas.</div>';
+else warn='<div class="verdict">Con un ciclo de '+P.cycle+' meses el grupo junta '+usd(P.members*P.monthly*P.cycle)+', que en este mercado compran unos '+f1(P.members*P.monthly*P.cycle/(1+P.setup/100)/P.m2)+' m² (con '+P.setup+'% de costos).</div>';
+$('unote').innerHTML=warn}
+/* ===== Brújula de decisión: IPC, instrumentos, mapa de mercados ===== */
+var IPC={ipc1:24,ipcL:8,fx0:1577,pfReal:2,cerReal:4,tbill:4,onY:6.5};
+var SCREAL={conservador:-5,base:0,optimista:3};
+CUR.inst='gen';CUR.tab='caminos';
+function peso(real,k){return((1+real/100)*(1+P.usInfl/100)*(1+SCREAL[k]/100)-1)*100}
+var INSTR=[
+{id:'gen',n:'Caja general del modelo',risk:2,liq:'1 día',d:'Promedio simple: 2,5 / 4 / 5,5 % según el escenario.',y:function(k){return SCENARIOS[k].cashYield}},
+{id:'cash',n:'Dólares en efectivo o caja de seguridad',risk:3,liq:'Inmediata',d:'No rinde, y suma riesgo de robo y de restricciones.',y:function(){return 0}},
+{id:'mm',n:'Fondo money market en dólares',risk:1,liq:'1 día',d:'Riesgo bajo y rendimiento bajo.',y:function(k){return{conservador:1,base:2,optimista:3}[k]}},
+{id:'tbill',n:'Letras del Tesoro de EE. UU. (6 a 12 meses)',risk:1,liq:'2–3 días',d:'Dólar duro. Se compra por un broker habilitado.',y:function(k){return IPC.tbill+{conservador:-.5,base:0,optimista:.5}[k]}},
+{id:'pf',n:'Plazo fijo en pesos',risk:3,liq:'30 días',d:'Rinde inflación más tasa real. El riesgo es que el dólar suba más que la inflación.',y:function(k){return peso(IPC.pfReal,k)}},
+{id:'cer',n:'Letras y bonos ajustables por CER',risk:3,liq:'1–2 días',d:'Siguen al IPC con tasa real. Mismo riesgo cambiario, con precio de mercado que oscila.',y:function(k){return peso(IPC.cerReal,k)}},
+{id:'on',n:'Obligaciones negociables en USD de empresas sólidas',risk:3,liq:'1–3 días',d:'Dólar con riesgo de crédito. El escenario conservador descuenta una pérdida.',y:function(k){return IPC.onY+{conservador:-3.5,base:0,optimista:1.5}[k]}},
+{id:'oro',n:'Oro',risk:4,liq:'2 días',d:'No paga renta; protege en crisis, oscila mucho a 10 meses.',y:function(k){return{conservador:-6,base:4,optimista:10}[k]}},
+{id:'acc',n:'Acciones globales (ETF)',risk:5,liq:'2 días',d:'A 10 meses el precio puede estar por debajo de lo aportado.',y:function(k){return{conservador:-8,base:8,optimista:15}[k]}}
+];
+function instOf(id){for(var i=0;i<INSTR.length;i++)if(INSTR[i].id===id)return INSTR[i];return INSTR[0]}
+function instY(id,k){return instOf(id).y(k)}
+function scn(k,inst){return{appreciation:SCENARIOS[k].appreciation,factor:SCENARIOS[k].factor,cashYield:instY(inst||CUR.inst,k)}}
+function runC(mk,mode,k,inst,extra){var q=Object.assign({},P,scn(k,inst),{mix:MODE_MIX[mode]},extra||{});if(mk!==P.market)applyMarket(q,mk);return simulate(q)}
+function tri(mk,mode,inst,extra){return{c:runC(mk,mode,'conservador',inst,extra),b:runC(mk,mode,'base',inst,extra),o:runC(mk,mode,'optimista',inst,extra)}}
+function dots(n){var h='';for(var i=1;i<=5;i++)h+='<i class="dt'+(i<=n?' on':'')+'"></i>';return '<span class="dots" title="Riesgo '+n+' de 5">'+h+'</span>'}
+function rl(n){return n<=1?'bajo':n===2?'moderado':n===3?'medio':n===4?'alto':'muy alto'}
+function heatBg(irr){if(!isFinite(irr))return '';var d=(irr-P.bench/100)/0.04;d=Math.max(-1,Math.min(1,d));return d>=0?'background:color-mix(in srgb,var(--lime) '+Math.round(15+d*55)+'%,transparent)':'background:color-mix(in srgb,var(--bad) '+Math.round(12-d*38)+'%,transparent)'}
+function applyChoice(mk,mode,inst,strat){applyMarket(P,mk);CUR.mode=mode;P.mix=MODE_MIX[mode];CUR.inst=inst;P.cashYield=instY(inst,CUR.sc);if(strat){P.strategy=strat.strategy;P.unitAdjust=!!strat.unitAdjust}
+$('market').value=mk;$('strategy').value=P.strategy;$('adj').checked=P.unitAdjust;seg('md','mode',MODES);sync();render();$('kpis').scrollIntoView({behavior:'smooth',block:'start'})}
+function ipcAt(y){return IPC.ipc1+(IPC.ipcL-IPC.ipc1)*Math.min(1,(y-1)/5)}
+var LABS={caminos:'Tres caminos',meta:'Mi meta de ingresos',solo:'Grupo o solo',reventa:'Arreglar y revender',mapa:'Mapa de mercados',imp:'Dónde se va la renta',caja:'Caja entre compras',ipc:'IPC y pesos',rueda:'Rueda sola',grupos:'Grupos griegos'};
+var CTL_IPC=[['ipc1','IPC del primer año (%)',5,60,1],['ipcL','IPC de largo plazo (%)',2,30,1],['fx0','Dólar de hoy (ARS)',800,3000,10]];
+var CTL_CAJA=[['tbill','Letras del Tesoro de EE. UU. (% anual)',1,7,.25],['pfReal','Tasa real del plazo fijo (% sobre IPC)',-3,8,.5],['cerReal','Tasa real de bonos CER (% sobre IPC)',0,10,.5],['onY','Rendimiento de ONs en USD (% anual)',3,12,.5]];
+function buildI(list,host){var h='';list.forEach(function(c){h+='<div class="ctl"><label for="i_'+c[0]+'">'+c[1]+'</label><output id="oi_'+c[0]+'"></output><input type="range" id="i_'+c[0]+'" min="'+c[2]+'" max="'+c[3]+'" step="'+c[4]+'" value="'+IPC[c[0]]+'"></div>'});$(host).innerHTML=h;
+list.forEach(function(c){var el=$('i_'+c[0]),o=$('oi_'+c[0]);var up=function(){o.textContent=String(IPC[c[0]]).replace('.',',')+(c[0]==='fx0'?'':' %')};up();
+el.addEventListener('input',function(){IPC[c[0]]=parseFloat(el.value);if(CUR.inst!=='gen')P.cashYield=instY(CUR.inst,CUR.sc);up();render()})})}
+function labTabs(){var h='';Object.keys(LABS).forEach(function(k){h+='<button type="button" data-k="'+k+'" aria-pressed="'+(CUR.tab===k)+'">'+LABS[k]+'</button>'});$('labtabs').innerHTML=h;
+$('labtabs').onclick=function(e){var b=e.target.closest('button');if(!b)return;CUR.tab=b.dataset.k;labTabs();lab()}}
+function lab(){['caminos','meta','solo','reventa','mapa','imp','caja','ipc','rueda','grupos'].forEach(function(k){$('t_'+k).hidden=CUR.tab!==k});
+({caminos:tabCaminos,meta:tabMeta,solo:tabSolo,reventa:tabReventa,mapa:tabMapa,imp:tabImp,caja:tabCaja,ipc:tabIpc,rueda:tabRueda,grupos:tabGrupos})[CUR.tab]()}
+/* --- Tres caminos --- */
+function tabCaminos(){
+var PR=[{n:'Prudente',inst:'tbill',max:2,sc:function(t){return t.c.irr},d:'Maximiza el piso del escenario conservador, con países de riesgo bajo o moderado y dólar duro mientras se espera.'},
+{n:'Equilibrado',inst:'cer',max:3,sc:function(t){return(t.c.irr+t.b.irr)/2},d:'Promedia el piso y el caso base, acepta riesgo medio (incluye Argentina) y espera la caja protegida del IPC.'},
+{n:'Ambicioso',inst:'on',max:5,sc:function(t){return t.o.irr},d:'Busca el techo del escenario optimista y acepta riesgo alto. Es el más sensible a que fallen los supuestos.'}];
+var keys=Object.keys(MARKETS).filter(function(k){return k!=='madrid'}),h='';
+PR.forEach(function(pf,pi){var best=null;
+keys.forEach(function(k){if(MARKETS[k].risk>pf.max)return;['mensual','temporario'].forEach(function(md){var t=tri(k,md,pf.inst);var s=pf.sc(t);if(!isFinite(s))return;if(!best||s>best.s)best={k:k,md:md,t:t,s:s}})});
+if(!best)return;
+var A=runC(best.k,best.md,'base',pf.inst,{strategy:'ciclo'}),B=runC(best.k,best.md,'base',pf.inst,{strategy:'ticket',unitAdjust:true});
+var useT=B.irr>A.irr+0.001,R=useT?B:A,M=MARKETS[best.k],I=instOf(pf.inst),N=P.members;
+h+='<article class="pcard"><div class="pc-h"><span class="badge b'+pi+'">'+pf.n+'</span>'+dots(M.risk)+'</div>'+
+'<h3>'+M.label+' · '+MODES[best.md==='temporario'?'temporario':'mensual']+'</h3><p class="sub" style="margin:4px 0 8px">'+pf.d+'</p>'+
+'<div class="rng"><span>'+pct(best.t.c.irr)+'</span><div class="rb"><i style="left:'+Math.max(0,Math.min(100,(best.t.c.irr+0.02)/0.16*100))+'%;width:'+Math.max(2,(best.t.o.irr-best.t.c.irr)/0.16*100)+'%"></i><b style="left:'+Math.max(0,Math.min(100,(best.t.b.irr+0.02)/0.16*100))+'%"></b></div><span>'+pct(best.t.o.irr)+'</span></div>'+
+'<div class="mini">TIR anual: piso · <b>base '+pct(best.t.b.irr)+'</b> · techo</div>'+
+'<ul class="ul"><li><b>Esperar la caja en:</b> '+I.n+'</li><li><b>Ritmo:</b> '+(useT?'apenas alcanza un depto de '+usd(P.unitUSD)+' (ajustado)':'una compra cada '+P.cycle+' meses con toda la caja')+'</li><li><b>Resultado base:</b> '+R.last.nProps+' deptos · '+usd(R.last.liq/N)+' por socio (aportó '+usd(R.last.contributed/N)+')</li><li><b>Acceso:</b> '+M.acc+' · riesgo '+rl(M.risk)+'</li></ul>'+
+'<button type="button" class="go" data-k="'+best.k+'" data-m="'+best.md+'" data-i="'+pf.inst+'" data-t="'+(useT?1:0)+'">Aplicar al simulador</button></article>'});
+$('t_caminos').innerHTML='<p class="sub">El simulador recorre todos los mercados, la modalidad mensual y la temporal, tres escenarios y un instrumento de espera por perfil, con tus supuestos de la izquierda. Elige el mejor de cada perfil.</p><div class="paths">'+h+'</div><div class="verdict">Son los mejores del modelo, no recomendaciones personalizadas: dependen del múltiplo temporal, de los precios y rentas ingresados y de impuestos que hay que validar con contador y abogado. Antes de comprar fuera de Argentina, confirmá que un argentino pueda adquirir (columna Acceso).</div>';
+$('t_caminos').onclick=function(e){var b=e.target.closest('.go');if(!b)return;applyChoice(b.dataset.k,b.dataset.m,b.dataset.i,b.dataset.t==='1'?{strategy:'ticket',unitAdjust:true}:{strategy:'ciclo',unitAdjust:P.unitAdjust})}}
+/* --- Mapa --- */
+function tabMapa(){var keys=Object.keys(MARKETS),md=['mensual','mixto','temporario'],rows=[],h='<tr><th>Mercado</th><th>Riesgo</th><th>Acceso</th><th>Mensual</th><th>Mixto</th><th>Temporal</th></tr>',grp='';
+keys.forEach(function(k){var T={};md.forEach(function(m){T[m]=tri(k,m)});rows.push({k:k,T:T})});
+rows.forEach(function(r){var M=MARKETS[r.k];if(M.grp!==grp){grp=M.grp;h+='<tr class="gh"><td colspan="6">'+grp+'</td></tr>'}
+h+='<tr class="hr'+(r.k===P.market?' hl':'')+'"><td>'+M.label.replace(/^[^·]*· /,'')+'</td><td>'+dots(M.risk)+'</td><td class="acc">'+M.acc+'</td>'+md.map(function(m){var b=r.T[m].b.irr;return '<td class="cell" data-k="'+r.k+'" data-m="'+m+'" style="'+heatBg(b)+'">'+pct(b)+'</td>'}).join('')+'</tr>'});
+var mode=CUR.mode;rows.sort(function(a,b){return(b.T[mode].b.irr||-1)-(a.T[mode].b.irr||-1)});
+var W=800,L=190,Rr=40,rh=24,H=rows.length*rh+36,lo=-0.02,hi=0.14,x=function(v){return L+(W-L-Rr)*Math.max(0,Math.min(1,(v-lo)/(hi-lo)))};
+var o='';for(var g=0;g<=7;g++){var v=lo+(hi-lo)*g/7;o+='<line x1="'+x(v)+'" x2="'+x(v)+'" y1="18" y2="'+(H-6)+'" stroke="var(--line)"/><text class="ax" x="'+x(v)+'" y="12" text-anchor="middle">'+Math.round(v*100)+'%</text>'}
+o+='<line x1="'+x(P.bench/100)+'" x2="'+x(P.bench/100)+'" y1="18" y2="'+(H-6)+'" stroke="var(--lime)" stroke-width="2.5" stroke-dasharray="5 4"/>';
+rows.forEach(function(r,i){var y=26+i*rh,t=r.T[mode],M=MARKETS[r.k];o+='<g class="rr" data-k="'+r.k+'" style="cursor:pointer"><rect x="0" y="'+(y-4)+'" width="'+W+'" height="'+rh+'" fill="'+(r.k===P.market?'var(--surface2)':'transparent')+'"/><text class="ax" x="'+(L-8)+'" y="'+(y+11)+'" text-anchor="end" style="fill:var(--fg)">'+M.label.replace(/^[^·]*· /,'')+'</text><rect x="'+x(t.c.irr)+'" y="'+(y+3)+'" width="'+Math.max(3,x(t.o.irr)-x(t.c.irr))+'" height="10" rx="5" fill="var(--violet)" opacity=".4"/><circle cx="'+x(t.b.irr)+'" cy="'+(y+8)+'" r="6" fill="var(--pink)"/><text class="ax" x="'+(x(t.o.irr)+8)+'" y="'+(y+12)+'">'+pct(t.b.irr)+'</text></g>'});
+$('t_mapa').innerHTML='<p class="sub">Cada celda es la TIR anual del caso base, con tus supuestos de estrategia y caja. Verde supera la referencia financiera de '+pct(P.bench/100)+', rojo queda debajo. Tocá una celda para cargar ese mercado y esa modalidad en el simulador.</p><div class="mapgrid"><div class="tw"><table class="heat">'+h+'</table></div><div><div class="lbl">Rango por mercado, modalidad «'+MODES[mode]+'» (barra: piso a techo · punto: base · línea verde: referencia)</div><div class="tw"><svg viewBox="0 0 '+W+' '+H+'" class="rangechart" style="min-width:560px;width:100%" role="img" aria-label="Rango de TIR por mercado">'+o+'</svg></div></div></div>';
+$('t_mapa').onclick=function(e){var c=e.target.closest('.cell');if(c){applyMarket(P,c.dataset.k);CUR.mode=c.dataset.m;P.mix=MODE_MIX[c.dataset.m];$('market').value=c.dataset.k;seg('md','mode',MODES);sync();render();return}
+var g=e.target.closest('.rr');if(g){applyMarket(P,g.dataset.k);$('market').value=g.dataset.k;sync();render()}}}
+/* --- Impuestos --- */
+function tabImp(){var mix=MODE_MIX[CUR.mode],h='',keys=Object.keys(MARKETS);
+var rows=keys.map(function(k){var q=Object.assign({},P);if(k!==P.market)applyMarket(q,k);var G=grossOf(q),f=1+mix*(q.mult-1),gr=G*f,opx=(1-mix)*q.opex+mix*q.tOpex,ib=(1-mix)*q.iibb+mix*q.tIibb,gn=(1-mix)*q.gan+mix*q.tGan;
+var after=gr*(1-(opx+ib)/100),net=after*(1-gn/100);return{k:k,gr:gr,opxv:gr*opx/100,ibv:gr*ib/100,gnv:after*gn/100,net:net,eff:gr?(1-net/gr):0}});
+rows.sort(function(a,b){return b.net-a.net});
+rows.forEach(function(r){var s=r.gr/100;h+='<div class="tx" data-k="'+r.k+'"><div class="tx-n">'+MARKETS[r.k].label+'</div><div class="tx-b" title="Gastos '+f1(r.opxv/s)+' · impuestos sobre renta '+f1(r.ibv/s)+' · ganancias '+f1(r.gnv/s)+' · neta '+f1(r.net/s)+' de cada 100"><i style="width:'+(r.net/s)+'%;background:var(--lime)"></i><i style="width:'+(r.opxv/s)+'%;background:var(--orange)"></i><i style="width:'+(r.ibv/s)+'%;background:var(--pink)"></i><i style="width:'+(r.gnv/s)+'%;background:var(--violet)"></i></div><div class="tx-v">bruta '+f1(r.gr)+'% → neta <b>'+f1(r.net)+'%</b></div></div>'});
+$('t_imp').innerHTML='<p class="sub">De cada USD 100 de renta bruta (modalidad «'+MODES[CUR.mode]+'»), cuánto queda tras gastos, impuestos sobre la renta y ganancias. Ordenado de mayor a menor renta neta sobre el valor del inmueble.</p><div class="legend"><span><i style="background:var(--lime)"></i>Queda neta</span><span><i style="background:var(--orange)"></i>Gastos operativos</span><span><i style="background:var(--pink)"></i>Impuesto sobre renta</span><span><i style="background:var(--violet)"></i>Ganancias</span></div><div class="txs">'+h+'</div><div class="verdict">España cobra 24% sobre la renta bruta a no residentes fuera de la UE, sin deducir gastos; Portugal, Eslovenia y Grecia gravan la renta neta con alícuotas menores o similares. Argentina depende de la modalidad: el alquiler temporal paga más gastos e impuestos pero sobre una renta bruta mayor. Todas las alícuotas son supuestos a validar, y no incluyen los impuestos que Argentina pueda cobrar sobre bienes y rentas en el exterior.</div>';
+$('t_imp').onclick=function(e){var t=e.target.closest('.tx');if(t){applyMarket(P,t.dataset.k);$('market').value=t.dataset.k;sync();render()}}}
+/* --- Caja --- */
+function tabCaja(){var h='',res=INSTR.map(function(I){var t=tri(P.market,CUR.mode,I.id);return{I:I,t:t,y:I.y(CUR.sc)}}),bestL=-1e18,worstL=1e18;
+res.forEach(function(r){var l=r.t.b.last.liq;bestL=Math.max(bestL,l);worstL=Math.min(worstL,l)});
+var mkBest=-1e18,mkWorst=1e18;Object.keys(MARKETS).forEach(function(k){var z=runC(k,CUR.mode,'base');if(isFinite(z.irr)){mkBest=Math.max(mkBest,z.last.liq);mkWorst=Math.min(mkWorst,z.last.liq)}});
+res.sort(function(a,b){return b.t.b.last.liq-a.t.b.last.liq});
+var cur=runC(P.market,CUR.mode,CUR.sc),avg=0;cur.series.forEach(function(s){avg+=s.cash});avg/=cur.T;
+res.forEach(function(r){var I=r.I,sel=I.id===CUR.inst,t=r.t,lo=t.c.irr,hi=t.o.irr,dif=t.b.last.liq-worstL;
+h+='<button type="button" class="inst'+(sel?' sel':'')+'" data-i="'+I.id+'"><div class="in-h"><b>'+I.n+'</b>'+dots(I.risk)+'</div><div class="in-d">'+I.d+'</div><div class="in-m"><span>Rinde (USD, '+CUR.sc+')</span><b>'+f1(r.y)+'%</b></div><div class="in-m"><span>TIR del proyecto</span><b>'+pct(t.b.irr)+'</b></div><div class="in-m"><span>Liquidación por socio</span><b>'+usd(t.b.last.liq/P.members)+'</b></div><div class="in-m"><span>Liquidez</span><b>'+I.liq+'</b></div><div class="rng"><span>'+pct(lo)+'</span><div class="rb"><i style="left:'+Math.max(0,Math.min(100,(lo+0.02)/0.14*100))+'%;width:'+Math.max(2,(hi-lo)/0.14*100)+'%"></i><b style="left:'+Math.max(0,Math.min(100,(t.b.irr+0.02)/0.14*100))+'%"></b></div><span>'+pct(hi)+'</span></div></button>'});
+$('t_caja').innerHTML='<p class="sub">Qué hacer con la plata entre una compra y la siguiente. Cada tarjeta corre el proyecto completo con ese instrumento, en el mercado y la modalidad que tenés cargados. Tocá una para usarla en todo el simulador.</p><div id="ctlsCaja" class="ctlrow"></div><div class="insts">'+h+'</div><div class="verdict">Con este mercado, la caja promedio parada es <b>'+usd(avg)+'</b>. Elegir el mejor instrumento en vez del peor cambia la liquidación del grupo en <b>'+usd(bestL-worstL)+'</b>; elegir el mejor mercado en vez del peor cambia <b>'+usd(mkBest-mkWorst)+'</b>. La decisión que más pesa es dónde comprar y cómo se alquila, no dónde esperar.</div><div class="foot" style="margin-top:8px">Rendimientos en USD supuestos y editables, no cotizaciones: los de la Argentina se derivan del IPC y de una suba real del dólar de −5, 0 o +3% anual según el escenario. Verificar tasas vigentes con el banco o el broker. No es asesoramiento financiero.</div>';
+buildI(CTL_CAJA,'ctlsCaja');
+$('t_caja').querySelector('.insts').onclick=function(e){var b=e.target.closest('.inst');if(!b)return;CUR.inst=b.dataset.i;P.cashYield=instY(CUR.inst,CUR.sc);sync();render()}}
+/* --- IPC --- */
+/* --- Rueda sola: el proyecto compra sin aportes de los socios --- */
+function rwFind(mk,mode,adj,x2){
+var s0=scn(CUR.sc,CUR.inst),ex=Object.assign({years:40,strategy:'ticket',unitAdjust:adj,stopAt:0,noBuyLast:0,reserve:0},x2||{});
+var r=runC(mk,mode,CUR.sc,CUR.inst,ex);
+var q=Object.assign({},P,s0,{mix:MODE_MIX[mode]},ex);if(mk!==P.market)applyMarket(q,mk);
+var mG=Math.pow(1+q.appreciation/100,1/12)-1,setupE=q.setup+q.mix*q.furnish,s=r.series,t,j,inc,cost;
+for(t=11;t<=s.length;t++){inc=0;for(j=t-10;j<t;j++)inc+=s[j].rent+s[j].int;
+cost=P.unitUSD*(adj?Math.pow(1+mG,t):1)*(1+setupE/100);
+if(inc>=cost)return{S:t,n:s[t-1].nProps,first:r.purchases.length?r.purchases[0].month:null,inc:inc,cost:cost}}
+return null}
+function rwVerify(mk,mode,adj,S){
+var r=runC(mk,mode,CUR.sc,CUR.inst,{years:S/12+10,strategy:'ticket',unitAdjust:adj,stopAt:S,noBuyLast:0,reserve:0});
+var after=r.purchases.filter(function(x){return x.month>S}),gap=0,prev=S;after.forEach(function(x){gap=Math.max(gap,x.month-prev);prev=x.month});
+return{after:after.length,gap:gap,final:r.last.nProps}}
+function rwY(f){return f?String((f.S/12).toFixed(1)).replace('.',',')+' años · '+f.n+' deptos':'más de 40 años'}
+function tabRueda(){
+var mk=P.market,md=CUR.mode,fa=rwFind(mk,md,false),fb=rwFind(mk,md,true),h='';
+var main=fb||fa;
+if(main){var v=rwVerify(mk,md,true,fb?fb.S:fa.S),fv=main.first;
+h+='<div class="kpis" style="margin-bottom:14px">'
++'<div class="kpi" style="background:var(--grad)"><small>Mes en que rueda sola</small><b>'+main.S+'</b><span>'+String((main.S/12).toFixed(1)).replace('.',',')+' años desde el inicio</span></div>'
++'<div class="kpi" style="background:var(--grad)"><small>Desde la primera compra</small><b>'+String(((main.S-fv)/12).toFixed(1)).replace('.',',')+' años</b><span>la primera compra es en el mes '+fv+'</span></div>'
++'<div class="kpi" style="background:var(--grad)"><small>Departamentos en ese momento</small><b>'+main.n+'</b><span>sin sumar los que se compren después</span></div>'
++'<div class="kpi" style="background:var(--grad)"><small>Renta e interés de 10 meses</small><b>'+usd(main.inc)+'</b><span>alcanza para un depto de '+usd(main.cost)+' con gastos</span></div></div>'
++'<div class="verdict">Con <b>'+MARKETS[mk].label+'</b>, alquiler <b>'+md+'</b> y el valor de cada departamento subiendo con la valorización, el proyecto empieza a caminar solo en el <b>mes '+main.S+'</b>. Si desde ese mes los socios dejan de aportar, el grupo compra <b>'+v.after+' departamentos más</b> en los 10 años siguientes, sin pasar nunca más de <b>'+v.gap+' meses</b> entre una compra y la otra.</div>'
++'<div style="margin:12px 0"><button type="button" class="go" style="width:auto;padding:10px 18px" id="rwApply">Probarlo en el simulador: dejar de aportar desde el mes '+main.S+'</button> <button type="button" class="go" style="width:auto;padding:10px 18px;background:var(--surface2);color:var(--fg);border:1px solid var(--line)" id="rwClear">Volver a aportar siempre</button></div>'}
+h+='<p class="sub">Cada departamento chico aporta poca renta por mes, pero cuando hay muchos, la renta junta más el interés de la caja pagan solos un departamento nuevo cada 10 meses. Esa es la rueda. La tabla muestra cuándo pasa en cada mercado, con el precio del departamento fijo o subiendo con la valorización.</p>';
+var rows='';Object.keys(MARKETS).forEach(function(k){var a=rwFind(k,'mensual',false),b=rwFind(k,'mensual',true),c=rwFind(k,'temporario',false),d=rwFind(k,'temporario',true);
+rows+='<tr'+(k===mk?' style="font-weight:700"':'')+'><td>'+MARKETS[k].label+'</td><td>'+rwY(a)+'</td><td>'+rwY(b)+'</td><td>'+rwY(c)+'</td><td>'+rwY(d)+'</td></tr>'});
+h+='<div class="tw"><table><tr><th>Mercado</th><th>Mensual, precio fijo</th><th>Mensual, con valorización</th><th>Temporal, precio fijo</th><th>Temporal, con valorización</th></tr>'+rows+'</table></div>';
+h+='<div class="foot" style="margin-top:8px">Se mide con la estrategia de ticket de '+usd(P.unitUSD)+' por departamento, escenario '+CUR.sc+', sin reserva y mirando hasta 40 años. El alquiler temporal supone el múltiplo y los gastos que tenés cargados. Son proyecciones, no promesas.</div>';
+$('t_rueda').innerHTML=h;
+var ap=$('rwApply');if(ap)ap.onclick=function(){P.strategy='ticket';P.unitAdjust=true;P.stopAt=main.S;P.years=Math.min(30,Math.ceil((main.S+60)/12));sync();render()};
+var cl=$('rwClear');if(cl)cl.onclick=function(){P.stopAt=0;sync();render()}}
+/* --- Grupos con nombre del alfabeto griego --- */
+var GREEK=['Alfa','Beta','Gamma','Delta','Épsilon','Zeta','Eta','Theta','Iota','Kappa','Lambda','Mu','Nu','Xi','Ómicron','Pi','Rho','Sigma','Tau','Ípsilon','Phi','Chi','Psi','Omega'];
+var GPRE=[{n:'Alfa',m:10,a:500},{n:'Beta',m:10,a:300},{n:'Gamma',m:20,a:250},{n:'Delta',m:8,a:1000}];
+CUR.gn=CUR.gn||'Épsilon';CUR.gfee=(CUR.gfee==null?0.05:CUR.gfee);
+function tabGrupos(){
+var rows=GPRE.concat([{n:CUR.gn,m:P.members,a:P.monthly,mine:1}]),h='',tot=0;
+rows.forEach(function(g){
+var r=runC(P.market,CUR.mode,CUR.sc,CUR.inst,{members:g.m,monthly:g.a,years:10,stopAt:0,fee:CUR.gfee}),f=rwFind(P.market,CUR.mode,true,{members:g.m,monthly:g.a,years:40,fee:CUR.gfee}),
+first=r.purchases.length?r.purchases[0].month:'—',m2=r.purchases.length?String(r.purchases[0].m2.toFixed(1)).replace('.',','):'—',ing=r.last.feeCum;tot+=ing;
+h+='<tr'+(g.mine?' style="font-weight:700"':'')+'><td>'+g.n+(g.mine?' (tu grupo)':'')+'</td><td>'+g.m+'</td><td>'+usd(g.a)+'</td><td>'+usd(g.m*g.a)+'</td><td>'+first+'</td><td>'+m2+' m²</td><td>'+r.purchases.length+'</td><td>'+usd(r.last.liq/g.m)+'</td><td>'+pct(r.irr)+'</td><td>'+usd(ing)+'</td><td>'+(f?String((f.S/12).toFixed(1)).replace('.',',')+' años':'más de 40 años')+'</td></tr>'});
+var opts='';GREEK.forEach(function(n){opts+='<option'+(n===CUR.gn?' selected':'')+'>'+n+'</option>'});
+$('t_grupos').innerHTML='<p class="sub">Cuando el proyecto se abra a más gente, cada grupo se arma con un nombre del alfabeto griego, un número de socios y un aporte mensual. Cuando el grupo se completa, se constituye su fideicomiso y empieza el mismo camino. Acá ves cómo le va a cada uno con el mercado, la modalidad y el escenario que tenés cargados. La fila de abajo es tu grupo: se arma con la cantidad de socios y el aporte de la izquierda.</p>'
++'<div class="ctlrow"><div class="ctl"><label for="gname">Nombre de tu grupo</label><output></output><select id="gname" style="grid-column:1/3;padding:8px;border-radius:10px;border:1px solid var(--line);background:var(--surface2);color:var(--fg)">'+opts+'</select></div><div class="ctl"><label for="gfee">Honorario del fiduciario (% mensual del patrimonio)</label><output>'+String(CUR.gfee).replace('.',',')+' %</output><input type="range" id="gfee" min="0" max="0.3" step="0.01" value="'+CUR.gfee+'"></div></div>'
++'<div class="tw"><table><tr><th>Grupo</th><th>Socios</th><th>Aporte por socio</th><th>Aporte del grupo por mes</th><th>1.ª compra (mes)</th><th>Superficie de la 1.ª compra</th><th>Deptos a 10 años</th><th>Por socio a 10 años</th><th>TIR</th><th>Honorario cobrado en 10 años</th><th>Rueda sola</th></tr>'+h+'</table></div>'
++'<div class="verdict">El honorario del fiduciario se cobra sobre el patrimonio del grupo y se descuenta del resultado de cada socio: con el '+String(CUR.gfee).replace('.',',')+'% mensual que elegiste arriba, los cinco grupos juntos pagan <b>'+usd(tot)+'</b> en 10 años. Un honorario alto baja la TIR por debajo de la referencia del '+String(P.bench).replace('.',',')+'%; por eso conviene un porcentaje chico más un premio si el grupo supera esa referencia.</div>'
++'<div class="foot" style="margin-top:8px">Abrir el proyecto a terceros puede encuadrarlo en normas de la CNV, la UIF y defensa del consumidor, así que antes de publicar hace falta dictamen legal y la estructura autorizada. Todas las cifras son proyecciones, no promesas.</div>';
+$('gname').onchange=function(){CUR.gn=this.value;tabGrupos()};$('gfee').onchange=function(){CUR.gfee=parseFloat(this.value);tabGrupos()}}
+function tabIpc(){var r=simulate(P),N=P.members,sr=SCREAL[CUR.sc]/100,fx=IPC.fx0,idx=1,rows='',y,T=Math.round(P.years);
+rows+='<tr><td>0</td><td>—</td><td>×1,00</td><td>ARS '+Math.round(fx).toLocaleString('es-AR')+'</td><td>ARS '+Math.round(P.monthly*fx).toLocaleString('es-AR')+'</td><td>—</td><td>—</td><td>—</td></tr>';
+var fx10,idx10;
+for(y=1;y<=T;y++){var ip=ipcAt(y);idx*=1+ip/100;fx*=(1+ip/100)/(1+P.usInfl/100)/(1+sr);var s=r.series[Math.min(r.T,y*12)-1];
+rows+='<tr'+(y===T?' class="hl"':'')+'><td>'+y+'</td><td>'+f1(ip)+'%</td><td>×'+idx.toFixed(2).replace('.',',')+'</td><td>ARS '+Math.round(fx).toLocaleString('es-AR')+'</td><td>ARS '+Math.round(P.monthly*fx).toLocaleString('es-AR')+'</td><td>ARS '+Math.round(s.rent*fx).toLocaleString('es-AR')+'</td><td>ARS '+Math.round(s.liq*fx/1e6).toLocaleString('es-AR')+' M</td><td>ARS '+Math.round(s.liq*fx/idx/1e6).toLocaleString('es-AR')+' M</td></tr>';fx10=fx;idx10=idx}
+var l=r.last,realIrr=(1+r.irr)/(1+P.usInfl/100)-1,perM=l.liq/N,ars0=perM*fx10/idx10;
+$('t_ipc').innerHTML='<p class="sub">Qué pasa en pesos. Parte de la inflación de la Argentina que fijes (el REM del BCRA de agosto 2026 espera 29,8% para 2026 y inflación mensual de 1,6 a 1,8% hacia fin de año) y de un dólar que acompaña a la inflación salvo el ajuste real del escenario «'+CUR.sc+'» ('+(SCREAL[CUR.sc]>0?'+':'')+SCREAL[CUR.sc]+'% anual).</p><div id="ctlsIpc" class="ctlrow"></div>'+
+'<section class="kpis" style="margin:12px 0"><div class="kpi k1"><small>IPC acumulado</small><b>×'+idx10.toFixed(1).replace('.',',')+'</b><span>en '+T+' años</span></div><div class="kpi k2"><small>Dólar estimado</small><b>ARS '+Math.round(fx10).toLocaleString('es-AR')+'</b><span>al año '+T+'</span></div><div class="kpi k3"><small>TIR real en USD</small><b>'+pct(realIrr)+'</b><span>descontada la inflación de EE. UU. ('+P.usInfl+'%)</span></div><div class="kpi k4"><small>Por socio, pesos de hoy</small><b>ARS '+Math.round(ars0/1e6).toLocaleString('es-AR')+' M</b><span>= '+usd(perM)+' al año '+T+'</span></div></section>'+
+'<div class="tw"><table><tr><th>Año</th><th>IPC del año</th><th>IPC acumulado</th><th>Dólar estimado</th><th>Aporte mensual por socio (ARS)</th><th>Renta mensual del grupo (ARS)</th><th>Liquidación (ARS corrientes)</th><th>Liquidación (pesos de hoy)</th></tr>'+rows+'</table></div><div class="verdict">Para que el aporte conserve su valor en dólares, la cuota en pesos de cada socio tiene que subir al ritmo del dólar: de ARS '+Math.round(P.monthly*IPC.fx0).toLocaleString('es-AR')+' hoy a unos ARS '+Math.round(P.monthly*fx10).toLocaleString('es-AR')+' al año '+T+'. Si la cuota se fija en pesos sin actualizar, el grupo compra cada vez menos. En Argentina los contratos de alquiler se actualizan por índice pactado, por lo que la renta en pesos sube con la inflación; el modelo la mueve junto con el precio del inmueble en dólares.</div>';
+buildI(CTL_IPC,'ctlsIpc')}
+
+
+var CX={v:50000,adj:false,m:'n',md:'ambos',crit:'usd',sqm:24};
+var CXC={usd:'Mismo valor en USD',m2:'Mismos metros cuadrados'};
+var CXM={n:'Deptos acumulados',liq:'Liquidación por socio',rent:'Renta mensual del grupo',cash:'Caja sin invertir'};
+var CXMD={ambos:'Mensual y temporal',mensual:'Solo mensual',temporario:'Solo temporal'};
+function cxModes(){return CX.md==='ambos'?['mensual','temporario']:[CX.md]}
+function cxRun(k,md){var q=Object.assign({},P,{strategy:'ticket',unitUSD:CX.v,unitAdjust:CX.adj,mix:MODE_MIX[md]});applyMarket(q,k);if(CX.crit==='m2')q.unitUSD=CX.sqm*q.m2;return{q:q,z:simulate(q)}}
+function cxJoin(a){return a.join(' / ')}
+function crossTab(){var rows=[],N=P.members,modes=cxModes(),both=modes.length>1,refs={};
+Object.keys(MARKETS).forEach(function(k){var R={};modes.forEach(function(md){R[md]=cxRun(k,md)});rows.push({k:k,R:R,m2:R[modes[0]].q.unitUSD/R[modes[0]].q.m2,val:R[modes[0]].q.unitUSD});if(k==='buenosaires')modes.forEach(function(md){refs[md]=R[md].z.purchases.length})});
+var h='<tr><th>Mercado</th><th>'+(CX.crit==='m2'?'Valor de cada depto':'m² que compra')+'</th><th>Deptos en '+P.years+' años'+(both?' (mensual / temporal)':'')+'</th><th>vs Buenos Aires</th><th>1.ª compra (mes)</th><th>Renta mensual final</th><th>Liquidación</th><th>Por socio</th><th>TIR</th></tr>';
+var mx=0;rows.forEach(function(r){modes.forEach(function(md){mx=Math.max(mx,r.R[md].z.purchases.length)})});
+rows.forEach(function(r){var f=function(fn){return cxJoin(modes.map(function(md){return fn(r.R[md])}))};
+h+='<tr'+(r.k===P.market?' class="hl"':'')+'><td>'+MARKETS[r.k].label+'</td><td>'+(CX.crit==='m2'?usd(r.val):f1(r.m2)+' m²')+'</td><td><b>'+f(function(x){return x.z.purchases.length})+'</b></td><td>'+cxJoin(modes.map(function(md){var d=r.R[md].z.purchases.length-refs[md];return (d>0?'+':'')+d}))+'</td><td>'+f(function(x){return x.z.purchases[0]?x.z.purchases[0].month:'—'})+'</td><td>'+f(function(x){return usd(x.z.last.rent)})+'</td><td>'+f(function(x){return usd(x.z.last.liq)})+'</td><td>'+f(function(x){return usd(x.z.last.liq/N)})+'</td><td>'+f(function(x){return pct(x.z.irr)})+'</td></tr>'});
+$('cross').innerHTML=h;
+var s=rows.slice().sort(function(a,b){return b.R[modes[modes.length-1]].z.purchases.length-a.R[modes[modes.length-1]].z.purchases.length}),b='<div class="lbl" style="margin-top:12px">Departamentos comprados en '+P.years+' años'+(both?': violeta mensual, rosa temporal':'')+'</div>';
+s.forEach(function(r){b+='<div class="tx" style="grid-template-columns:minmax(120px,190px) minmax(0,1fr) 70px"><div class="tx-n">'+MARKETS[r.k].label+'</div><div style="display:flex;flex-direction:column;gap:3px">'+modes.map(function(md,i){return '<div class="tx-b" style="height:9px"><i style="width:'+(r.R[md].z.purchases.length/mx*100)+'%;background:var(--'+(md==='mensual'?'violet':'pink')+')"></i></div>'}).join('')+'</div><div class="tx-v"><b>'+cxJoin(modes.map(function(md){return r.R[md].z.purchases.length}))+'</b></div></div>'});
+$('crossbars').innerHTML=b;
+$('crossnote').innerHTML='<div class="verdict">Con departamentos de '+usd(CX.v)+', en Buenos Aires el grupo compra '+cxJoin(modes.map(function(md){return refs[md]}))+' ('+(both?'mensual / temporal':MODES[modes[0]].toLowerCase())+'). Más departamentos no significa más ganancia: mirá la TIR y la liquidación, porque cada mercado tiene su propio alquiler, impuestos y riesgo. El múltiplo temporal de Argentina es ×'+String(MARKETS.ushuaia.mult).replace('.',',')+' y el de Europa y Turquía ×1,5, y los dos son supuestos que se cambian en «Rentas, costos e impuestos».</div>'}
+function crossCycles(){var keys=Object.keys(MARKETS),T=Math.round(P.years*12),cyc=[],c,modes=cxModes();for(c=10;c<=T;c+=10)cyc.push(c);
+var h='<tr><th>Mercado</th>'+cyc.map(function(m){return '<th>Mes '+m+'</th>'}).join('')+'</tr>';
+keys.forEach(function(k){var R={};modes.forEach(function(md){R[md]=cxRun(k,md).z});
+h+='<tr'+(k===P.market?' class="hl"':'')+'><td>'+MARKETS[k].label+'</td>'+cyc.map(function(m){return '<td>'+cxJoin(modes.map(function(md){var s=R[md].series[m-1];return CX.m==='n'?String(s.nProps):CX.m==='liq'?usd(s.liq/P.members).replace('USD ',''):CX.m==='rent'?usd(s.rent).replace('USD ',''):usd(s.cash).replace('USD ','')}))+'</td>'}).join('')+'</tr>'});
+$('crosscyc').innerHTML=h;
+$('cxnote').textContent=(CX.m==='n'?'Cantidad de departamentos':'Valores en USD')+(modes.length>1?'; en cada celda: alquiler mensual / alquiler temporal.':'.')}
+function cxSeg(){var h='',h2='',h3='';Object.keys(CXC).forEach(function(k){h3+='<button type="button" data-k="'+k+'" aria-pressed="'+(CX.crit===k)+'">'+CXC[k]+'</button>'});$('cxc').innerHTML=h3;$('cxvbox').hidden=CX.crit==='m2';$('cxsbox').hidden=CX.crit!=='m2';$('cxc').onclick=function(e){var b=e.target.closest('button');if(!b)return;CX.crit=b.dataset.k;cxSeg();crossTab();crossCycles()};Object.keys(CXM).forEach(function(k){h+='<button type="button" data-k="'+k+'" aria-pressed="'+(CX.m===k)+'">'+CXM[k]+'</button>'});$('cxm').innerHTML=h;
+$('cxm').onclick=function(e){var b=e.target.closest('button');if(!b)return;CX.m=b.dataset.k;cxSeg();crossCycles()};
+Object.keys(CXMD).forEach(function(k){h2+='<button type="button" data-k="'+k+'" aria-pressed="'+(CX.md===k)+'">'+CXMD[k]+'</button>'});$('cxmd').innerHTML=h2;
+$('cxmd').onclick=function(e){var b=e.target.closest('button');if(!b)return;CX.md=b.dataset.k;cxSeg();crossTab();crossCycles()}}
+/* --- Mi meta de ingresos (pedido de Claudio, 25-10-2026): renta por mes de un socio al final del plazo --- */
+var MT={renta:1000,anios:10,aporte:500,desc:15,reno:10,obra:2};
+function mtQ(o){var q=Object.assign({},P,scn(CUR.sc,CUR.inst),{mix:MODE_MIX[CUR.mode],monthly:MT.aporte,years:MT.anios,strategy:'ciclo'},o||{});return q}
+function mtRenta(q){var r=simulate(q),T=r.series.length,s=r.series[T-1];return{hoy:s.rent/q.members/Math.pow(1+q.usInfl/100,q.years),pat:s.liq/q.members,irr:r.irr}}
+function mtNec(o){var lo=0,hi=50000,i;var f=function(a){return mtRenta(mtQ(Object.assign({},o||{},{monthly:a}))).hoy};if(f(hi)<MT.renta)return null;for(i=0;i<40;i++){var m=(lo+hi)/2;if(f(m)>=MT.renta)hi=m;else lo=m}return Math.ceil(hi/10)*10}
+function tabMeta(){
+var C=[['renta','Renta por mes que quiero (USD de hoy)',100,5000,50],['anios','En cuántos años',5,25,1],['aporte','Aporte por socio por mes (USD)',100,3000,50],['desc','Comprar por debajo del valor (%)',0,30,1],['reno','Refacción (% del precio)',0,25,1],['obra','Meses de obra',0,6,1]];
+var h='<p class="sub">¿Cuánto querés cobrar por mes de renta? Con el mercado y el escenario de la izquierda, el simulador calcula la renta de tu parte al final del plazo con cada camino y cuánto aportar para llegar. En la app está en el menú «Mi meta de ingresos».</p><div class="mtc" style="display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:10px">'+C.map(function(c){return '<div class="ctl"><label for="mt_'+c[0]+'">'+c[1]+'</label><output id="omt_'+c[0]+'">'+MT[c[0]]+'</output><input type="range" id="mt_'+c[0]+'" min="'+c[2]+'" max="'+c[3]+'" step="'+c[4]+'" value="'+MT[c[0]]+'"></div>'}).join('')+'</div><div id="mtOut"></div>';
+$('t_meta').innerHTML=h;
+C.forEach(function(c){var el=$('mt_'+c[0]);el.oninput=function(){MT[c[0]]=parseFloat(el.value);$('omt_'+c[0]).textContent=el.value;out()}});
+function out(){var M=MARKETS[P.market],ref={setup:((1+M.setup/100)*((1-MT.desc/100)+MT.reno/100)-1)*100,lag:M.lag+MT.obra};
+var W=[['Tu modalidad ('+({mensual:'fijo',mixto:'mitad y mitad',temporario:'temporario'})[CUR.mode]+')',{}],['Alquiler fijo',{mix:0}],['Alquiler temporario',{mix:1}],['Comprar '+MT.desc+'% abajo y refaccionar',ref],['Aporte que sube 5% por año',{contribGrowth:5}],['Todo junto',Object.assign({mix:1,contribGrowth:5},ref)]];
+var rows=W.map(function(w){var x=mtRenta(mtQ(w[1]));return '<tr><td>'+w[0]+'</td><td class="n"><b>'+usd(x.hoy)+'</b></td><td class="n">'+pct(Math.min(9.99,x.hoy/MT.renta))+'</td><td class="n">'+usd(x.pat)+'</td><td class="n">'+pct(x.irr)+'</td></tr>'}).join('');
+var nec=mtNec({});
+$('mtOut').innerHTML='<div class="tw"><table><tr><th>Camino</th><th>Renta por mes (USD de hoy)</th><th>De tu meta</th><th>Tu parte del patrimonio</th><th>TIR</th></tr>'+rows+'</table></div><div class="verdict">Para llegar a '+usd(MT.renta)+' por mes en '+MT.anios+' años con tu modalidad, cada socio tendría que aportar <b>'+(nec?usd(nec):'más de USD 50.000')+'</b> por mes. Regla del 4%: para retirar esa renta de un capital sin que se achique harían falta '+usd(MT.renta*12/0.04)+'. Son escenarios, no promesas.</div>'}
+out()}
+/* --- Grupo o solo: los mismos USD por mes, en grupo de 10 o comprando solo --- */
+function tabSolo(){
+var g=runC(P.market,CUR.mode,CUR.sc,CUR.inst,{members:10,strategy:'ciclo',years:10}),s=runC(P.market,CUR.mode,CUR.sc,CUR.inst,{members:1,strategy:'umbral',years:10});
+var f1=s.purchases.length?s.purchases[0].month:null,an=function(m){return m?(Math.floor(m/12)+' años'+(m%12?' y '+(m%12)+' meses':'')):'más de 10 años'};
+$('t_solo').innerHTML='<p class="sub">Los mismos USD '+P.monthly+' por mes, las mismas reglas y el mercado de la izquierda: en un grupo de 10 o comprando solo cuando alcanza para 24 m².</p><div class="tw"><table><tr><th></th><th>En grupo de 10 (tu parte)</th><th>Solo</th></tr>'+
+'<tr><td>Primera compra</td><td class="n">mes '+(g.purchases[0]?g.purchases[0].month:'—')+'</td><td class="n">'+(f1?'mes '+f1+' ('+an(f1)+')':'no llega')+'</td></tr>'+
+'<tr><td>Departamentos a 10 años</td><td class="n">'+g.last.nProps+' del grupo ('+(g.last.nProps/10).toFixed(1).replace('.',',')+' tuyos)</td><td class="n">'+s.last.nProps+'</td></tr>'+
+'<tr><td>Valor a 10 años</td><td class="n"><b>'+usd(g.last.liq/10)+'</b></td><td class="n"><b>'+usd(s.last.liq)+'</b></td></tr>'+
+'<tr><td>TIR</td><td class="n">'+pct(g.irr)+'</td><td class="n">'+pct(s.irr)+'</td></tr>'+
+'<tr><td>Renta por mes al año 10</td><td class="n">'+usd(g.last.rent/10)+'</td><td class="n">'+usd(s.last.rent)+'</td></tr></table></div>'+
+'<div class="verdict">En grupo, el primer departamento se compra en el mes 10 y el alquiler empieza a trabajar años antes; cada renta se reinvierte y compra más metros (interés compuesto), los riesgos se reparten entre '+g.last.nProps+' departamentos y los gastos fijos se pagan entre 10. Solo, la plata espera '+an(f1)+' para la primera compra. Lo que se resigna: decisiones votadas y depender de que los demás paguen (la mora y la exclusión lo cubren).</div>'}
+/* --- Arreglar y revender contra alquilar (skill GANANCIA: ganancia por año, con todos los costos) --- */
+var RV={precio:42000,m2:24,zona:2000,obra:120,mo:1,mv:4,prima:6,cv:5,imp:15};
+function tabReventa(){
+var C=[['precio','Precio de compra (USD)',10000,200000,500],['m2','Superficie (m²)',12,80,1],['zona','Valor de la zona (USD/m²)',500,6000,10],['obra','Refacción (USD/m²)',0,800,10],['mo','Meses de obra',0,12,1],['mv','Meses para vender',1,18,1],['prima','Prima por estar a nuevo (%)',0,30,1],['cv','Costo de vender (%)',0,15,1],['imp','Impuesto sobre la ganancia (%)',0,40,1]];
+$('t_reventa').innerHTML='<p class="sub">¿Conviene arreglar y revender o quedárselo y alquilarlo? Todo medido por ganancia por año, con gastos de compra, obra, expensas mientras se vende, comisión, escribano e impuesto. En la app, cada aviso del radar trae esta cuenta hecha.</p><div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:10px">'+C.map(function(c){return '<div class="ctl"><label for="rv_'+c[0]+'">'+c[1]+'</label><output id="orv_'+c[0]+'">'+RV[c[0]]+'</output><input type="range" id="rv_'+c[0]+'" min="'+c[2]+'" max="'+c[3]+'" step="'+c[4]+'" value="'+RV[c[0]]+'"></div>'}).join('')+'</div><div id="rvOut"></div>';
+C.forEach(function(c){var el=$('rv_'+c[0]);el.oninput=function(){RV[c[0]]=parseFloat(el.value);$('orv_'+c[0]).textContent=el.value;out()}});
+function out(){var M=MARKETS[P.market],mG=Math.pow(1+P.appreciation/100,1/12)-1,meses=RV.mo+RV.mv,inv=RV.precio*(1+M.setup/100)+RV.obra*RV.m2+RV.m2*1.75*meses,venta=RV.zona*RV.m2*(1+RV.prima/100)*Math.pow(1+mG,meses),neto=venta*(1-RV.cv/100),gan=neto-inv,ganN=gan-Math.max(0,gan)*RV.imp/100,r=ganN/inv,anual=r>-1?Math.pow(1+r,12/meses)-1:-1;
+var q=Object.assign({},P,{mix:MODE_MIX[CUR.mode]}),alq=netYieldOf(q)*(RV.zona*RV.m2)/(RV.precio*(1+M.setup/100)+RV.obra*RV.m2)+P.appreciation/100,emp=Math.pow(1+alq,meses/12)-1;
+$('rvOut').innerHTML='<div class="tw"><table><tr><th>Concepto</th><th>USD</th></tr><tr><td>Total invertido (compra, gastos, obra y expensas '+meses+' meses)</td><td class="n">'+usd(inv)+'</td></tr><tr><td>Venta (zona + prima, con la suba del m²)</td><td class="n">'+usd(venta)+'</td></tr><tr><td>Ganancia neta después de vender e impuesto</td><td class="n"><b>'+usd(ganN)+'</b> · '+pct(r)+'</td></tr><tr><td>Ganancia por año (anualizada)</td><td class="n"><b>'+pct(anual)+'</b></td></tr><tr><td>Alquilar ese mismo departamento ('+({mensual:'fijo',mixto:'mixto',temporario:'temporario'})[CUR.mode]+'), renta neta + suba del m² por año</td><td class="n">'+pct(alq)+'</td></tr></table></div>'+
+'<div class="verdict">'+(anual>alq?'<b>Revender gana:</b> ':'<b>Alquilar gana:</b> ')+'para superar al alquiler, la reventa tiene que dejar más de '+pct(emp)+' neto en '+meses+' meses; deja '+pct(r)+'. Comprar y vender seguido puede volver habitual la actividad y subir los impuestos (hasta 35% de Ganancias e ingresos brutos sobre las ventas): lo confirma el contador. Vender necesita mayoría calificada de la Asamblea.</div>'}
+out()}
+function render(){
+var r=simulate(P),l=r.last,N=P.members;
+$('mnote').textContent=NOTES[P.market]||'';
+$('kpis').innerHTML=
+'<div class="kpi k1"><small>Valor de liquidación</small><b>'+usd(l.liq)+'</b><span>Grupo, a año '+P.years+'</span></div>'+
+'<div class="kpi k2"><small>Por socio</small><b>'+usd(l.liq/N)+'</b><span>Aportó '+usd(l.contributed/N)+'</span></div>'+
+'<div class="kpi k3"><small>TIR anual</small><b>'+pct(r.irr)+'</b><span>Referencia financiera '+pct(r.benchIrr)+'</span></div>'+
+'<div class="kpi k4"><small>Renta neta mensual</small><b>'+usd(l.rent)+'</b><span>'+l.nProps+' deptos · '+usd(l.rent/N)+' por socio</span></div>';
+svgChart(r);unitTable();
+var W=windows(r,CUR.wl),h='<tr><th>Ciclo</th><th>Meses</th><th>Aportes</th><th>Renta neta cobrada</th><th>Intereses de caja</th><th>Compra</th><th>Renta usada en la compra</th><th>Reserva de renta capitalizada</th><th>Caja al cierre</th><th>Deptos</th><th>Inmuebles</th><th>Liquidación</th><th>Δ vs ciclo anterior</th><th>Por socio</th><th>Renta mensual</th></tr>';
+W.forEach(function(w,i){var d=i>0&&W[i-1].liq>0?(w.liq/W[i-1].liq-1):NaN;h+='<tr'+(i===W.length-1?' class="hl"':'')+'><td>'+w.k+'</td><td>'+w.a+'–'+w.b+'</td><td>'+usd(w.contrib)+'</td><td>'+usd(w.rentC)+'</td><td>'+usd(w.intC)+'</td><td>'+(w.nb?usd(w.bought):'—')+'</td><td>'+(w.nb?usd(w.ru):'—')+'</td><td>'+usd(w.pool)+'</td><td>'+usd(w.cash)+'</td><td>'+w.nProps+'</td><td>'+usd(w.pv)+'</td><td>'+usd(w.liq)+'</td><td>'+(isFinite(d)?pct(d):'—')+'</td><td>'+usd(w.liq/N)+'</td><td>'+usd(w.rent)+'</td></tr>'});
+$('win').innerHTML=h;
+var WY=windows(r,12),WC=windows(r,10),nr=Math.max(WY.length,WC.length);
+h='<tr><th colspan="6" style="text-align:center">Año por año (12 meses)</th><th colspan="7" style="text-align:center;border-left:2px solid var(--line)">Cada 10 meses (ciclo)</th></tr><tr><th>Año</th><th>Aportado</th><th>Inmuebles</th><th>Liquidación</th><th>Deptos</th><th>Renta mensual</th><th style="border-left:2px solid var(--line)">Ciclo</th><th>Mes</th><th>Aportado</th><th>Inmuebles</th><th>Liquidación</th><th>Deptos</th><th>Renta mensual</th></tr>';
+for(var i=0;i<nr;i++){var y=WY[i],c=WC[i],cum=function(w){return w?w.liq:0};
+h+='<tr>'+(y?'<td>'+y.k+'</td><td>'+usd(y.contrib*0+r.series[y.b-1].contributed)+'</td><td>'+usd(y.pv)+'</td><td>'+usd(y.liq)+'</td><td>'+y.nProps+'</td><td>'+usd(y.rent)+'</td>':'<td colspan="6"></td>')+(c?'<td style="border-left:2px solid var(--line)">'+c.k+'</td><td>'+c.b+'</td><td>'+usd(r.series[c.b-1].contributed)+'</td><td>'+usd(c.pv)+'</td><td>'+usd(c.liq)+'</td><td>'+c.nProps+'</td><td>'+usd(c.rent)+'</td>':'<td colspan="7" style="border-left:2px solid var(--line)"></td>')+'</tr>'}
+$('yr').innerHTML=h;
+h='<tr><th>Mercado</th><th>USD/m²</th><th>Unidad de 24 m²</th><th>m² por ciclo</th><th>Deptos</th><th>Liquid. mensual</th><th>Por socio</th><th>TIR mensual</th><th>TIR temporal</th><th>Múltiplo temp.</th><th>Renta mensual</th></tr>';
+Object.keys(MARKETS).forEach(function(k){var q=applyMarket(Object.assign({},P,{mix:0}),k),z=simulate(q),ll=z.last,q2=applyMarket(Object.assign({},P,{mix:1}),k),z2=simulate(q2);h+='<tr'+(k===P.market?' class="hl"':'')+'><td>'+MARKETS[k].label+'</td><td>'+usd(q.m2)+'</td><td>'+usd(24*q.m2)+'</td><td>'+f1(P.members*P.monthly*P.cycle/(1+q.setup/100)/q.m2)+'</td><td>'+ll.nProps+'</td><td>'+usd(ll.liq)+'</td><td>'+usd(ll.liq/N)+'</td><td>'+pct(z.irr)+'</td><td>'+pct(z2.irr)+'</td><td>×'+String(q2.mult).replace('.',',')+'</td><td>'+usd(ll.rent)+'</td></tr>'});
+$('mk').innerHTML=h;
+var c='<tr><th>Escenario</th><th>Liquidación grupo</th><th>Por socio</th><th>Ganancia por socio</th><th>TIR</th></tr>',res={};
+['conservador','base','optimista'].forEach(function(k){var q=Object.assign({},P,SCENARIOS[k]);var z=simulate(q),ll=z.last;res[k]=z;var g=(ll.liq-ll.contributed)/N;c+='<tr><td>'+k[0].toUpperCase()+k.slice(1)+'</td><td>'+usd(ll.liq)+'</td><td>'+usd(ll.liq/N)+'</td><td class="'+(g>=0?'pos':'neg')+'">'+usd(g)+'</td><td>'+pct(z.irr)+'</td></tr>'});
+c+='<tr class="hl"><td>Referencia financiera</td><td>'+usd(l.bench)+'</td><td>'+usd(l.bench/N)+'</td><td>'+usd((l.bench-l.contributed)/N)+'</td><td>'+pct(r.benchIrr)+'</td></tr>';
+$('cmp').innerHTML=c;
+var d=res.base.irr-r.benchIrr;
+$('verdict').innerHTML=isFinite(res.base.irr)?(d<0?'En el escenario base, con estos supuestos, el proyecto rinde <b>'+pct(res.base.irr)+'</b>, por debajo de la referencia financiera de '+pct(r.benchIrr)+'. El valor está en el ahorro disciplinado y en el patrimonio real.':'En el escenario base el proyecto rinde <b>'+pct(res.base.irr)+'</b>, por encima de la referencia financiera de '+pct(r.benchIrr)+'. Verificá que se cumplan los supuestos de renta, ocupación e impuestos, sobre todo el múltiplo del temporal.'):'No se pudo calcular la TIR con estos supuestos.';
+var CS=[['Ciclo fijo: cada '+P.cycle+' meses con toda la caja (tamaño variable)',{strategy:'ciclo'}],['Apenas alcanza '+usd(P.unitUSD)+' (valor fijo, sin ajustar)',{strategy:'ticket',unitAdjust:false}],['Apenas alcanza '+usd(P.unitUSD)+' (ajustado por valorización)',{strategy:'ticket',unitAdjust:true}]];
+h='<tr><th>Estrategia</th><th>Deptos al año '+P.years+'</th><th>1.ª compra (mes)</th><th>Intervalo al inicio</th><th>Intervalo al final</th><th>Promedio (meses)</th><th>Caja sobrante</th><th>Liquidación</th><th>Por socio</th><th>TIR</th></tr>';
+var cadRes=[];
+CS.forEach(function(c){var q=Object.assign({},P,c[1]),z=simulate(q),ms=z.purchases.map(function(p){return p.month}),iv=ms.map(function(x,i){return x-(i?ms[i-1]:0)}),ll=z.last;cadRes.push({n:ms.length,iv:iv});
+var avg=ms.length?(ms[ms.length-1]/ms.length):NaN;h+='<tr'+(P.strategy===c[1].strategy&&(c[1].strategy!=='ticket'||P.unitAdjust===c[1].unitAdjust)?' class="hl"':'')+'><td>'+c[0]+'</td><td>'+ms.length+'</td><td>'+(ms[0]||'—')+'</td><td>'+(iv[1]||iv[0]||'—')+'</td><td>'+(iv.length?iv[iv.length-1]:'—')+'</td><td>'+(isFinite(avg)?f1(avg):'—')+'</td><td>'+usd(ll.cash)+'</td><td>'+usd(ll.liq)+'</td><td>'+usd(ll.liq/N)+'</td><td>'+pct(z.irr)+'</td></tr>'});
+$('cad').innerHTML=h;
+$('cadnote').innerHTML='<div class="verdict">Con departamentos de '+usd(P.unitUSD)+' (más '+P.setup+'% de costos), el grupo compra <b>'+cadRes[1].n+'</b> si el precio no sube y <b>'+cadRes[2].n+'</b> si sube con la valorización, contra '+cadRes[0].n+' del ciclo fijo de '+P.cycle+' meses (que compra unidades más grandes cada vez). El intervalo entre compras baja de unos '+(cadRes[1].iv[1]||cadRes[1].iv[0])+' meses al principio a '+cadRes[1].iv[cadRes[1].iv.length-1]+' hacia el final, porque la renta y los intereses se suman a los aportes. La liquidación casi no cambia: es el mismo dinero con otra forma.</div>';
+var b='<tr><th>#</th><th>Mes</th><th>Gasto total</th><th>De aportes</th><th>De renta reinvertida</th><th>Precio del inmueble</th><th>m² estimados</th><th>Renta neta mensual</th><th>Aumento de precio vs anterior</th><th>Meses desde la anterior</th></tr>';
+r.purchases.forEach(function(p,i){var dd=i>0?(p.price/r.purchases[i-1].price-1):NaN;b+='<tr><td>'+p.n+'</td><td>'+p.month+'</td><td>'+usd(p.spent)+'</td><td>'+usd(p.fundUsed)+'</td><td>'+usd(p.rentUsed)+'</td><td>'+usd(p.price)+'</td><td>'+f1(p.m2)+'</td><td>'+usd(p.rentMonthly)+'</td><td>'+(isFinite(dd)?pct(dd):'—')+'</td><td>'+(p.month-(i>0?r.purchases[i-1].month:0))+'</td></tr>'});
+$('buys').innerHTML=b;crossTab();crossCycles();lab()}
+var mh='';Object.keys(MARKETS).forEach(function(k){mh+='<option value="'+k+'">'+MARKETS[k].label+'</option>'});$('market').innerHTML=mh;
+$('market').onchange=function(){applyMarket(P,this.value);sync();render()};
+build(C1,'ctls');build(C2,'ctls2');build(C3,'ctls3');
+seg('sc','sc',{conservador:'Conservador',base:'Base',optimista:'Optimista'});
+seg('md','mode',MODES);
+seg('wl','wl',{'10':'Cada 10 meses','12':'Cada 12 meses (año)'});
+$('un').addEventListener('input',function(){U.n=parseInt(this.value,10);sync();render()});
+$('um').addEventListener('input',function(){U.m=parseInt(this.value,10);sync();render()});
+$('cx').addEventListener('input',function(){CX.v=parseInt(this.value,10);$('o_cx').textContent=usd(CX.v);crossTab();crossCycles()});$('cxadj').onchange=function(){CX.adj=this.checked;crossTab();crossCycles()};$('cs').addEventListener('input',function(){CX.sqm=parseInt(this.value,10);$('o_cs').textContent=CX.sqm+' m²';crossTab();crossCycles()});$('cs').value=CX.sqm;$('o_cs').textContent=CX.sqm+' m²';$('cx').value=CX.v;$('o_cx').textContent=usd(CX.v);
+$('strategy').onchange=function(){P.strategy=this.value;render()};
+$('adj').onchange=function(){P.unitAdjust=this.checked;render()};
+$('th').onclick=function(){var d=document.documentElement,cur=d.getAttribute('data-theme');var dark=cur?cur==='dark':matchMedia('(prefers-color-scheme: dark)').matches;d.setAttribute('data-theme',dark?'light':'dark')};
+labTabs();cxSeg();sync();render();
+</script>

@@ -213,11 +213,11 @@ function ventanaSimularCartera() {
 /* =================== VALOR DEL m² HOY =================== */
 /* Referencias de precio de compra por m² (departamento usado chico) y alquiler bruto mensual por m².
    Los valores en euros se pasan a dólares con el cruce del día. Son referencias para comparar: antes de comprar
-   se pide tasación local. Fuentes de referencia: Zonaprop/Reporte inmobiliario (Argentina), Idealista (España, Italia, Portugal),
+   se pide tasación local. Fuentes de referencia: Zonaprop/Reporte inmobiliario (Argentina; alquileres de CABA de 24 m² entre $450.000 y $900.000 por mes, monoambiente promedio $771.871 en agosto de 2026), Idealista (España, Italia, Portugal),
    Imot.bg (Bulgaria), Endeksa (Turquía), Spitogatos (Grecia), Njuškalo (Croacia), Nepremičnine (Eslovenia). */
 var ZONAS_M2 = [
-  ['Argentina', 'Buenos Aires · Puerto Madero', 5900, 'USD', 18], ['Argentina', 'Buenos Aires · Palermo', 3200, 'USD', 14], ['Argentina', 'Buenos Aires · Belgrano', 3100, 'USD', 13.5],
-  ['Argentina', 'Buenos Aires · Saavedra', 2600, 'USD', 12], ['Argentina', 'Buenos Aires · Caballito', 2350, 'USD', 11.5], ['Argentina', 'Buenos Aires · Microcentro', 1900, 'USD', 10.5],
+  ['Argentina', 'Buenos Aires · Puerto Madero', 5900, 'USD', 24.2], ['Argentina', 'Buenos Aires · Palermo', 3200, 'USD', 22.8], ['Argentina', 'Buenos Aires · Belgrano', 3100, 'USD', 21],
+  ['Argentina', 'Buenos Aires · Saavedra', 2600, 'USD', 17.5], ['Argentina', 'Buenos Aires · Caballito', 2350, 'USD', 16.7], ['Argentina', 'Buenos Aires · Microcentro', 1900, 'USD', 14],
   ['Argentina', 'Ushuaia (valor que fijó el grupo)', 2000, 'USD', 12], ['Argentina', 'Córdoba · Nueva Córdoba', 1450, 'USD', 9], ['Argentina', 'Rosario · Centro', 1550, 'USD', 9],
   ['Europa', 'España interior (Zamora, Jaén, Ciudad Real)', 1300, 'EUR', 7.5], ['Europa', 'Italia interior (Molise, Calabria, Basilicata)', 950, 'EUR', 6], ['Europa', 'Bulgaria (Plovdiv, Varna)', 1350, 'EUR', 7.5],
   ['Europa', 'Portugal interior (Guarda, Castelo Branco)', 1050, 'EUR', 7], ['Europa', 'Turquía (Ankara, Konya)', 850, 'USD', 5.5], ['Europa', 'Grecia (Patras, Volos)', 1700, 'EUR', 7.5],
@@ -225,7 +225,7 @@ var ZONAS_M2 = [
 ];
 var FECHA_ZONAS = '2026-10';
 function ventanaM2() {
-  var g = grupoActual(), props = D.propiedades.filter(function (p) { return p.g === g.id; }), p1 = props[0], cot = COT.eurUsd || 1.1, caja10 = g.N * g.aporte * g.ciclo;
+  var g = grupoActual(), props = propiedadesActivas(g.id), p1 = props[0], cot = COT.eurUsd || 1.1, caja10 = g.N * g.aporte * g.ciclo;
   var filas = ZONAS_M2.map(function (z) { var u = z[3] === 'EUR' ? z[2] * cot : z[2], rU = z[3] === 'EUR' ? z[4] * cot : z[4]; return { grp: z[0], n: z[1], m2: u, orig: z[2], mon: z[3], renta: rU }; }).sort(function (a, b) { return b.m2 - a.m2; });
   var max = filas[0].m2;
   var html = (p1 ? '<div class="aviso" style="margin-bottom:12px"><b>' + esc(p1.nombre) + '</b> · ' + num(p1.m2, 1) + ' m² · comprado el ' + fechaCorta(p1.fecha) + ' a <b>' + usd(p1.precio / p1.m2) + ' el m²</b> (' + usd(p1.precio) + ' + ' + usd(p1.gastos) + ' de gastos). Alquiler de mercado ' + usd(p1.alquiler || 0) + ' por mes.</div>' : '') +

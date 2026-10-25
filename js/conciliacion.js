@@ -170,7 +170,7 @@ function aplicarConciliacion(gid, res, decisiones, moneda, u) {
         pago: { moneda: moneda, monto: Math.abs(l.monto), metodo: 'transferencia' }, recibo: g.letra.toUpperCase() + '-' + p[2].replace('-', '') + '-' + (++n) }, base));
       if (extra > 0.5) D.movimientos.push(Object.assign({ id: id(), tipo: 'punitorio', usd: extra, socio: p[1], periodo: p[2] }, base, { conc: null }));
     } else if (p[0] === 'renta') {
-      var prop = D.propiedades.filter(function (q) { return q.g === gid; })[0];
+      var prop = propiedadesActivas(gid)[0];
       D.movimientos.push(Object.assign({ id: id(), tipo: 'renta', usd: usdL, prop: prop ? prop.id : null, desc: 'Alquiler acreditado en el banco' + (prop ? ' · ' + prop.nombre : '') }, base));
     } else if (p[0] === 'banco') D.movimientos.push(Object.assign({ id: id(), tipo: 'banco', usd: usdL, desc: 'Comisión bancaria' }, base));
     else if (p[0] === 'impuesto') D.movimientos.push(Object.assign({ id: id(), tipo: 'impuesto', usd: usdL, desc: 'Impuesto cobrado por el banco (débitos y créditos u otros)' }, base));
