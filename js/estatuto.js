@@ -32,7 +32,7 @@ function capitulosEstatuto(g) {
       ['Copia firmada', 'A recibir copia de todo documento que firme, con su huella SHA-256, y de la constancia de auditoría.']
     ]],
     ['III. Deberes de cada socio', [
-      ['Aportar a tiempo', 'Pagar USD ' + ap + ' del 1 al ' + dv + ' de cada mes, desde una cuenta o tarjeta a su nombre. Los pagos en pesos se convierten al dólar oficial vendedor del Banco Nación del día del pago.'],
+      ['Aportar a tiempo', 'Pagar USD ' + ap + ' del 1 al ' + dv + ' de cada mes (lo pactado), desde una cuenta o tarjeta a su nombre. Puede acomodarlo dentro del ciclo (cuota flexible): cada mes, como mínimo, la mitad de la cuota por mes transcurrido, y el ciclo completo (USD ' + num(g.aporte * ci) + ') hasta el día ' + dv + ' del mes de la compra; lo que pase de eso es aporte extra (hasta la mitad del ciclo) y compra UP de más. Los pagos en pesos se convierten a la cotización vendedora más alta del día entre los bancos (incluido el Banco Nación) del día del pago.'],
       ['Origen lícito de los fondos', 'Declarar bajo juramento el origen de los fondos, si es persona expuesta políticamente, y actualizarlo cada año o cuando cambie (Ley 25.246 y normas de la UIF).'],
       ['Datos al día', 'Mantener actualizados en la app su domicilio, correo, teléfono, CUIT o CUIL, condición fiscal y CBU. El correo y la app son su domicilio electrónico: allí son válidas las notificaciones.'],
       ['Sus propios impuestos', 'Cumplir sus obligaciones fiscales personales (Ganancias, Bienes personales, monotributo) con la información que le da la app. El fideicomiso no las asume.'],

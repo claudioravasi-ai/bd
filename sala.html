@@ -1,0 +1,61 @@
+<!doctype html>
+<html lang="es-AR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>B&amp;D · Sala en vivo</title>
+<meta name="robots" content="noindex, nofollow">
+<meta name="theme-color" content="#0D1824">
+<link rel="icon" href="icono-192.png" type="image/png">
+<link rel="apple-touch-icon" href="icono-180.png">
+<link href="https://fonts.googleapis.com/css2?family=EB+Garamond:wght@400;500&family=IBM+Plex+Sans:wght@400;600&display=swap" rel="stylesheet">
+<style>
+:root { --noche: #0D1824; --noche-2: #12202F; --oro: #C9A24B; --oro2: #E6C979; --crema: #F6F3EC; --gris: #B4C2D2; --verde: #6FD3A0; --rojo: #FF9284; }
+* { box-sizing: border-box; }
+html, body { margin: 0; height: 100%; background: var(--noche); color: var(--crema); font-family: 'IBM Plex Sans', system-ui, sans-serif; overflow: hidden; }
+button { font: inherit; }
+.barra { position: fixed; left: 0; right: 0; top: 0; z-index: 10; display: flex; flex-wrap: wrap; align-items: center; gap: 6px 8px; padding: calc(8px + env(safe-area-inset-top)) 12px 8px; background: rgba(13, 24, 36, .96); border-bottom: 1px solid rgba(201, 162, 75, .3); }
+.barra .titulo { font-family: 'EB Garamond', Georgia, serif; font-size: 1.15rem; margin-right: auto; display: flex; align-items: center; gap: 8px; min-width: 0; }
+.barra .titulo small { font-family: 'IBM Plex Sans', sans-serif; color: var(--gris); font-size: .78rem; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.punto { width: 10px; height: 10px; border-radius: 50%; background: var(--rojo); flex: none; }
+.punto.vivo { background: var(--verde); box-shadow: 0 0 0 0 rgba(111, 211, 160, .6); animation: latido 1.6s infinite; }
+@keyframes latido { 70% { box-shadow: 0 0 0 9px rgba(111, 211, 160, 0); } 100% { box-shadow: 0 0 0 0 rgba(111, 211, 160, 0); } }
+.btn { min-height: 38px; padding: 6px 12px; border-radius: 999px; border: 1px solid rgba(201, 162, 75, .45); background: transparent; color: var(--crema); cursor: pointer; white-space: nowrap; }
+.btn[aria-pressed="true"], .btn.oro { background: var(--oro); color: #13202E; border-color: var(--oro); font-weight: 600; }
+.btn:focus-visible { outline: 2px solid var(--oro2); outline-offset: 2px; }
+.grupo-btn { display: flex; gap: 4px; flex-wrap: wrap; }
+.escena { position: fixed; left: 0; right: 0; bottom: 0; top: var(--alto-barra, 56px); background: #000; }
+.escena iframe { width: 100%; height: 100%; border: 0; background: var(--noche); display: block; }
+.laminas { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; overflow: hidden; background: #070d14; }
+.laminas .lienzo { position: absolute; left: 0; top: 0; width: 1920px; height: 1080px; transform-origin: 0 0; }
+.laminas section { position: relative; width: 1920px; height: 1080px; }
+.laminas aside { display: none; }
+.laminas .lienzo { overflow: hidden; }
+.laminas p, .laminas h1, .laminas h2, .laminas h3 { margin: 0; }
+.laminas table { border-collapse: collapse; }
+.laminas th, .laminas td { padding: 14px 18px; border-bottom: 1px solid rgba(128, 128, 128, .3); vertical-align: top; text-align: left; }
+.laminas ol, .laminas ul { margin: 0; padding-left: 1.2em; }
+.tapa { position: absolute; inset: 0; z-index: 3; }
+.notas { position: fixed; left: 12px; right: 12px; bottom: 12px; z-index: 12; max-height: 30vh; overflow: auto; padding: 12px 14px; border-radius: 14px; background: rgba(13, 24, 36, .95); border: 1px solid rgba(201, 162, 75, .4); color: var(--gris); font-size: .95rem; line-height: 1.45; }
+.velo { position: fixed; inset: 0; z-index: 20; display: flex; align-items: center; justify-content: center; padding: 16px; background: rgba(5, 9, 14, .86); }
+.velo[hidden], .notas[hidden], [hidden] { display: none !important; }
+.caja { width: min(440px, 100%); max-height: calc(100vh - 32px); overflow: auto; background: var(--noche-2); border: 1px solid rgba(201, 162, 75, .45); border-radius: 22px; padding: 22px; text-align: center; }
+.caja h2 { font-family: 'EB Garamond', Georgia, serif; font-weight: 500; font-size: 1.8rem; margin: 0 0 6px; }
+.caja p { color: var(--gris); margin: 8px 0; line-height: 1.45; }
+.qr { background: #fff; border-radius: 16px; padding: 12px; margin: 12px auto; width: min(300px, 80vw); }
+.qr svg { width: 100%; height: auto; display: block; }
+.enlace-sala { font-family: ui-monospace, monospace; font-size: .82rem; word-break: break-all; color: var(--oro2); }
+.aviso { position: fixed; left: 50%; bottom: calc(18px + env(safe-area-inset-bottom)); transform: translateX(-50%); z-index: 30; max-width: calc(100% - 32px); padding: 10px 16px; border-radius: 14px; background: rgba(13, 24, 36, .96); border: 1px solid var(--oro); color: var(--crema); font-size: .92rem; text-align: center; }
+.portada { position: fixed; inset: 0; display: flex; align-items: center; justify-content: center; padding: 16px; }
+@media (max-width: 560px) { .barra .titulo { width: 100%; } .btn { min-height: 36px; padding: 5px 10px; font-size: .88rem; } }
+</style>
+</head>
+<body>
+<div id="raiz"></div>
+<div id="velo" class="velo" hidden></div>
+<div id="aviso" class="aviso" role="status" aria-live="polite" hidden></div>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/peerjs/1.5.4/peerjs.min.js"></script>
+<script src="js/vendor/qrcode.js?v=0.2.6"></script>
+<script src="js/sala.js?v=0.2.6"></script>
+</body>
+</html>

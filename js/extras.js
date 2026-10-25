@@ -191,8 +191,8 @@ function vistaResumen(u) {
   var ci = cicloInfo(g), deuda = deudaDe(g.id, u.id), tir = tirSocio(g.id, u.id), P = posicionesHoy(g), props = propiedadesActivas(g.id);
   var votos = D.votaciones.filter(function (v) { return v.g === g.id && hoy <= v.cierra; }), proximo = mesDe(sumarMeses(hoy, pagoDe(g.id, u.id, mesDe(hoy)) ? 1 : 0)), tot = e.caja + e.inv + e.inm, pp = porcentajes100([e.inm, e.inv, e.caja]);
   var sec = function (n, t, c) { return '<section class="rs-sec"><p class="rs-num">' + n + '</p><div><h3>' + t + '</h3>' + c + '</div></section>'; };
-  return '<div class="fila entre no-imprimir"><div><h1>Resumen semanal</h1><p class="gris" style="margin:0">Lo que te llega cada lunes al correo (' + esc(u.email) + ') en PDF. Se ve de un vistazo cómo va tu plata.</p></div>' +
-    '<div class="fila"><button class="btn btn-oro btn-chico" onclick="window.print()">Guardar en PDF</button><button class="btn btn-chico" id="btnResCorreo">Mandármelo por correo</button></div></div>' +
+  return '<div class="fila entre no-imprimir"><div><h1>Resumen semanal</h1><p class="gris" style="margin:0">Lo que te llega cada domingo a las 20 h al correo (' + esc(u.email) + ') en PDF. Se ve de un vistazo cómo va tu plata.</p></div>' +
+    '<div class="fila"><button class="btn btn-oro btn-chico" id="btnMuestraCorreo">Ver el correo del domingo</button><button class="btn btn-chico" onclick="window.print()">Guardar en PDF</button><button class="btn btn-chico" id="btnResCorreo">Mandármelo por correo</button></div></div>' +
     '<article class="hoja resumen-hoja seccion"><header class="rs-cabeza"><div>' + svgLogo('marca-logo') + '</div><div><p class="chico" style="margin:0;letter-spacing:.14em">RESUMEN SEMANAL · ' + fechaCorta(hace7) + ' al ' + fechaCorta(hoy) + '</p><h2 style="margin:2px 0">' + esc(u.nombre) + ' · ' + esc(g.letra.toUpperCase()) + '</h2></div></header>' +
     '<div class="rs-grande"><div><small>Tu parte hoy</small><b>' + usd(mis, 2) + '</b><span class="' + (mis - mis0 >= 0 ? 'verde' : 'rojo') + '">' + (mis - mis0 >= 0 ? '▲ +' : '▼ −') + usd(Math.abs(mis - mis0), 2) + ' en la semana</span></div><div><small>Participación</small><b>' + pct(part, 2) + '</b><span>' + num(e.upSocio[u.id] || 0, 2) + ' UP a ' + usd(e.vup, 2) + '</span></div><div><small>Tu TIR real</small><b>' + (isFinite(tir) ? pct(tir) : '—') + '</b><span>meta 6%</span></div><div><small>El fideicomiso (UP)</small><b>' + (function () { var R = rendimientoUP(g.id); return isFinite(R.anual) ? pct(R.anual, 2) : '—'; })() + '</b><span>por año, igual para todos</span></div></div>' +
     sec(1, 'Tus aportes', deuda.total ? '<p class="rojo"><b>Tenés ' + deuda.meses.length + ' aporte(s) vencido(s)</b>: debés ' + usd(deuda.total, 2) + ' con el interés de hoy.</p>' : '<p class="verde"><b>Al día ✓</b></p>' + '<p>Próximo aporte: ' + nombreMes(proximo) + ', del 1 al 10 · ' + usd(g.aporte) + '.</p>') +
@@ -200,9 +200,10 @@ function vistaResumen(u) {
     sec(3, 'Departamentos', props.map(function (p) { return '<p>' + esc(p.nombre) + ' · ' + num(p.m2, 1) + ' m² · alquiler ' + usd(p.alquiler || 0) + '/mes · ' + esc(p.estado) + '</p>'; }).join('') + '<p class="chico">Ciclo ' + ci.ciclo + ', mes ' + ci.enCiclo + ' de ' + g.ciclo + ': el próximo se compra en ' + nombreMes(mesDe(ci.fechaCompra)) + '.</p>') +
     sec(4, 'Para decidir', votos.length ? votos.map(function (v) { return '<p>• ' + esc(v.titulo) + ' · cierra el ' + fechaCorta(v.cierra) + (v.votos[u.id] ? ' (ya votaste)' : ' <b>(te falta votar)</b>') + '</p>'; }).join('') : '<p>No hay votaciones abiertas.</p>') +
     '<p class="chico gris" style="margin-top:14px">Resumen generado por la app B&amp;D. Proyecciones, no promesas. Si no querés recibirlo, desactivalo en Mis datos.</p></article>' +
-    '<div class="aviso seccion no-imprimir">El envío automático de los lunes lo hace el servidor (fase 2): la carpeta <span class="mono">servidor/resumen-semanal.gs</span> ya trae el programa de Google Apps Script que arma este mismo resumen en PDF y lo manda a cada socio a su correo. Mientras tanto, este botón abre tu correo con el resumen.</div>';
+    '<div class="aviso seccion no-imprimir">Todos los domingos a las 20 h (hora de Ushuaia) el servidor de Google (servidor/resumen-semanal.gs) arma este mismo resumen en PDF y se lo manda a cada socio a su correo. Con «Ver el correo del domingo» ves exactamente lo que te llega.</div>';
 }
 GANCHOS_EXTRA.resumen = function () {
+  if ($('btnMuestraCorreo')) $('btnMuestraCorreo').onclick = verMuestraCorreo;
   var b = $('btnResCorreo'); if (!b) return;
   b.onclick = function () {
     var u = yo(), g = grupoActual(), e = estadoGrupo(g.id), mis = (e.upSocio[u.id] || 0) * e.vup;
@@ -256,6 +257,7 @@ GANCHOS_EXTRA.vitrina = function () { document.querySelectorAll('[data-copiar]')
 /* =================== PLAZOS DE LOS FIDEICOMISOS SOLICITADOS (90 días) Y REUNIÓN DE INICIO =================== */
 var PLAZO_FORMACION = 90, AVISO_FORMACION = 7;
 function estadoPlazo(g) {
+  if (g.sinPlazo) return { dias: 0, quedan: null, texto: g.estado };
   if (['propuesto', 'abierto'].indexOf(g.estado) < 0 || !g.creado) return { dias: 0, quedan: null, texto: g.estado };
   var dias = diasEntre(g.creado, hoyISO()), quedan = PLAZO_FORMACION - dias;
   return { dias: dias, quedan: quedan, vence: sumarDias(g.creado, PLAZO_FORMACION), texto: quedan > 0 ? 'quedan ' + quedan + ' días para completarse' : 'venció el plazo' };
@@ -317,7 +319,7 @@ function marcaTarjeta(n) {
 }
 function luhn(n) { n = n.replace(/\D/g, ''); var s = 0, i, d, par = false; for (i = n.length - 1; i >= 0; i--) { d = +n[i]; if (par) { d *= 2; if (d > 9) d -= 9; } s += d; par = !par; } return n.length >= 13 && s % 10 === 0; }
 function ventanaTarjeta(g, u, per, mon) {
-  var total = g.aporte + (hoyISO() > venceDe(per) ? interesMora(g.aporte, per) : 0);
+  var mo = montoElegido(g), total = mo + interesCubierto(g, u.id, mo);
   modal('Pagar con tarjeta de crédito', '<p class="gris chico">Aporte de ' + nombreMes(per) + ': <b class="oro">' + (mon === 'USD' ? usd(total, 2) : enMoneda(total, 'ARS', COT)) + '</b>. ' + (PAGOS.mpClavePublica ? 'El formulario es de Mercado Pago: tus números van directo al procesador.' : 'Modo prueba: no se cobra nada. Podés usar la tarjeta de prueba 4509 9535 6623 3704, vencimiento 11/30, código 123.') + '</p>' +
     '<form id="formTarjeta" class="apilar" autocomplete="on" novalidate><div class="campo"><label for="tNum">Número de la tarjeta</label><input id="tNum" inputmode="numeric" autocomplete="cc-number" maxlength="23" placeholder="0000 0000 0000 0000"><span class="ayuda" id="tMarca">Visa, Mastercard, American Express, Naranja o Cabal.</span></div>' +
     '<div class="rejilla r3"><div class="campo"><label for="tVence">Vencimiento (MM/AA)</label><input id="tVence" inputmode="numeric" autocomplete="cc-exp" maxlength="5" placeholder="MM/AA"></div><div class="campo"><label for="tCvv">Código de seguridad</label><input id="tCvv" inputmode="numeric" autocomplete="cc-csc" maxlength="4" type="password"></div>' +

@@ -249,5 +249,5 @@ function abrirExcelenteSiHay() {
   if (abrirExcelenteSiHay.ya === u.id || (typeof MARCO_DEMO !== 'undefined' && MARCO_DEMO)) return;
   var x = excelentesNuevas(u, g)[0]; if (!x) return;
   abrirExcelenteSiHay.ya = u.id;
-  setTimeout(function () { if ($('velo').hidden) { sonarCampanita(); ventana(function () { ventanaOportunidad(x.o.id); }); } }, 900);
+  setTimeout(function () { if (yo() && $('velo').hidden) { sonarCampanita(); ventana(function () { ventanaOportunidad(x.o.id); }); } }, 900);
 }

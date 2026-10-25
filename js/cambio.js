@@ -1,7 +1,9 @@
 /* ===== Cotizaciones del día (automático) =====
    Fuente: dolarapi.com (Banco Nación para el oficial, MEP, contado con liquidación, blue y euro).
    Se guarda una copia con la hora; si no hay internet se usan los últimos valores conocidos.
-   El contrato (art. 18) convierte los aportes en pesos al oficial vendedor del Banco Nación del día de pago. */
+   Los aportes en pesos se convierten a la cotización vendedora MÁS ALTA del día entre los bancos (criptoya.com, que
+   publica el oficial de cada banco; se toman solo las cotizaciones del día, incluido el Banco Nación). Así el
+   fideicomiso siempre puede comprar en cualquier banco los dólares que le acredita al socio. */
 var COT_RESPALDO = {
   fecha: '2026-10-24T20:59:00', usdOficial: 1550, usdMep: 1563.9, usdCcl: 1654, usdBlue: 1565, usdMayorista: 1529.5,
   eurArs: 1713.96, eurUsd: 1713.96 / 1550, enVivo: false, fuente: 'valores de respaldo del 24-10-2026'
@@ -21,6 +23,23 @@ function tcDelMes(mes) {
   return mes >= mesDe(hoyISO()) ? COT.usdOficial : TC_HIST[ks[Math.max(0, i)]];
 }
 
+/* la vendedora más alta entre los bancos con cotización de las últimas 36 horas (y nunca menos que el Banco Nación) */
+var NOMBRES_BANCOS = { bna: 'Banco Nación', bapro: 'Banco Provincia', bbva: 'BBVA', ciudad: 'Banco Ciudad', galicia: 'Galicia', santander: 'Santander', macro: 'Macro', icbc: 'ICBC', hipotecario: 'Hipotecario', supervielle: 'Supervielle', patagonia: 'Patagonia', comafi: 'Comafi', brubank: 'Brubank', piano: 'Piano', andina: 'Andina', mariva: 'Mariva', columbia: 'Columbia', plazacambio: 'Plaza Cambio', pluscambio: 'Plus Cambio', triacambio: 'Tria Cambio', bytelime: 'Bytelime', prex: 'Prex' };
+function dolarParaAportes(bancos, bna) {
+  var mejor = { usdAporte: bna, bancoAporte: 'Banco Nación', bancosVistos: 1 };
+  if (!bancos) return mejor;
+  var ahora = Date.now() / 1000, n = 0;
+  Object.keys(bancos).forEach(function (k) {
+    var b = bancos[k]; if (!b || !b.ask || !b.time || ahora - b.time > 36 * 3600) return;
+    n++; if (b.ask > mejor.usdAporte) { mejor.usdAporte = b.ask; mejor.bancoAporte = NOMBRES_BANCOS[k] || k; }
+  });
+  mejor.bancosVistos = Math.max(1, n);
+  return mejor;
+}
+/* dólar con el que se convierte un aporte pagado en pesos */
+function tcAporte() { return COT.usdAporte || COT.usdOficial; }
+function cotAportes() { return Object.assign({}, COT, { usdOficial: tcAporte() }); }
+
 function traerJSON(url, ms) {
   var c = window.AbortController ? new AbortController() : null;
   var t = setTimeout(function () { if (c) c.abort(); }, ms || 9000);
@@ -32,7 +51,7 @@ function traerJSON(url, ms) {
 function cargarCotizaciones(forzar) {
   var viejo = !COT.enVivo || !COT.leido || (Date.now() - COT.leido > 30 * 60 * 1000);
   if (!forzar && !viejo) return Promise.resolve(COT);
-  return Promise.all([traerJSON('https://dolarapi.com/v1/dolares'), traerJSON('https://dolarapi.com/v1/cotizaciones/eur')])
+  return Promise.all([traerJSON('https://dolarapi.com/v1/dolares'), traerJSON('https://dolarapi.com/v1/cotizaciones/eur'), traerJSON('https://criptoya.com/api/bancostodos').catch(function () { return null; })])
     .then(function (r) {
       var d = {}; r[0].forEach(function (x) { d[x.casa] = x; });
       if (!d.oficial || !d.oficial.venta) throw new Error('sin oficial');
@@ -43,6 +62,7 @@ function cargarCotizaciones(forzar) {
         eurUsd: r[1].venta / d.oficial.venta, enVivo: true, leido: Date.now(), fuente: 'dolarapi.com (Banco Nación y mercado)',
         previo: COT.enVivo ? { usdOficial: COT.usdOficial, usdMep: COT.usdMep, usdCcl: COT.usdCcl, usdBlue: COT.usdBlue, eurArs: COT.eurArs } : (COT.previo || null)
       };
+      Object.assign(nuevo, dolarParaAportes(r[2], d.oficial.venta));
       COT = nuevo; guardar('bd.cotizaciones', COT); return COT;
     })
     .catch(function () { COT.enVivo = false; return COT; });

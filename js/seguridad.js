@@ -90,6 +90,7 @@ function ganchoAltaFundador() {
       if (usuarioPorCorreo(correo) && usuarioPorCorreo(correo).id !== 'u1') { err.textContent = 'Ese correo ya es de otro socio.'; return; }
       if (c1.length < 10 || !/[a-zA-Z]/.test(c1) || !/\d/.test(c1)) { err.textContent = 'La clave necesita al menos 10 caracteres, con letras y números.'; return; }
       if (c1 !== c2) { err.textContent = 'Las dos claves no coinciden.'; return; }
+      if (MODO_REAL) FUND_CLAVE = c1;
       huella(correo + '|' + c1).then(function (h) {
         Object.assign(a, { paso: 1, nombre: nombre, cuil: cuil, email: correo, huella: h, secreto: secretoNuevo() });
         render();
@@ -98,6 +99,7 @@ function ganchoAltaFundador() {
     }
     totpValido(a.secreto, $('tCodigo').value).then(function (ok) {
       if (!ok) { err.textContent = 'El código no coincide. Fijate que la hora del teléfono esté en automático y probá con el código nuevo.'; return; }
+      if (MODO_REAL) { crearFundadorReal(a, err); return; }
       var u = usuario('u1');
       u.nombre = a.nombre; u.email = a.email; u.clave = a.huella; u.totp = a.secreto; u.ficha.nombre = a.nombre; u.ficha.cuit = a.cuil; delete u.sinActivar; delete u.demo;
       anotar('u1', 'Creó la cuenta de socio fundador con segundo factor'); guardarDatos();

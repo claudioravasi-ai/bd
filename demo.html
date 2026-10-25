@@ -77,6 +77,7 @@ h1 { font-size: clamp(2rem, 5vw, 3rem); }
     <button class="recargar" data-k="3">Volver a empezar este celular</button>
   </section>
 </div>
+<p class="nota"><b>¿Presentás a varias personas?</b> Abrí <a href="sala.html?presentar" style="color:#E6C979">la sala en vivo</a>: mostrás un QR, cada uno lo escanea y ve en su celular lo que vos vas pasando.</p>
 <p class="nota">Modo prueba: los datos son inventados y quedan en este equipo; los cuatro celulares comparten los mismos datos de prueba. En el celular del fundador, la cuenta ya aparece abierta para mostrarla; en la vida real se crea una sola vez con CUIL, correo, clave y Google Authenticator.</p>
 <script>
 function ajustar() { document.querySelectorAll('.marco').forEach(function (m) { var f = m.querySelector('iframe'), k = m.clientWidth / 390; f.style.transform = 'scale(' + k + ')'; m.style.height = (800 * k) + 'px'; }); }

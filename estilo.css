@@ -662,3 +662,112 @@ button.kpi { text-align: left; }
 .sg-botones .btn { white-space: normal; text-align: left; max-width: 100%; height: auto; }
 .heroe > * { min-width: 0; } .heroe svg { max-width: 100%; height: auto; }
 @media (max-width: 480px) { .hoja th, .hoja td { padding: 6px 5px; font-size: .78rem; } .hoja { padding: 14px; } }
+
+/* pie con los textos legales y quién desarrolló la app */
+.pie-app { margin: 36px 0 12px; padding-top: 14px; border-top: 1px solid rgba(255,255,255,.12); font-size: .78rem; color: var(--gris-2); text-align: left; line-height: 1.5; }
+.pie-app p { margin: 6px 0 0; }
+.pie-enlaces { display: flex; flex-wrap: wrap; gap: 4px 16px; }
+.enlace { background: none; border: 0; padding: 6px 0; min-height: 32px; color: var(--oro-claro); font: inherit; text-decoration: underline; text-underline-offset: 3px; cursor: pointer; }
+.enlace:focus-visible { outline: 2px solid var(--oro-claro); outline-offset: 2px; }
+@media print { .pie-app { display: none; } }
+
+/* EN VIVO con el nombre de quien está conectado */
+.cinta-vivo .cv-txt { display: flex; flex-direction: column; line-height: 1.1; }
+#cintaQuien { letter-spacing: .02em; color: var(--crema); font-size: .64rem; max-width: 120px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+#cintaQuien:empty { display: none; }
+#cintaQuien b { font-weight: 600; letter-spacing: 0; }
+#cintaQuien { cursor: help; max-width: 150px; }
+
+/* ===== Tu ganancia, explicada ===== */
+#cintaQuien { cursor: pointer; }
+.gan { --g1: #E6C979; --g2: #4FD1C5; --g3: #A78BFA; display: flex; flex-direction: column; gap: 16px; }
+.gan-heroe { display: grid; grid-template-columns: minmax(150px, 210px) 1fr; gap: 18px; align-items: center; padding: 16px; border-radius: 22px;
+  background: radial-gradient(120% 140% at 0% 0%, rgba(230, 201, 121, .22), transparent 55%), radial-gradient(120% 140% at 100% 100%, rgba(167, 139, 250, .22), transparent 55%), rgba(255, 255, 255, .03);
+  border: 1px solid rgba(230, 201, 121, .35); animation: ganSube .6s ease both; }
+@media (max-width: 520px) { .gan-heroe { grid-template-columns: 1fr; justify-items: center; text-align: center; } }
+.gan-anillo { position: relative; width: 100%; max-width: 210px; aspect-ratio: 1; }
+.gan-anillo svg { width: 100%; height: 100%; transform: rotate(-90deg); }
+.gan-pista { fill: none; stroke: rgba(255, 255, 255, .08); stroke-width: 11; }
+.gan-arco { fill: none; stroke: url(#ganGrad); stroke-width: 11; stroke-linecap: round; stroke-dasharray: 100; stroke-dashoffset: 100; animation: ganArco 1.4s cubic-bezier(.2, .8, .2, 1) .2s forwards; filter: drop-shadow(0 0 6px rgba(79, 209, 197, .5)); }
+@keyframes ganArco { to { stroke-dashoffset: calc(100 - var(--p)); } }
+.gan-centro { position: absolute; inset: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; text-align: center; padding: 18%; }
+.gan-num { font-family: var(--display); font-size: clamp(1.9rem, 8vw, 2.6rem); line-height: 1; }
+.gan-centro span { font-size: .72rem; color: var(--gris); margin-top: 4px; }
+.gan-centro small { font-size: .66rem; color: var(--g2); margin-top: 4px; }
+.gan-linea { display: flex; justify-content: space-between; gap: 12px; margin: 0; padding: 7px 0; border-bottom: 1px dashed rgba(255, 255, 255, .12); }
+.gan-linea b { font-variant-numeric: tabular-nums; }
+.gan-total { font-size: 1.12rem; border-bottom: 0; }
+.gan-solapas { display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; }
+@media (max-width: 560px) { .gan-solapas { grid-template-columns: repeat(2, 1fr); } }
+.gan-sol { position: relative; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 2px; min-height: 86px; padding: 10px 6px; border-radius: 18px;
+  border: 1px solid rgba(255, 255, 255, .1); background: linear-gradient(160deg, rgba(255, 255, 255, .07), rgba(255, 255, 255, .02)); color: var(--crema); font: inherit; cursor: pointer;
+  transition: transform .25s cubic-bezier(.2, .8, .2, 1), box-shadow .25s, border-color .25s; animation: ganSube .5s ease both; overflow: hidden; }
+.gan-sol:nth-child(2) { animation-delay: .06s; } .gan-sol:nth-child(3) { animation-delay: .12s; } .gan-sol:nth-child(4) { animation-delay: .18s; }
+.gan-sol:hover { transform: translateY(-3px); border-color: rgba(230, 201, 121, .45); }
+.gan-sol:active { transform: scale(.96); }
+.gan-sol b { font-size: .98rem; line-height: 1.1; } .gan-sol small { font-size: .72rem; color: var(--gris); }
+.gs-ico { display: grid; place-items: center; width: 34px; height: 34px; border-radius: 12px; background: rgba(255, 255, 255, .07); margin-bottom: 4px; transition: background .3s, transform .4s; }
+.gs-ico svg { width: 20px; height: 20px; fill: none; stroke: var(--oro-claro); stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
+.gan-sol[aria-selected="true"] { border-color: transparent; box-shadow: 0 10px 26px rgba(79, 209, 197, .25);
+  background: linear-gradient(var(--noche), var(--noche)) padding-box, linear-gradient(120deg, var(--g1), var(--g2), var(--g3), var(--g1)) border-box; border: 2px solid transparent; background-size: 100% 100%, 300% 300%; animation: ganBorde 4s linear infinite; }
+.gan-sol[aria-selected="true"] .gs-ico { background: linear-gradient(135deg, var(--g1), var(--g2)); transform: rotate(-8deg) scale(1.08); }
+.gan-sol[aria-selected="true"] .gs-ico svg { stroke: #10202c; }
+.gan-sol[aria-selected="true"] small { color: var(--g2); }
+@keyframes ganBorde { to { background-position: 0 0, 300% 0; } }
+
+.gan-panel h3 { margin: 0 0 6px; }
+.gan-entra { animation: ganSube .45s ease both; }
+@keyframes ganSube { from { opacity: 0; transform: translateY(10px); } }
+.gan-formula { display: flex; flex-wrap: wrap; align-items: center; justify-content: center; gap: 8px; margin: 12px 0; font-size: 1.05rem; font-variant-numeric: tabular-nums; }
+.gan-formula span { padding: 8px 12px; border-radius: 12px; background: rgba(255, 255, 255, .06); }
+.gan-formula .gf-a { background: rgba(79, 209, 197, .18); } .gan-formula .gf-b { background: rgba(230, 201, 121, .18); }
+.gan-formula .gf-r { background: linear-gradient(120deg, var(--g1), var(--g2)); color: #10202c; font-weight: 700; }
+.gan-formula i { font-style: normal; color: var(--gris); }
+.gan-barra { position: relative; display: flex; justify-content: space-between; gap: 10px; width: 100%; margin: 6px 0 0; padding: 10px 12px; border: 1px solid rgba(255, 255, 255, .1); border-radius: 12px; background: rgba(255, 255, 255, .03); color: var(--crema); font: inherit; cursor: pointer; overflow: hidden; text-align: left; }
+.gan-barra i { position: absolute; left: 0; top: 0; bottom: 0; width: 0; opacity: .28; animation: ganBarra .9s ease var(--d) forwards; z-index: 0; }
+.gan-barra span { position: relative; z-index: 1; } .gb-v { font-variant-numeric: tabular-nums; font-weight: 600; }
+@keyframes ganBarra { to { width: var(--w); } }
+.gan-barra.g-verde i { background: #34D399; } .gan-barra.g-celeste i { background: var(--g2); } .gan-barra.g-violeta i { background: var(--g3); } .gan-barra.g-oro i { background: var(--g1); } .gan-barra.g-rojo i { background: #F87171; }
+.gan-barra.abierta { border-color: var(--g2); }
+.gan-exp { margin: 4px 4px 0; font-size: .86rem; color: var(--gris); }
+.gan-tir { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; margin: 12px 0; }
+@media (max-width: 480px) { .gan-tir { grid-template-columns: 1fr; } }
+.gt-caja { padding: 12px; border-radius: 14px; text-align: center; border: 1px solid rgba(255, 255, 255, .1); animation: ganSube .5s ease both; }
+.gt-caja small { display: block; color: var(--gris); font-size: .75rem; } .gt-caja b { font-family: var(--display); font-size: 1.6rem; }
+.gt-caja.g-celeste { background: rgba(79, 209, 197, .12); } .gt-caja.g-oro { background: rgba(230, 201, 121, .12); animation-delay: .08s; } .gt-caja.g-violeta { background: rgba(167, 139, 250, .12); animation-delay: .16s; }
+.gan-graf { width: 100%; height: auto; display: block; }
+.gg-ap { fill: none; stroke: var(--g1); stroke-width: 2.5; stroke-dasharray: 6 5; }
+.gg-cap { fill: none; stroke: var(--g2); stroke-width: 3.5; stroke-dasharray: 100; stroke-dashoffset: 100; animation: ganLinea 1.6s ease forwards; }
+@keyframes ganLinea { to { stroke-dashoffset: 0; } }
+.gg-cursor { stroke: rgba(255, 255, 255, .35); stroke-width: 1.5; } .gg-punto { fill: var(--g3); stroke: #fff; stroke-width: 2; }
+.gg-ley { display: inline-block; width: 18px; height: 4px; border-radius: 2px; vertical-align: middle; } .gg-ley-cap { background: var(--g2); } .gg-ley-ap { background: var(--g1); }
+.gan-rango { width: 100%; accent-color: var(--g3); margin-top: 8px; }
+.gan-mes { padding: 10px 12px; border-radius: 12px; background: rgba(255, 255, 255, .05); font-size: .92rem; }
+.gan-volver { align-self: center; min-width: 200px; }
+.sin-movimiento .gan *, .sin-movimiento .gan { animation-duration: .01s !important; animation-delay: 0s !important; }
+
+/* cuota flexible */
+.cuota { padding: 12px; border-radius: 16px; background: rgba(255, 255, 255, .04); border: 1px solid var(--borde); }
+.cuota-barra { position: relative; height: 12px; border-radius: 999px; background: rgba(255, 255, 255, .08); overflow: visible; }
+.cuota-barra i { position: absolute; left: 0; top: 0; bottom: 0; border-radius: 999px; background: linear-gradient(90deg, var(--oro), #4FD1C5); transition: width .6s ease; }
+.cuota-min { position: absolute; top: -4px; bottom: -4px; width: 3px; margin-left: -1px; border-radius: 2px; background: var(--crema); }
+.cuota-opciones { display: flex; flex-wrap: wrap; gap: 6px; }
+.cuota-opciones .btn { flex: 1 1 120px; line-height: 1.25; padding: 8px 10px; }
+.cuota-opciones .btn[aria-pressed="true"] { background: var(--oro); color: #13202E; border-color: var(--oro); }
+.cuota-nota { margin: 0; }
+
+/* la letra griega en minúscula (α, β, γ, δ…): la mayúscula alfa se confunde con nuestra A */
+.letra-griega { text-transform: lowercase; }
+
+/* mercado del día */
+.md { display: flex; flex-direction: column; gap: 12px; }
+.md-zona { padding: 12px; border-radius: 14px; background: rgba(255, 255, 255, .04); border: 1px solid var(--borde); animation: ganSube .5s ease both; }
+.md-par { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-top: 8px; }
+.md-par small { display: block; color: var(--gris); font-size: .74rem; } .md-par b { font-size: 1.15rem; } .md-par span { display: block; }
+.md-barra { position: relative; height: 14px; margin-top: 10px; border-radius: 999px; background: rgba(255, 255, 255, .06); }
+.md-barra i, .md-ley i { position: absolute; top: 0; bottom: 0; border-radius: 999px; }
+.md-rango { background: rgba(79, 209, 197, .35); }
+.md-regla { width: 4px; margin-left: -2px; background: var(--crema); }
+.md-med { width: 12px; height: 12px; top: 1px !important; margin-left: -6px; background: var(--oro-claro); box-shadow: 0 0 10px rgba(230, 201, 121, .7); }
+.md-ley { position: relative; display: inline-block; padding-left: 18px; margin-right: 8px; } .md-ley i { left: 0; width: 12px; height: 8px; top: 4px; }
+@media (max-width: 420px) { .md-par { grid-template-columns: 1fr; } }

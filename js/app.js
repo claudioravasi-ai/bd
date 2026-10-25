@@ -32,6 +32,9 @@ var MENU_ABAJO = [['inicio', 'Inicio'], ['inversiones', 'Inversiones'], ['pagar'
 var MENU_OBSERVADOR = [['vitrina', 'Vitrina de fideicomisos'], ['meta', 'Mi meta de ingresos'], ['ayuda', 'Cómo se usa'], ['perfil', 'Mis datos']];
 
 function yo() { return SES.uid ? usuario(SES.uid) : null; }
+/* el socio fundador todavía no creó su cuenta (en la versión real: la base no tiene fundador) */
+function fundadorPendiente() { return MODO_REAL ? NUBE.instalado === false : !!(usuario('u1') && usuario('u1').sinActivar); }
+function invitacionDeAlta(a) { return a.inv || D.invitaciones.filter(function (x) { return x.codigo === a.codigo; })[0]; }
 /* cada socio ve solo sus fideicomisos; el socio fundador puede entrar a todos */
 function gruposVisibles(u) { return u.rol === 'fundador' ? D.grupos.filter(function (g) { return g.estado !== 'disuelto'; }) : gruposDe(u.id).filter(function (g) { return g.estado !== 'disuelto'; }); }
 function grupoActual() {
@@ -42,7 +45,7 @@ function grupoActual() {
 }
 /* demo con varios celulares (demo.html): cada marco entra con un perfil y no pisa la sesión de los otros */
 var MARCO_DEMO = (function () { try { return new URLSearchParams(location.search).get('demo'); } catch (e) { return null; } })();
-function guardarSesion() { if (!MARCO_DEMO) guardar(CLAVE_SESION, SES); }
+function guardarSesion() { if (SES.uid && !SES.t) SES.t = Date.now(); if (!MARCO_DEMO) guardar(CLAVE_SESION, SES); }
 function aplicarPreferencias() {
   document.documentElement.classList.toggle('letra-grande', !!PREF.letraGrande);
   document.documentElement.classList.toggle('sin-movimiento', !!PREF.sinMovimiento);
@@ -53,6 +56,7 @@ function pintarCinta() {
   var c = COT, items = [], g = grupo('alfa');
   function flecha(a, b) { if (!b || !a || a === b) return ''; return a > b ? '<i class="verde" aria-label="sube">▲</i>' : '<i class="rojo" aria-label="baja">▼</i>'; }
   var pv = c.previo || {};
+  items.push(['Dólar aportes', ars(tcAporte()), '']);
   items.push(['Dólar oficial BNA', ars(c.usdOficial), flecha(c.usdOficial, pv.usdOficial)]);
   if (c.usdMep) items.push(['Dólar MEP', ars(c.usdMep), flecha(c.usdMep, pv.usdMep)]);
   if (c.usdCcl) items.push(['Contado con liqui', ars(c.usdCcl), flecha(c.usdCcl, pv.usdCcl)]);
@@ -67,8 +71,9 @@ function pintarCinta() {
   if (RADAR && RADAR.extra && RADAR.extra.inflacionMes) items.push(['Inflación ' + nombreMesCorto(mesDe(RADAR.extra.inflacionMes.fecha)), num(RADAR.extra.inflacionMes.valor, 1) + '%', '']);
   if (g && D) { var e = estadoGrupo('alfa'); items.push(['UP Alfa', usd(e.vup, 2), e.vup >= 100 ? '<i class="verde" aria-label="sobre el valor inicial">▲</i>' : '']); }
   var h = items.map(function (x) { return '<span class="cinta-item"><span>' + x[0] + '</span><b>' + x[1] + '</b>' + x[2] + '</span>'; }).join('');
-  $('cinta').innerHTML = '<div class="cinta-vivo"><span class="punto-vivo' + (c.enVivo ? '' : ' apagado') + '"></span>' + (c.enVivo ? 'EN VIVO' : 'SIN CONEXIÓN') + '</div>' +
+  $('cinta').innerHTML = '<div class="cinta-vivo"><span class="punto-vivo' + (c.enVivo ? '' : ' apagado') + '"></span>' + '<span class="cv-txt"><span>' + (c.enVivo ? 'EN VIVO' : 'SIN CONEXIÓN') + '</span><small id="cintaQuien"></small></span></div>' +
     '<div class="cinta-pista" aria-label="Cotizaciones del día">' + h + '<span aria-hidden="true" style="display:contents">' + h + '</span></div>';
+  quienEnCinta();
 }
 
 /* ---------- avisos de pago ---------- */
@@ -160,7 +165,7 @@ function moraVivo(monto, periodo, op) {
   var v = (op.base || 0) + interesMora(monto, periodo);
   return '<span class="num mora-viva" data-mora="' + periodo + '" data-monto="' + monto + '" data-base="' + (op.base || 0) + '" data-dec="' + (op.dec == null ? 2 : op.dec) + '" data-moneda="' + (op.moneda || 'USD') + '">' + textoMora(v, op.moneda || 'USD', op.dec == null ? 2 : op.dec) + '</span>';
 }
-function textoMora(v, moneda, dec) { return moneda === 'USD' ? usd(v, dec) : enMoneda(v, moneda, COT); }
+function textoMora(v, moneda, dec) { return moneda === 'USD' ? usd(v, dec) : enMoneda(v, moneda, cotAportes()); }
 function tickMora() {
   document.querySelectorAll('[data-mora]').forEach(function (el) {
     var v = (+el.dataset.base || 0) + interesMora(+el.dataset.monto, el.dataset.mora);
@@ -179,6 +184,8 @@ function modal(titulo, html, op) {
   if (!abriendoVentana) { PILA.push(null); }
   if ($('velo').hidden) focoAnterior = document.activeElement;
   var v = $('velo'); v.hidden = false;
+  /* ventana fija: no se cierra tocando afuera, solo con Volver */
+  if (op.fija) v.dataset.fija = '1'; else delete v.dataset.fija;
   v.innerHTML = '<div class="modal' + (op.ancho ? ' modal-ancho' : '') + '" role="dialog" aria-modal="true" aria-labelledby="modalTitulo"><div class="modal-cabeza"><button class="btn btn-chico atras-modal" data-atras aria-label="Atrás: volver al paso anterior">← Atrás</button><h2 id="modalTitulo">' + esc(titulo) + '</h2><button class="cerrar" aria-label="Cerrar todas las ventanas" data-cerrar>✕</button></div><div id="modalCuerpo">' + html + '</div></div>';
   v.querySelector('.modal').scrollTop = 0;
   setTimeout(function () { var f = v.querySelector('[data-atras]'); if (f) f.focus(); }, 30);
@@ -195,7 +202,7 @@ function tickVentana(fn) { clearInterval(tickVentana.t); tickVentana.t = setInte
 document.addEventListener('click', function (e) {
   if (e.target.closest('[data-atras]')) { atrasModal(); }
   else if (e.target.closest('[data-cerrar]')) { cerrarModal(); }
-  else if (e.target.id === 'velo') cerrarModal();
+  else if (e.target.id === 'velo' && !e.target.dataset.fija) cerrarModal();
 });
 document.addEventListener('keydown', function (e) { if (e.key === 'Escape' && !$('velo').hidden) atrasModal(); });
 
@@ -246,13 +253,30 @@ window.addEventListener('scroll', function () {
 }, { passive: true });
 document.addEventListener('click', function (e) { var a = e.target.closest('a[href^="#"]'); if (a) recordarPosicion(); }, true);
 
+/* abajo de EN VIVO, quién está conectado en este teléfono */
+function quienEnCinta() {
+  var q = $('cintaQuien'), u = yo(); if (!q) return;
+  q.textContent = u ? nombreCorto(u) : ''; q.title = u ? 'Conectado: ' + u.nombre : '';
+  var r = u ? gananciaDe(u) : null;
+  if (r) { var b = document.createElement('b'); b.className = r.pct >= 0 ? 'verde' : 'rojo'; b.textContent = ' ' + (r.pct >= 0 ? '+' : '') + num(r.pct * 100, 1) + '%'; q.appendChild(b);
+    q.title = u.nombre + ': ganó ' + (r.pct >= 0 ? '+' : '') + num(r.pct * 100, 2) + '% sobre lo aportado (' + usd(r.aportado) + ' → ' + usd(r.valor) + ')' + (isFinite(r.tir) ? ' · TIR anual ' + pct(r.tir, 1) : ''); }
+}
+document.addEventListener('click', function (e) { var q = e.target.closest && e.target.closest('#cintaQuien'); if (q && yo()) abrirGanancia(); });
+/* ganancia de hoy sobre lo aportado: lo que valen sus UP (más lo que ya recibió en especie) contra todo lo que puso */
+function gananciaDe(u) {
+  var g = grupoActual(); if (!g || g.estado !== 'activo' || g.socios.indexOf(u.id) < 0) return null;
+  var e = estadoGrupo(g.id), ap = e.aportadoSocio[u.id] || 0; if (!ap) return null;
+  var valor = (e.upSocio[u.id] || 0) * e.vup + especieDe(g.id, u.id, hoyISO());
+  return { aportado: ap, valor: valor, pct: valor / ap - 1, tir: tirSocio(g.id, u.id) };
+}
 function render() {
   var r = ruta(), u = yo(), raiz = $('app'), st = marcarEntrada();
+  quienEnCinta();
   PROYS = {}; CURVAS = {}; pintarProyeccion.ya = false;
   if (!$('velo').hidden) { $('velo').hidden = true; $('velo').innerHTML = ''; }
   if (!u) {
     raiz.className = 'marco';
-    var pant = r.partes[0] === 'alta' && SES.alta ? 'alta' : r.partes[0] === 'fundador' && usuario('u1') && usuario('u1').sinActivar ? 'fundador' : 'entrada';
+    var pant = r.partes[0] === 'alta' && SES.alta ? 'alta' : r.partes[0] === 'fundador' && fundadorPendiente() ? 'fundador' : 'entrada';
     raiz.innerHTML = pant === 'alta' ? '<main id="principal">' + vistaAlta() + '</main>' : pant === 'fundador' ? '<main id="principal">' + vistaAltaFundador() + '</main>' : vistaEntrada();
     despuesDe(pant);
     return;
@@ -266,7 +290,7 @@ function render() {
     '<main id="principal" tabindex="-1" data-seccion="' + v + '"><div class="fila entre no-imprimir barra-arriba" style="margin-bottom:14px">' +
     '<div class="fila" style="gap:8px"><button class="btn btn-chico hamburguesa" id="btnMenu" aria-label="Menú" aria-expanded="false" aria-controls="menuLateral"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M4 6h16M4 12h16M4 18h16"/></svg></button>' + (st.n > 0 ? '<button class="btn btn-chico" id="btnVolver" aria-label="Volver a la pantalla anterior, donde estabas">← Volver</button>' : '') + (u.rol === 'observador' ? '<span class="chip azul">Solo mirar</span>' : selectorGrupo()) + '</div>' +
     '<button class="btn btn-chico' + (nAvisos ? ' campana-viva' : '') + '" id="btnAvisos" aria-label="Avisos: ' + nAvisos + ' sin leer">' + icono('campana').replace('<svg', '<svg width="20" height="20"') + (nAvisos ? '<span class="chip ' + (nuevos.some(function (a) { return a.nivel === 'mal'; }) ? 'mal' : 'oro') + '" style="padding:0 8px">' + nAvisos + '</span>' : '') + '</button></div>' +
-    VISTAS[v](u, r) + '</main>' + menuAbajo(v) + '<div class="velo-menu" id="veloMenu" hidden></div>';
+    VISTAS[v](u, r) + piePagina() + '</main>' + menuAbajo(v) + '<div class="velo-menu" id="veloMenu" hidden></div>';
   $('btnAvisos').onclick = abrirAvisos;
   $('btnMenu').onclick = alternarMenu; $('veloMenu').onclick = function () { alternarMenu(false); };
   sonarSiHayNuevos(nuevos);
@@ -305,7 +329,7 @@ function selectorGrupo() {
   var gs = gruposVisibles(yo()), g = grupoActual();
   if (gs.length <= 1) return g ? '<span class="chip oro">' + g.simbolo + ' ' + g.letra + '</span>' : '';
   return '<label class="solo-lector" for="selGrupo">Fideicomiso</label><select id="selGrupo" class="btn btn-chico" style="padding-right:10px">' +
-    gs.map(function (x) { return '<option value="' + x.id + '"' + (x === g ? ' selected' : '') + '>' + x.simbolo + ' ' + x.letra + ' · ' + x.estado + '</option>'; }).join('') + '</select>';
+    gs.map(function (x) { return '<option value="' + x.id + '"' + (x === g ? ' selected' : '') + '>' + x.simbolo.toLowerCase() + ' ' + x.letra + ' · ' + x.estado + '</option>'; }).join('') + '</select>';
 }
 function despuesDe(v, r) {
   animarCuentas($('app'));
@@ -345,6 +369,7 @@ function vistaEntrada() {
   return '<div class="entrada"><div class="entrada-caja entrar">' + svgLogo('logo-completo') +
     '<div class="frases-griegas" id="frasesGr" tabindex="0" role="group" aria-label="Frases en griego. Pasá el mouse, tocá o enfocá para ver la traducción."><p class="fg-griego" id="fgGr" lang="el">' + FRASES_GRIEGAS[0][0] + '</p><p class="fg-trad" id="fgEs" aria-live="polite"></p></div>' +
     '<h1 class="solo-lector">B&amp;D · Building Dreams</h1><p class="gris">Construyendo sueños, un aporte a la vez. Fideicomisos de amigos que compran departamentos, los alquilan y reinvierten.</p>' +
+    (SESION_VENCIDA ? '<div class="aviso" role="status" style="text-align:left;margin-top:14px"><b>Por seguridad se cerró tu sesión</b> (' + MINUTOS_SESION + ' minutos sin uso). Entrá de nuevo con tu clave y tu código.</div>' : '') +
     '<div class="tarjeta dorada" style="text-align:left;margin-top:18px">' +
     '<div class="segmentos" role="group" aria-label="Cómo entrar" style="margin-bottom:14px"><button type="button" aria-pressed="true" data-modo="inv">Tengo una invitación</button><button type="button" aria-pressed="false" data-modo="soc">Ya soy socio</button></div>' +
     '<form id="formEntrada" class="apilar" novalidate>' +
@@ -353,18 +378,19 @@ function vistaEntrada() {
     '<div class="campo" id="campoClave" hidden><label for="eClave">Clave</label><input id="eClave" type="password" autocomplete="current-password"></div>' +
     '<div class="campo" id="campoTotp" hidden><label for="eTotp">Código de Google Authenticator (6 números)</label><input id="eTotp" inputmode="numeric" autocomplete="one-time-code" maxlength="7" style="letter-spacing:.3em;text-align:center"><span class="ayuda">Abrí Google Authenticator en tu teléfono y copiá el código de B&amp;D.</span></div>' +
     '<p class="error rojo chico" id="eError" role="alert"></p>' +
-    '<button class="btn btn-oro" style="width:100%">Entrar</button></form></div>' +
-    (usuario('u1') && usuario('u1').sinActivar ? '<div class="tarjeta" style="text-align:left;margin-top:14px"><b>¿Sos el socio fundador?</b><p class="chico gris" style="margin:4px 0 10px">Tu cuenta se crea una sola vez, con CUIL, correo, clave y Google Authenticator. Después nadie más puede entrar como fundador.</p><a class="btn btn-oro btn-chico" href="#/fundador">Crear la cuenta del socio fundador</a></div>' : '') +
-    '<div class="aviso prueba" style="text-align:left;margin-top:16px"><b>Modo prueba.</b> Los datos son inventados y quedan solo en este equipo.<div class="fila" style="margin-top:10px">' +
+    '<button class="btn btn-oro" style="width:100%">Entrar</button>' + (MODO_REAL ? '<button type="button" class="enlace" id="eOlvide" hidden>¿Olvidaste tu clave?</button>' : '') + '</form></div>' +
+    (fundadorPendiente() ? '<div class="tarjeta" style="text-align:left;margin-top:14px"><b>¿Sos el socio fundador?</b><p class="chico gris" style="margin:4px 0 10px">Tu cuenta se crea una sola vez, con CUIL, correo, clave y Google Authenticator. Después nadie más puede entrar como fundador.</p><a class="btn btn-oro btn-chico" href="#/fundador">Crear la cuenta del socio fundador</a></div>' : '') +
+    (modoPrueba() ? '<div class="aviso prueba" style="text-align:left;margin-top:16px"><b>Modo prueba.</b> Los datos son inventados y quedan solo en este equipo.<div class="fila" style="margin-top:10px">' +
     '<button class="btn btn-chico" data-demo="u2">Probar como socia de ejemplo</button>' +
-    '<button class="btn btn-chico" data-demo="inv">Probar una invitación</button><button class="btn btn-chico" data-demo="obs">Probar como invitado que solo mira</button></div></div>' +
-    '<p class="chico gris" style="margin-top:14px">Acceso exclusivo por invitación. Nada de lo que ves es una oferta al público ni una promesa de rentabilidad.</p></div></div>';
+    '<button class="btn btn-chico" data-demo="inv">Probar una invitación</button><button class="btn btn-chico" data-demo="obs">Probar como invitado que solo mira</button></div></div>' : '') +
+    (MODO_REAL ? '<p class="chico" style="margin-top:14px"><a class="enlace" href="?prueba">Ver la demostración con datos inventados</a> · <a class="enlace" href="sala.html">Sala en vivo</a></p>' : '') +
+    '<p class="chico gris" style="margin-top:14px">Acceso exclusivo por invitación. Nada de lo que ves es una oferta al público ni una promesa de rentabilidad.</p></div>' + piePagina() + '</div>';
 }
 
 /* =================== ALTA DEL INVITADO =================== */
 var PASOS_ALTA = ['Tu clave', 'Datos personales', 'Domicilio y datos fiscales', 'Origen de los fondos', 'Cobros y beneficiario', 'Privacidad y firma'];
 function vistaAlta() {
-  var a = SES.alta, p = a.paso, d = a.datos, inv = D.invitaciones.filter(function (x) { return x.codigo === a.codigo; })[0], g = inv ? grupo(inv.g) : null;
+  var a = SES.alta, p = a.paso, d = a.datos, inv = invitacionDeAlta(a), g = inv ? grupo(inv.g) : null;
   var pasos = PASOS_ALTA.map(function (x, i) { return '<i class="' + (i < p ? 'hecho' : i === p ? 'actual' : '') + '"></i>'; }).join('');
   function c(id, rotulo, tipo, extra, ayuda) {
     return '<div class="campo"><label for="a_' + id + '">' + rotulo + '</label><input id="a_' + id + '" name="' + id + '" type="' + (tipo || 'text') + '" value="' + esc(d[id] || '') + '" ' + (extra || '') + '>' + (ayuda ? '<span class="ayuda">' + ayuda + '</span>' : '') + '</div>';
@@ -373,7 +399,7 @@ function vistaAlta() {
     return '<div class="campo"><label for="a_' + id + '">' + rotulo + '</label><select id="a_' + id + '" name="' + id + '">' + ops.map(function (o) { return '<option' + (d[id] === o ? ' selected' : '') + '>' + o + '</option>'; }).join('') + '</select></div>';
   }
   var cuerpo = [
-    '<p class="gris">Bienvenido/a' + (inv ? ', ' + esc(inv.nombre) : '') + '. Te invitó ' + (inv ? esc(usuario(inv.por).nombre) : 'un socio fundador') + (g ? ' al fideicomiso <b class="oro">' + g.simbolo + ' ' + g.letra + '</b>' : '') + '. Primero, tu clave.</p>' +
+    '<p class="gris">Bienvenido/a' + (inv ? ', ' + esc(inv.nombre) : '') + '. Te invitó ' + (inv && usuario(inv.por) ? esc(usuario(inv.por).nombre) : 'un socio fundador') + (g ? ' al fideicomiso <b class="oro">' + g.simbolo + ' ' + g.letra + '</b>' : '') + '. Primero, tu clave.</p>' +
       c('clave', 'Clave (mínimo 8 caracteres)', 'password', 'autocomplete="new-password" minlength="8" required') + c('clave2', 'Repetí la clave', 'password', 'autocomplete="new-password" required'),
     c('nombre', 'Nombre y apellido completos', 'text', 'autocomplete="name" required') + c('dni', 'DNI', 'text', 'inputmode="numeric" maxlength="8" required') +
       c('nacimiento', 'Fecha de nacimiento', 'date', 'required') + c('nacionalidad', 'Nacionalidad', 'text', 'required') +
@@ -415,7 +441,8 @@ function validarPasoAlta(p, d) {
   return '';
 }
 function terminarAlta() {
-  var a = SES.alta, d = a.datos, inv = D.invitaciones.filter(function (x) { return x.codigo === a.codigo; })[0];
+  if (MODO_REAL) return terminarAltaReal();
+  var a = SES.alta, d = a.datos, inv = invitacionDeAlta(a);
   return huella(a.email + '|' + d.clave).then(function (h) {
     var id = 'u' + (Date.now() % 1e9);
     if (inv.tipo === 'mirar') {
@@ -440,6 +467,9 @@ function terminarAlta() {
 
 /* =================== INICIO =================== */
 function vistaInicio(u) {
+  return htmlTransferenciasAvisadas(u) + vistaInicioGrupo(u);
+}
+function vistaInicioGrupo(u) {
   var g = grupoActual();
   if (!g) return '<h1>Hola, ' + esc(u.nombre.split(' ')[0]) + '</h1><p class="gris">Todavía no estás en ningún fideicomiso.</p><a class="btn btn-oro" href="#/grupos">Ver los fideicomisos griegos</a>';
   if (g.estado !== 'activo') return vistaGrupoConvocando(u, g);
@@ -451,8 +481,8 @@ function vistaInicio(u) {
     : pagado ? '<span class="chip ok">✓ Aporte de ' + nombreMes(mesHoy) + ' pagado</span><a class="btn btn-chico" href="#/pagar">Adelantar el próximo</a>'
       : '<a class="btn btn-oro" href="#/pagar">Pagar mi aporte de ' + nombreMes(mesHoy) + '</a>';
   return '<section class="heroe entrar"><div>' +
-    '<p class="etiqueta">Fideicomiso ' + esc(g.estructura) + '</p>' +
-    '<div class="heroe-titulo"><span class="letra-griega" aria-hidden="true">' + g.simbolo + '</span><div><h1>' + esc(g.letra) + '</h1><p class="gris" style="margin:0">' + g.N + ' socios · ' + usd(g.aporte) + ' por mes · ' + g.ciclo + ' meses · <i class="oro">building dreams…!!</i></p></div></div>' +
+    '<p class="etiqueta">Fideicomiso ' + esc(g.letra) + ' · ' + esc(String(g.estructura || '').replace(/^[A-C] · /, '')) + '</p>' +
+    '<div class="heroe-titulo"><span class="letra-griega" aria-hidden="true">' + g.simbolo + '</span><div><h1 class="solo-lector">Fideicomiso ' + esc(g.letra) + '</h1><p class="gris" style="margin:0">' + g.N + ' socios · ' + usd(g.aporte) + ' por mes · ' + g.ciclo + ' meses · <i class="oro">building dreams…!!</i></p></div></div>' +
     '<p style="margin-top:14px">Hola, <b>' + esc(u.nombre.split(' ')[0]) + '</b>. Estamos en el <b>mes ' + ci.mesN + '</b> del proyecto: ciclo ' + ci.ciclo + ', mes ' + ci.enCiclo + ' de ' + g.ciclo + '. ' +
     (ci.faltan ? 'La compra ' + ci.ciclo + ' se vota en <b>' + nombreMes(mesDe(ci.fechaCompra)) + '</b>.' : 'Este mes se compra el departamento ' + ci.ciclo + '.') + (ci.conRenta ? ' Desde el mes ' + (g.ciclo + 1) + ' se suma la renta de los alquileres.' : '') + '</p>' +
     '<div class="fila">' + botonPago + '</div></div>' +
@@ -548,6 +578,7 @@ function vistaGrupoConvocando(u, g) {
     '<div class="medidor" style="height:12px;max-width:420px"><i style="width:' + (g.socios.length / g.N * 100) + '%"></i></div></div>' +
     '<div class="tarjeta dorada">' + svgTorre(0, Math.min(pr.r.purchases.length, 12)) + '</div></section>' +
     '<section class="tarjeta seccion">' + svgProyeccion(pr.r) + '</section>' +
+    (MODO_REAL && g.id === 'alfa' && u.id === (NUBE.instalado || {}).fundador ? '<section class="tarjeta dorada seccion"><h3>Arrancar el fideicomiso Alfa</h3><p class="chico gris">Cuando estén los socios y firmado el contrato, tocá acá: los aportes empiezan con el de ' + nombreMes(mesDe(inicioAlfa())) + ' (del 1 al ' + DIA_VENCE + '), la mora corre desde el día ' + (DIA_VENCE + 1) + ' y la primera compra es en el mes ' + g.ciclo + '.</p><button class="btn btn-oro" id="btnArrancarAlfa">Arrancar Alfa</button></section>' : '') +
     '<div class="aviso seccion">Los grupos fuera del piloto Alfa necesitan antes el dictamen de un abogado de mercado de capitales y la estructura que corresponda (fiduciaria autorizada o club cerrado). La app no los activa sola.</div>';
 }
 
@@ -557,15 +588,18 @@ function periodoAPagar(g, u, pedido) {
   var mora = moraDe(g.id).filter(function (m) { return m.socio === u.id; });
   if (mora.length) return mora[0].periodo;
   var mes = mesDe(hoyISO());
+  if (g.inicio && mes < mesDe(g.inicio)) return mesDe(g.inicio);
   return pagoDe(g.id, u.id, mes) ? mesDe(sumarMeses(hoyISO(), 1)) : mes;
 }
 function vistaPagar(u, r) {
   var g = grupoActual();
   if (!g || g.estado !== 'activo') return '<h1>Pagar</h1><p class="gris">Los aportes empiezan cuando tu fideicomiso se completa y se firma el contrato.</p>';
   if (g.socios.indexOf(u.id) < 0) return '<h1>Pagar</h1><p class="gris">No sos socio de ' + esc(g.letra) + ': como fundador lo mirás, pero no aportás.</p>';
-  var per = periodoAPagar(g, u, r.q.periodo), ya = pagoDe(g.id, u.id, per), vence = venceDe(per), tarde = hoyISO() > vence;
-  var dias = tarde ? diasEntre(vence, hoyISO()) : 0, interes = tarde ? interesMora(g.aporte, per) : 0, deuda = deudaDe(g.id, u.id);
-  var mon = SES.moneda || 'ARS', met = SES.metodo || 'mercadopago';
+  var per = periodoAPagar(g, u, r.q.periodo), vence = venceDe(per), deuda = deudaDe(g.id, u.id);
+  /* cuota flexible: por defecto lo pactado; el socio puede elegir otro monto */
+  var rc = resumenCuota(g, u.id), ya = rc.maximo <= 0.004, monto = montoElegido(g, rc), interes = interesCubierto(g, u.id, monto), total = monto + interes;
+  var tarde = rc.vencido > 0.004, dias = deuda.dias;
+  var mon = SES.moneda || 'ARS', met = MODO_REAL ? (mon === 'EUR' ? 'exterior' : 'transferencia') : SES.metodo || 'mercadopago';
   var mis = D.movimientos.filter(function (m) { return m.g === g.id && m.tipo === 'aporte' && m.socio === u.id; }).sort(function (a, b) { return a.fecha < b.fecha ? 1 : -1; });
   var metodos = [
     ['mercadopago', 'Mercado Pago', 'Dinero en cuenta o débito. Se acredita al instante.', 'ARS'],
@@ -573,28 +607,32 @@ function vistaPagar(u, r) {
     ['transferencia', 'Transferencia bancaria', 'A la cuenta del fideicomiso, desde una cuenta a tu nombre (art. 18).', 'ARS USD'],
     ['exterior', 'Transferencia desde el exterior', 'En dólares o euros, a la cuenta en dólares del fideicomiso.', 'USD EUR']
   ];
+  /* versión real: por ahora solo transferencia (Mercado Pago y tarjeta se conectan en la fase 2) */
+  if (MODO_REAL) metodos = metodos.filter(function (x) { return x[0] === 'transferencia' || x[0] === 'exterior'; });
   return '<h1>Pagar mi aporte</h1><p class="gris">Fideicomiso ' + esc(g.letra.toUpperCase()) + ' · vence del 1 al 10 de cada mes · la mora es automática el día 11.</p>' +
-    (ya ? '<div class="aviso">El aporte de ' + nombreMes(per) + ' ya está pagado (recibo ' + esc(ya.recibo) + ').</div>' : '') +
+    (MODO_REAL ? '<div class="aviso seccion"><b>Cómo se paga:</b> transferí el aporte a la cuenta del fideicomiso desde una cuenta a tu nombre y tocá «Ya transferí». El fiduciario lo confirma cuando lo ve en el banco y se compran tus UP con la fecha de tu aviso. Los datos de la cuenta te los da el fiduciario.</div>' : '') +
+    (ya ? '<div class="aviso">Ya completaste el ciclo ' + rc.ciclo + ' y el aporte extra llegó a su tope. El próximo aporte es del ciclo ' + (rc.ciclo + 1) + '.</div>' : '') +
     '<section class="rejilla r2 seccion"><div class="tarjeta dorada apilar">' +
-    '<div class="fila entre"><div><p class="etiqueta">Aporte de ' + nombreMes(per) + '</p><p class="chico gris" style="margin:0">' + (tarde ? '<span class="rojo">Vencido hace ' + dias + ' días</span>' : 'Vence el ' + fechaLarga(vence)) + '</p></div>' +
-    '<span class="chip ' + (tarde ? 'mal' : 'oro') + '">' + (tarde ? 'En mora' : per > mesDe(hoyISO()) ? 'Adelantado' : 'Al día') + '</span></div>' +
+    '<div class="fila entre"><div><p class="etiqueta">Aporte de ' + nombreMes(per) + '</p><p class="chico gris" style="margin:0">' + (tarde ? '<span class="rojo">Debés ' + usd(rc.vencido) + ' vencidos hace ' + dias + ' días</span>' : rc.paraAlDia > 0.004 ? 'Para estar al día, hasta el ' + fechaLarga(vence) + ': ' + usd(rc.paraAlDia) : 'Estás al día: lo que pongas adelanta el ciclo') + '</p></div>' +
+    '<span class="chip ' + (tarde ? 'mal' : 'oro') + '">' + (tarde ? 'En mora' : rc.paraAlDia > 0.004 ? 'Pendiente' : 'Al día') + '</span></div>' +
+    htmlCuota(g, rc, monto) +
     '<div class="segmentos" role="group" aria-label="Moneda de pago">' + ['ARS', 'USD', 'EUR'].map(function (m) { return '<button type="button" data-moneda="' + m + '" aria-pressed="' + (m === mon) + '">' + { ARS: 'Pesos', USD: 'Dólares', EUR: 'Euros' }[m] + '</button>'; }).join('') + '</div>' +
-    '<div><span class="gris chico">Total a pagar</span><div class="num" style="font-size:clamp(2rem,7vw,2.8rem);color:var(--oro-claro);line-height:1.1" id="totalPago">' + (tarde ? moraVivo(g.aporte, per, { base: g.aporte, moneda: mon }) : enMoneda(g.aporte, mon, COT)) + '</div>' +
-    '<p class="chico gris" style="margin:4px 0 0">= ' + usd(g.aporte) + (tarde ? ' + interés por mora que corre en vivo: ' + moraVivo(g.aporte, per, { dec: 6 }) + ' (suma ' + usd(porDia(g.aporte), 2) + ' por día)' : '') + ' · ' +
-    (mon === 'ARS' ? 'al dólar oficial vendedor del Banco Nación de hoy: ' + ars(COT.usdOficial) : mon === 'EUR' ? 'al cruce euro/dólar de hoy: ' + num(COT.eurUsd, 4) : 'en dólares') + '</p>' +
-    '<p class="chico gris" style="margin:2px 0 0">Equivale a ' + ars((g.aporte + interes) * COT.usdOficial) + ' · ' + usd(g.aporte + interes, 2) + ' · ' + eur((g.aporte + interes) / COT.eurUsd, 2) + '</p></div>' +
+    '<div><span class="gris chico">Total a pagar</span><div class="num" style="font-size:clamp(2rem,7vw,2.8rem);color:var(--oro-claro);line-height:1.1" id="totalPago">' + enMoneda(total, mon, cotAportes()) + '</div>' +
+    '<p class="chico gris" style="margin:4px 0 0">= ' + usd(monto) + (interes > 0 ? ' + interés por mora de lo vencido que cubre: ' + usd(interes, 2) + ' (suma cada día que pasa)' : '') + ' · ' +
+    (mon === 'ARS' ? 'al dólar vendedor más alto de hoy entre los bancos (' + esc(COT.bancoAporte || 'Banco Nación') + '): ' + ars(tcAporte()) : mon === 'EUR' ? 'al cruce euro/dólar de hoy: ' + num(COT.eurUsd, 4) : 'en dólares') + '</p>' +
+    '<p class="chico gris" style="margin:2px 0 0">Equivale a ' + ars(total * tcAporte()) + ' · ' + usd(total, 2) + ' · ' + eur(total / COT.eurUsd, 2) + '</p></div>' +
     '<fieldset style="border:none;padding:0;margin:0" class="apilar"><legend class="rotulo gris chico" style="margin-bottom:8px">Cómo pagás</legend>' +
     metodos.map(function (x) {
       var ok = x[3].indexOf(mon) >= 0;
       return '<label class="casilla tarjeta" style="padding:12px;' + (ok ? '' : 'opacity:.45') + '"><input type="radio" name="metodo" value="' + x[0] + '"' + (x[0] === met && ok ? ' checked' : '') + (ok ? '' : ' disabled') + '><span><b>' + x[1] + '</b><br><span class="chico gris">' + x[2] + (ok ? '' : ' (no disponible en ' + mon + ')') + '</span></span></label>';
     }).join('') + '</fieldset>' +
-    '<button class="btn btn-oro" id="btnPagar" style="width:100%"' + (ya ? ' disabled' : '') + '>Pagar ' + (tarde ? moraVivo(g.aporte, per, { base: g.aporte, moneda: mon }) : enMoneda(g.aporte, mon, COT)) + '</button>' +
+    '<button class="btn btn-oro" id="btnPagar" style="width:100%"' + (ya ? ' disabled' : '') + '>' + (MODO_REAL ? 'Ya transferí ' : 'Pagar ') + enMoneda(total, mon, cotAportes()) + (MODO_REAL ? ': avisar al fiduciario' : '') + '</button>' +
     (tarde ? '<div class="aviso alerta chico">Mientras no pagues, el interés suma cada segundo (lo que se cobra es lo que marca el contador al pagar). Lo que debés se descuenta de tu parte en las ganancias del fideicomiso (art. 25)' + (deuda.suspendido ? ' y <b>ya tenés suspendidos el voto y la renta</b> por pasar los 30 días (art. 26).' : '; si pasan 30 días se suspenden tu voto y tu renta (art. 26).') + '</div>' : '') +
     '<p class="chico gris" style="margin:0">Modo prueba: el pago es simulado y no se cobra nada. En la versión real te lleva a Mercado Pago o te muestra los datos de la cuenta, y lo confirma el banco (no el teléfono).</p></div>' +
 
     '<div class="apilar"><div class="tarjeta"><h3>Avisos de pago</h3><p class="gris chico">La app te avisa antes del día 1, el día 10 y si queda vencido.</p><div class="fila"><button class="btn btn-chico" id="btnAvisosPago">Configurar avisos</button><button class="btn btn-chico" id="btnIcsPago">Recordatorio en mi calendario</button></div></div>' +
     '<div class="tarjeta"><h3>Lo que compra tu aporte</h3><p class="gris chico">Cada aporte compra UP (unidades de participación) al valor del día: así un pago tardío no perjudica a nadie.</p>' +
-    (function () { var e = estadoGrupo(g.id); return '<p>Hoy, ' + usd(g.aporte) + ' compran <b class="oro">' + num(g.aporte / e.vup, 3) + ' UP</b> a ' + usd(e.vup, 2) + ' cada una.</p>'; })() + '</div>' +
+    (function () { var e = estadoGrupo(g.id); return '<p>Al valor de hoy, ' + usd(monto) + ' comprarían <b class="oro">' + num(monto / e.vup, 3) + ' UP</b> a ' + usd(e.vup, 2) + ' cada una. El número final se fija con el valor del cierre del mes.</p>'; })() + '</div>' +
     tarjetaAtraso(g, r.q.que === 'atraso') +
     '<div class="tarjeta"><h3>Mis pagos</h3><div class="tabla-scroll"><table><tr><th>Mes</th><th>Pagado</th><th>Cómo</th><th class="n">USD</th><th></th></tr>' +
     mis.map(function (m) { return '<tr><td>' + nombreMesCorto(m.periodo) + '</td><td>' + fechaCorta(m.fecha) + (m.fecha > venceDe(m.periodo) ? ' <span class="chip">tarde</span>' : '') + '</td><td class="chico">' + metodoTxt(m.pago.metodo) + ' · ' + m.pago.moneda + '</td><td class="n">' + num(m.usd) + '</td><td><button class="btn-texto chico" data-recibo="' + m.id + '">Recibo</button></td></tr>'; }).join('') +
@@ -620,12 +658,14 @@ function verRecibo(id) {
     '<tr><td>En concepto de</td><td>Aporte mensual de ' + nombreMes(m.periodo) + '</td></tr>' +
     '<tr><td>Importe</td><td><b>' + usd(m.usd, 2) + '</b></td></tr>' +
     '<tr><td>Pagado en</td><td>' + (m.pago.moneda === 'ARS' ? ars(m.pago.monto) : m.pago.moneda === 'EUR' ? eur(m.pago.monto, 2) : usd(m.pago.monto, 2)) + ' por ' + metodoTxt(m.pago.metodo) + '</td></tr>' +
-    '<tr><td>Tipo de cambio</td><td>Oficial vendedor Banco Nación: ' + ars(m.tc) + '</td></tr>' +
-    '<tr><td>UP compradas</td><td>' + num(m._up, 4) + ' UP a ' + usd(m._vup, 2) + '</td></tr></table>' +
+    '<tr><td>Tipo de cambio</td><td>Dólar vendedor más alto del día entre los bancos: ' + ars(m.tc) + '</td></tr>' +
+    '<tr><td>UP compradas</td><td>' + num(m._up, 4) + ' UP a ' + usd(m._vup, 2) + (m._prov ? ' <span class="chip">provisorio: se fija al cierre de ' + nombreMes(mesDe(m.fecha)) + '</span>' : ' (valor del cierre del mes)') + '</td></tr></table>' +
     '<p class="chico gris" style="margin-top:12px">Comprobante de PRUEBA, sin validez. En la versión real lo emite el fiduciario cuando el banco acredita el pago.</p></div>' +
     '<div class="fila no-imprimir" style="margin-top:12px"><button class="btn btn-oro" onclick="window.print()">Imprimir o guardar en PDF</button></div>');
 }
 function procesarPago(g, u, per, mon, met, datos) {
+  datos = Object.assign({ usd: montoElegido(g) }, datos || {}); delete SES.montoAporte; guardarSesion();
+  if (MODO_REAL) { avisarTransferencia(g, u, per, mon, met, datos.usd); return; }
   modal('Procesando el pago', '<div style="text-align:center;padding:20px 0"><div class="letra-griega" style="font-size:4rem">' + g.simbolo + '</div><p id="pasoPago" aria-live="polite">Conectando con ' + metodoTxt(met) + '… (simulado)</p><div class="medidor" style="max-width:320px;margin:0 auto"><i id="barraPago" style="width:0%"></i></div></div>');
   var pasos = ['Conectando con ' + metodoTxt(met) + '… (simulado)', 'Esperando la acreditación…', 'Comprando UP al valor de hoy…'], k = 0;
   var t = setInterval(function () {
@@ -633,7 +673,7 @@ function procesarPago(g, u, per, mon, met, datos) {
     if ($('pasoPago') && pasos[k]) $('pasoPago').textContent = pasos[k];
     if (k >= 3) {
       clearInterval(t);
-      var m = registrarAporte(g.id, u.id, per, mon, met, datos);
+      var m = registrarAporte(g.id, u.id, mesDe(hoyISO()) < per ? per : mesDe(hoyISO()), mon, met, datos);
       cerrarModal(); render(); lluviaDorada(); tostada('Pago acreditado. ¡Gracias!'); if (m) setTimeout(function () { verRecibo(m.id); }, 600);
     }
   }, sinMovimiento() ? 150 : 650);
@@ -642,7 +682,7 @@ function procesarPago(g, u, per, mon, met, datos) {
 /* =================== MERCADO =================== */
 function vistaMercado(u) {
   var g = grupoActual(), c = COT, lista = RADAR ? RADAR.lista : RADAR_BASE;
-  var tarjetasCot = [['Dólar oficial BNA', c.usdOficial, 'Se usa para convertir los aportes (art. 18)'], ['Dólar MEP', c.usdMep, 'Bolsa'], ['Contado con liquidación', c.usdCcl, 'Para girar al exterior'], ['Dólar blue', c.usdBlue, 'Informal, solo referencia'], ['Euro', c.eurArs, 'Banco Nación'], ['Dólar mayorista', c.usdMayorista, 'Comunicación A 3500']]
+  var tarjetasCot = [['Dólar para los aportes', tcAporte(), 'El vendedor más alto de hoy entre ' + (c.bancosVistos || 1) + ' bancos (' + (c.bancoAporte || 'Banco Nación') + ')'], ['Dólar oficial BNA', c.usdOficial, 'Banco Nación, vendedor'], ['Dólar MEP', c.usdMep, 'Bolsa'], ['Contado con liquidación', c.usdCcl, 'Para girar al exterior'], ['Dólar blue', c.usdBlue, 'Informal, solo referencia'], ['Euro', c.eurArs, 'Banco Nación'], ['Dólar mayorista', c.usdMayorista, 'Comunicación A 3500']]
     .filter(function (x) { return x[1]; }).map(function (x) { return '<div class="tarjeta kpi entrar"><small>' + x[0] + '</small><b class="num">' + ars(x[1]) + '</b><span>' + x[2] + '</span></div>'; }).join('');
   var orden = lista.slice().sort(function (a, b) { return (b.permitido - a.permitido) || (puntaje(b) - puntaje(a)); }), maxY = Math.max.apply(null, lista.map(function (x) { return Math.max(0.01, x.y); }));
   var inst = orden.map(function (x) {
@@ -667,7 +707,8 @@ function vistaMercado(u) {
       '<p class="chico gris" style="margin-top:10px">No es asesoramiento financiero: son datos públicos ordenados con la política que votó el grupo (art. 29). La decisión la toma la Asamblea y la ejecuta el fiduciario con un agente habilitado.</p></section>';
   }
   return '<div class="fila entre"><div><h1>Mercado de hoy</h1><p class="gris" style="margin:0">' + (c.enVivo ? '<span class="chip ok">En vivo</span> ' : '<span class="chip">Sin conexión: últimos valores conocidos</span> ') + 'Cotizaciones: ' + esc(c.fuente) + (c.fecha ? ' · ' + fechaCorta(String(c.fecha).slice(0, 10)) : '') + '</p></div><button class="btn btn-chico" id="btnActualizar">Actualizar ahora</button></div>' +
-    '<section class="rejilla r3 seccion">' + tarjetasCot + '</section>' + cartera +
+    '<section class="rejilla r3 seccion">' + tarjetasCot + '</section>' +
+    '<section class="tarjeta seccion entrar"><h2>Precio del m² y alquileres hoy</h2>' + htmlMercadoDia() + '</section>' + cartera +
     '<section class="seccion"><h2>Radar de la inversión de espera</h2><p class="gris">Ordenado por rendimiento en dólares, castigado por riesgo y por tiempo inmovilizado. ' + (RADAR && RADAR.extra ? 'Suba esperada del dólar en pesos (inflación reciente anualizada): <b>' + pct(RADAR.extra.devalEsperada) + '</b>.' : '') + '</p>' +
     '<div class="rejilla r2">' + inst + '</div></section>';
 }
@@ -940,11 +981,14 @@ var GANCHOS = {
       b.onclick = function () {
         modo = b.dataset.modo; document.querySelectorAll('[data-modo]').forEach(function (x) { x.setAttribute('aria-pressed', x === b); });
         $('campoCodigo').hidden = modo !== 'inv'; $('campoClave').hidden = modo === 'inv'; $('campoTotp').hidden = true; $('eError').textContent = '';
+        if ($('eOlvide')) $('eOlvide').hidden = modo === 'inv';
       };
     });
     $('formEntrada').onsubmit = function (e) {
       e.preventDefault(); var correo = $('eCorreo').value.trim().toLowerCase(), err = $('eError');
       if (!correoValido(correo)) { err.textContent = 'Revisá el correo.'; $('eCorreo').focus(); return; }
+      if (modo === 'inv' && MODO_REAL) { entrarConInvitacionReal(correo, $('eCodigo').value.trim().toUpperCase().replace(/[^A-Z0-9]/g, ''), err); return; }
+      if (modo !== 'inv' && MODO_REAL) { entrarSocioReal(correo, err); return; }
       if (modo === 'inv') {
         var cod = $('eCodigo').value.trim().toUpperCase().replace(/[^A-Z0-9]/g, '');
         var inv = D.invitaciones.filter(function (i) { return i.codigo === cod && i.email === correo; })[0];
@@ -968,6 +1012,10 @@ var GANCHOS = {
         });
       }
     };
+    if ($('eOlvide')) $('eOlvide').onclick = function () {
+      var c = $('eCorreo').value.trim().toLowerCase(); if (!correoValido(c)) { $('eError').textContent = 'Escribí tu correo arriba y tocá de nuevo.'; $('eCorreo').focus(); return; }
+      nubeOlvideClave(c).then(function () { tostada('Si ese correo tiene cuenta, te llegó un mensaje para elegir una clave nueva.'); }, function () { tostada('Si ese correo tiene cuenta, te llegó un mensaje para elegir una clave nueva.'); });
+    };
     document.querySelectorAll('[data-demo]').forEach(function (b) {
       b.onclick = function () {
         if (b.dataset.demo === 'inv') {
@@ -986,7 +1034,7 @@ var GANCHOS = {
     f.onsubmit = function (e) {
       e.preventDefault(); juntar(); var msg = validarPasoAlta(a.paso, a.datos);
       if (msg) { $('altaError').textContent = msg; return; }
-      var invA = D.invitaciones.filter(function (x) { return x.codigo === a.codigo; })[0];
+      var invA = invitacionDeAlta(a);
       if (a.paso === PASOS_ALTA.length - 1 || (invA && invA.tipo === 'mirar' && a.paso === 0)) { terminarAlta(); return; }
       a.paso++; var copia = JSON.parse(JSON.stringify(SES)); delete copia.alta.datos.clave; delete copia.alta.datos.clave2; guardar(CLAVE_SESION, copia); render();
       var p = document.querySelector('#formAlta input, #formAlta select'); if (p) p.focus();
@@ -995,6 +1043,7 @@ var GANCHOS = {
     if ($('altaCancelar')) $('altaCancelar').onclick = function () { SES = {}; guardarSesion(); irLimpio('#/'); };
   },
   inicio: function () {
+    ganchoTransferencias(); ganchoArrancarAlfa();
     ganchoProyeccion();
     if ($('btnInvHoy')) $('btnInvHoy').onclick = function () { ventana(ventanaInversionesHoy); };
     if ($('btnMiParte')) $('btnMiParte').onclick = function () { ventana(ventanaMiParte); };
@@ -1028,6 +1077,7 @@ var GANCHOS = {
     document.querySelectorAll('[data-moneda]').forEach(function (b) { b.onclick = function () { SES.moneda = b.dataset.moneda; if (SES.moneda === 'EUR' && ['transferencia', 'mercadopago', 'tarjeta'].indexOf(SES.metodo) >= 0) SES.metodo = 'exterior'; if (SES.moneda === 'ARS' && SES.metodo === 'exterior') SES.metodo = 'mercadopago'; guardarSesion(); render(); }; });
     document.querySelectorAll('input[name="metodo"]').forEach(function (i) { i.onchange = function () { SES.metodo = i.value; guardarSesion(); }; });
     var per = periodoAPagar(g, u, r.q.periodo);
+    ganchoCuota(g);
     if ($('btnPagar')) $('btnPagar').onclick = function () {
       var sel = document.querySelector('input[name="metodo"]:checked');
       if (!sel) { tostada('Elegí cómo pagás.'); return; }
@@ -1149,8 +1199,9 @@ var GANCHOS = {
     $('chkResumen').onchange = function () { u.sinResumen = !this.checked; anotar(u.id, this.checked ? 'Activó el resumen semanal' : 'Desactivó el resumen semanal'); guardarDatos(); };
     $('chkLetra').onchange = function () { PREF.letraGrande = this.checked; guardar('bd.preferencias', PREF); aplicarPreferencias(); };
     $('chkMov').onchange = function () { PREF.sinMovimiento = this.checked; guardar('bd.preferencias', PREF); aplicarPreferencias(); };
-    $('btnSalir').onclick = function () { SES = {}; guardarSesion(); irLimpio('#/'); };
-    $('btnReiniciar').onclick = function () { reiniciarDemo(); SES = {}; guardarSesion(); tostada('Datos de prueba restablecidos.'); irLimpio('#/'); };
+    $('btnSalir').onclick = function () { if (MODO_REAL) nubeSalir(); SES = {}; guardarSesion(); irLimpio('#/'); };
+    if (MODO_REAL) $('btnReiniciar').hidden = true;
+    else $('btnReiniciar').onclick = function () { reiniciarDemo(); SES = {}; guardarSesion(); tostada('Datos de prueba restablecidos.'); irLimpio('#/'); };
   }
 };
 GANCHOS.mas = function () {};
@@ -1175,7 +1226,13 @@ function arrancar() {
     else SES = {};
     if (MARCO_DEMO !== 'mira' && !location.hash) location.replace(MARCO_DEMO === 'invitacion' ? '#/' : '#/inicio');
   }
-  pintarCinta(); render();
+  cerrarSesionPorTiempo(); vigilarSesion();
+  pintarCinta();
+  if (MODO_REAL) {
+    $('app').innerHTML = '<div class="entrada"><div class="entrada-caja entrar">' + svgLogo('logo-completo') + '<p class="gris" role="status">Conectando con la base de B&amp;D…</p></div></div>';
+    nubeIniciar().then(function () { if (SES.uid && !yo()) { SES = {}; guardarSesion(); } render(); },
+      function () { $('app').innerHTML = '<div class="entrada"><div class="entrada-caja"><p class="rojo" role="alert">No se pudo conectar con la base de B&amp;D. Revisá la conexión a internet y volvé a abrir la app.</p><button class="btn btn-oro" onclick="location.reload()">Reintentar</button></div></div>'; });
+  } else render();
   if (MARCO_DEMO === 'invitacion') setTimeout(function () { var i = D.invitaciones.filter(function (x) { return !x.usada; })[0]; if (i && $('eCorreo')) { document.querySelector('[data-modo="inv"]').click(); $('eCorreo').value = i.email; $('eCodigo').value = i.codigo; } }, 300);
   window.addEventListener('hashchange', render);
   document.addEventListener('click', function (e) { var b = e.target.closest('[data-recibo]'); if (b && !GANCHOS._rec) verRecibo(b.dataset.recibo); });

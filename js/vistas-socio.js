@@ -3,6 +3,7 @@
 /* =================== MIS INVERSIONES =================== */
 function vistaInversiones(u) {
   var g = grupoActual();
+  if (g && g.estado === 'activo' && g.inicio && hoyISO() < g.inicio) return '<h1>Mis inversiones</h1><p class="gris">' + esc(g.letra) + ' arranca el ' + fechaLarga(g.inicio) + '. Desde el primer aporte, acá vas a ver tu parte, cómo crece mes a mes y su proyección.</p>';
   if (!g || g.estado !== 'activo') return '<h1>Mis inversiones</h1><p class="gris">Cuando tu fideicomiso empiece, acá vas a ver tu parte, cómo crece mes a mes y su proyección.</p>' + (g ? '<a class="btn" href="#/grupos/nuevo?desde=' + g.id + '">Ver la proyección de ' + esc(g.letra) + '</a>' : '');
   var e = estadoGrupo(g.id), misUp = e.upSocio[u.id] || 0, valor = misUp * e.vup, aport = e.aportadoSocio[u.id] || 0, tir = tirSocio(g.id, u.id), ci = cicloInfo(g);
   var nAportes = D.movimientos.filter(function (m) { return m.g === g.id && m.tipo === 'aporte' && m.socio === u.id; }).length, deuda = deudaDe(g.id, u.id);
