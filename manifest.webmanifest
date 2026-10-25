@@ -1,0 +1,11 @@
+{
+  "name": "B&D · Building Dreams",
+  "short_name": "B&D",
+  "description": "Fideicomiso B&D: aportes, pagos, inversión de espera, carpeta contable y contratos.",
+  "lang": "es-AR",
+  "start_url": "./",
+  "display": "standalone",
+  "background_color": "#0D1824",
+  "theme_color": "#0D1824",
+  "icons": [{ "src": "icono.svg", "sizes": "any", "type": "image/svg+xml", "purpose": "any maskable" }]
+}
