@@ -62,7 +62,7 @@ var CLAVE_DATOS = 'bd.prueba.datos.v1';
 var D = null;
 function cargarDatos() {
   if (MODO_REAL) { if (!D) D = datosVacios(); return D; }
-  D = leer(CLAVE_DATOS, null); if (!D || D.v !== 13 || !D.documentos) reiniciarDemo();
+  D = leer(CLAVE_DATOS, null); if (!D || D.v !== 14 || !D.documentos) reiniciarDemo();
   if (!D.lineasBanco) { D.lineasBanco = []; D.conciliaciones = []; }
   if (!D.mensajes) D.mensajes = []; if (!D.oportunidades) D.oportunidades = []; if (!D.leidos) D.leidos = {}; if (!D.pagosPendientes) D.pagosPendientes = [];
   return D;
@@ -140,19 +140,24 @@ function generarDemo() {
       var ii = Math.round(r * ALICUOTA_IIBB * 100) / 100;
       if (mov({ fecha: mes + '-15', tipo: 'impuesto', usd: ii, prop: p.id, desc: 'Ingresos brutos (AREF) sobre alquileres · estimado' })) caja -= ii;
     });
+    var nuevo = 0, fNuevo = null;
     if (esCompra) {
-      /* mes 10: se rescata la inversión de espera y se compra (la compra es cada 10 meses, sin excepción) */
+      /* mes 10: se rescata la inversión de espera y se compra (la compra es cada 10 meses, sin excepción).
+         Antes del rescate se cobra lo que rindió del 1 al 18, por los días justos */
+      var fAnt = finDeMes(mesDe(sumarMeses(inicio, t - 2))), itR = Math.round(inv * (Math.pow(1 + tasa, diasEntre(fAnt, mes + '-18') / 365) - 1) * 100) / 100;
+      if (inv > 0 && itR > 0 && mov({ fecha: mes + '-18', tipo: 'interes', usd: itR, desc: 'Rendimiento del 1 al 18 de ' + nombreMes(mes) + ' (hasta el rescate)' })) inv += itR;
       if (inv > 0 && mov({ fecha: mes + '-18', tipo: 'rescate', usd: Math.round(inv * 100) / 100, desc: 'Rescate de la inversión de espera para la compra' })) { caja += inv; inv = 0; }
       var tope = Math.floor(caja - 150), precio = Math.round(tope / (1 + M.setup / 100)), m2 = Math.round(precio / M.m2 * 10) / 10, gastos = Math.round(precio * M.setup / 100);
       var p = { id: 'p' + (props.length + 1), g: 'alfa', nombre: 'Departamento ' + (props.length + 1), direccion: 'Ushuaia · dirección de prueba', m2: m2, precio: precio, gastos: gastos, fecha: mes + '-20', modo: 'mensual', estado: 'alquilado', alquiler: Math.round(m2 * M.rent24 / 24) };
       if (mov({ fecha: mes + '-20', tipo: 'compra', usd: precio + gastos, prop: p.id, desc: 'Compra de ' + p.nombre + ' (' + num(m2, 1) + ' m²): precio ' + usd(precio) + ' + gastos ' + usd(gastos) })) { caja -= precio + gastos; props.push(p); }
     } else {
       var aInv = Math.floor(caja - colchon);
-      if (aInv > 0 && mov({ fecha: mes + '-' + pad(DIA_VENCE + 1), tipo: 'inversion', usd: aInv, reparto: REPARTO_VIGENTE, desc: 'Política vigente: 10% cuenta remunerada, 30% fondo de dinero en dólares, 30% letras del Tesoro de EE. UU., 30% obligaciones negociables' })) { caja -= aInv; inv += aInv; }
+      if (aInv > 0 && mov({ fecha: mes + '-' + pad(DIA_VENCE + 1), tipo: 'inversion', usd: aInv, reparto: REPARTO_VIGENTE, desc: 'Política vigente: 10% cuenta remunerada, 30% fondo de dinero en dólares, 30% letras del Tesoro de EE. UU., 30% obligaciones negociables' })) { caja -= aInv; inv += aInv; nuevo = aInv; fNuevo = mes + '-' + pad(DIA_VENCE + 1); }
     }
     var fin = finDeMes(mes);
     if (fin < hoy && inv > 0) {
-      var it = Math.round(inv * (Math.pow(1 + tasa, 1 / 12) - 1) * 100) / 100;
+      /* lo que ya estaba invertido rinde el mes entero; lo que entró este mes, solo los días desde que se invirtió */
+      var it = Math.round(((inv - nuevo) * (Math.pow(1 + tasa, 1 / 12) - 1) + nuevo * (Math.pow(1 + tasa, (fNuevo ? diasEntre(fNuevo, fin) : 0) / 365) - 1)) * 100) / 100;
       if (mov({ fecha: fin, tipo: 'interes', usd: it, desc: 'Rendimiento de ' + nombreMes(mes) })) inv += it;
     }
   }
@@ -169,7 +174,7 @@ function generarDemo() {
     { id: 'delta', letra: 'Delta', simbolo: 'δ', estado: 'abierto', N: 8, aporte: 1000, ciclo: 10, mercado: 'ushuaia', modo: 'mixto', fee: 0.05, reserva: 1000, tasaEspera: tasa, inicio: null, socios: ['u1', 'u5', 'u8', 'u10', 'u4'], creadoPor: 'u1', estructura: 'B · fiduciaria autorizada (a definir)', creado: sumarDias(hoy, -84) }
   ];
   return {
-    v: 13, creado: hoy, usuarios: usuarios, grupos: grupos, movimientos: movs, propiedades: props, votaciones: votaciones,
+    v: 14, creado: hoy, usuarios: usuarios, grupos: grupos, movimientos: movs, propiedades: props, votaciones: votaciones,
     invitaciones: [{ codigo: 'BD7K4M', email: 'invitado@demo.bd', nombre: 'Invitado de ejemplo', g: 'delta', por: 'u1', fecha: sumarDias(hoy, -1), vence: sumarDias(hoy, 6), usada: false }],
     bitacora: [{ f: new Date().toISOString(), quien: 'sistema', que: 'Se armaron los datos de prueba' }],
     inquilinos: props.length ? [{ id: 'iq1', g: 'alfa', prop: props[0].id, nombre: 'Ana Torres (inquilina de prueba)', dni: '', tel: '+5492901000000', email: 'inquilina@example.com', creado: props[0].fecha, contrato: { inicio: props[0].fecha, fin: sumarDias(props[0].fecha, 730), monto: props[0].alquiler, moneda: 'USD', diaPago: 10, ajuste: 'Fijo en dólares, sin ajuste', deposito: props[0].alquiler, garantia: 'Seguro de caución' } }] : [],

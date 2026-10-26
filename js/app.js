@@ -665,11 +665,12 @@ function vistaPagar(u, r) {
 
     '<div class="apilar"><div class="tarjeta"><h3>Avisos de pago</h3><p class="gris chico">La app te avisa antes del día 1, el día 10 y si queda vencido.</p><div class="fila"><button class="btn btn-chico" id="btnAvisosPago">Configurar avisos</button><button class="btn btn-chico" id="btnIcsPago">Recordatorio en mi calendario</button></div></div>' +
     '<div class="tarjeta"><h3>Lo que compra tu aporte</h3><p class="gris chico">Cada aporte compra UP (unidades de participación) al valor del día: así un pago tardío no perjudica a nadie.</p>' +
-    (function () { var e = estadoGrupo(g.id); return '<p>Al valor de hoy, ' + usd(monto) + ' comprarían <b class="oro">' + num(monto / e.vup, 3) + ' UP</b> a ' + usd(e.vup, 2) + ' cada una. El número final se fija con el valor del cierre del mes.</p>'; })() + '</div>' +
+    (function () { var e = estadoGrupo(g.id); return '<p>Al valor de hoy, ' + enElegida(monto) + ' comprarían <b class="oro">' + num(monto / e.vup, 3) + ' UP</b> a ' + usd(e.vup, 2) + ' cada una. El número final se fija con el valor del cierre del mes.</p>'; })() + '</div>' +
     tarjetaAtraso(g, r.q.que === 'atraso') +
-    '<div class="tarjeta"><h3>Mis pagos</h3><div class="tabla-scroll"><table><tr><th>Mes</th><th>Pagado</th><th>Cómo</th><th class="n">USD</th><th></th></tr>' +
-    mis.map(function (m) { return '<tr><td>' + nombreMesCorto(m.periodo) + '</td><td>' + fechaCorta(m.fecha) + (m.fecha > venceDe(m.periodo) ? ' <span class="chip">tarde</span>' : '') + '</td><td class="chico">' + metodoTxt(m.pago.metodo) + ' · ' + m.pago.moneda + '</td><td class="n">' + num(m.usd) + '</td><td><button class="btn-texto chico" data-recibo="' + m.id + '">Recibo</button></td></tr>'; }).join('') +
-    '</table></div></div></div></section>';
+    '<div class="tarjeta"><h3>Mis pagos</h3><div class="tabla-scroll"><table><tr><th>Mes</th><th>Pagado</th><th>Cómo</th>' + (mon === 'USD' ? '' : '<th class="n">En ' + { ARS: 'pesos', EUR: 'euros' }[mon] + '</th>') + '<th class="n">USD</th><th></th></tr>' +
+    mis.map(function (m) { return '<tr><td>' + nombreMesCorto(m.periodo) + '</td><td>' + fechaCorta(m.fecha) + (m.fecha > venceDe(m.periodo) ? ' <span class="chip">tarde</span>' : '') + '</td><td class="chico">' + metodoTxt(m.pago.metodo) + ' · ' + m.pago.moneda + '</td>' + (mon === 'USD' ? '' : '<td class="n">' + pagoEnMoneda(m, mon) + '</td>') + '<td class="n">' + num(m.usd) + '</td><td><button class="btn-texto chico" data-recibo="' + m.id + '">Recibo</button></td></tr>'; }).join('') +
+    (mis.length ? '<tr class="total"><td colspan="3">Total</td>' + (mon === 'USD' ? '' : '<td class="n">≈ ' + (mon === 'ARS' ? ars(mis.reduce(function (t, m) { return t + pagoEnMonedaNum(m, mon); }, 0)) : eur(mis.reduce(function (t, m) { return t + pagoEnMonedaNum(m, mon); }, 0), 2)) + '</td>') + '<td class="n">' + num(mis.reduce(function (t, m) { return t + m.usd; }, 0)) + '</td><td></td></tr>' : '') +
+    '</table></div>' + (mon === 'USD' ? '' : '<p class="chico gris" style="margin:6px 0 0">Lo que pagaste en ' + { ARS: 'pesos', EUR: 'euros' }[mon] + ' está exacto; lo que pagaste en otra moneda va con «≈», ' + (mon === 'ARS' ? 'al dólar del día en que se pagó' : 'al cruce euro/dólar de hoy') + '. Para tus UP cuenta la columna USD: el fideicomiso lleva todo en dólares.</p>') + '</div></div></section>';
 }
 /* el estado del aporte de un vistazo: un anillo con lo que llevás del ciclo, el estado en grande con su color
    (al día, pendiente o vencido) y los meses del ciclo como casilleros que se llenan con lo que pusiste */
@@ -914,8 +915,8 @@ function pintarProyeccion() {
     (chico ? '<p class="aviso alerta chico" style="margin-top:10px">Con ' + usd(caja) + ' por ciclo no alcanza para 20 m² en ' + M.label + '. Subí el aporte, los socios o el ciclo.</p>' : '') +
     (r.irr < 0.06 ? '<p class="chico gris" style="margin-top:8px">Con estos números el grupo rinde menos que la referencia financiera del 6% anual.</p>' : '') +
     '<p class="chico gris" style="margin-top:8px">Precio de ' + M.label + ': ' + usd(M.m2) + ' por m². Escenario base. Proyección, no promesa.</p>';
-  $('grafProy').innerHTML = '<h3>Proyección compuesta</h3>' + svgProyeccion(r, { rueda: rs, quieto: pintarProyeccion.ya }) + '<div style="max-width:420px;margin:12px auto 0">' + svgTorre(0, Math.min(r.purchases.length, 14)) + '</div>';
-  pintarProyeccion.ya = true; activarProyecciones($('grafProy'));
+  $('grafProy').innerHTML = '<h3>Proyección compuesta</h3>' + svgProyeccion(r, { rueda: rs, quieto: pintarProyeccion.ya }) + htmlTorreTiempo(r, g.ciclo);
+  pintarProyeccion.ya = true; activarProyecciones($('grafProy')); ganchoTorreTiempo($('grafProy'));
 }
 function mini(t, v) { return '<div><small class="gris chico">' + t + '</small><div class="num" style="font-size:1.05rem">' + v + '</div></div>'; }
 
@@ -940,7 +941,7 @@ function vistaVotos(u) {
   var g = grupoActual(); if (!g) return '<h1>Votaciones</h1><p class="gris">Sin fideicomiso.</p>';
   var vs = D.votaciones.filter(function (v) { return v.g === g.id; }).sort(function (a, b) { return a.abre < b.abre ? 1 : a.abre > b.abre ? -1 : (a.id < b.id ? 1 : -1); });
   var hayDeptos = g.estado === 'activo' && propiedadesActivas(g.id).length > 0;
-  return '<div class="fila entre"><div><h1>Votaciones</h1><p class="gris" style="margin:0">Un socio, un voto. Las mayorías se cuentan sobre los ' + g.N + ' socios, no sobre los presentes.</p></div><div class="fila"><button class="btn btn-oro" id="btnNuevaVot">Nueva propuesta</button>' + (hayDeptos && u.rol !== 'observador' ? '<button class="btn" id="btnQuedarme">Quedarme con un departamento</button>' : '') + '</div></div>' +
+  return '<div class="fila entre"><div><h1>Votaciones</h1><p class="gris" style="margin:0">Un socio, un voto. Las mayorías se cuentan sobre los ' + g.N + ' socios, no sobre los presentes.</p></div><div class="fila"><button class="btn btn-oro" id="btnNuevaVot">Nueva propuesta</button><button class="btn" data-abrir-dec>¿Qué podemos votar?</button>' + (hayDeptos && u.rol !== 'observador' ? '<button class="btn" id="btnQuedarme">Quedarme con un departamento</button>' : '') + '</div></div>' +
     '<section class="apilar seccion">' + vs.map(function (v) {
       var r = resultadoVoto(v, g), req = r.req, base = r.base, abierta = r.abierta, res = r.estado;
       var mio = v.votos[u.id], susp = deudaDe(g.id, u.id).suspendido, fuera = excluidoDe(v, u.id), puede = abierta && !v.ejecutada && g.socios.indexOf(u.id) >= 0 && !susp && !fuera;
@@ -956,13 +957,15 @@ function vistaVotos(u) {
         (puede ? '<input class="motivo-voto" id="mot_' + v.id + '" maxlength="200" placeholder="Por qué votás así (opcional, lo ven los socios)" value="' + esc((v.motivos || {})[u.id] || '') + '" style="margin-top:10px"><div class="fila" role="group" aria-label="Tu voto" style="margin-top:8px">' + opciones.map(function (x) { return '<button class="btn btn-chico' + (mio === x[0] ? ' btn-oro' : '') + '" data-votar="' + v.id + '" data-voto="' + x[0] + '" aria-pressed="' + (mio === x[0]) + '">' + esc(v.opciones ? x[1].split(' (')[0] : x[1]) + '</button>'; }).join('') + '</div>' + (mio ? '<p class="chico gris">Votaste. Podés cambiar tu voto hasta el cierre.</p>' : '') : (abierta && susp && !fuera ? '<p class="aviso alerta chico">Tu voto está suspendido por tener un aporte vencido hace más de 30 días (art. 26). Se habilita apenas lo pagues.</p>' : '')) + '</div>';
     }).join('') + '</section><div class="aviso seccion">La abstención no suma a favor. En empate o sin mayoría, todo sigue como estaba. Quien tiene un interés propio en el tema lo declara y no vota: la mayoría se cuenta sin él. Un socio puede pedir quedarse con un departamento por su tasación: vota la Asamblea con mayoría calificada y después se decide qué hacer con la plata.</div>';
 }
-function nuevaVotacion(u) {
+/* pre: { titulo, materia, detalle } cuando se propone desde «¿Qué podemos votar?» */
+function nuevaVotacion(u, pre) {
   var g = grupoActual();
   modal('Nueva propuesta para la Asamblea', '<form id="formVot" class="apilar"><div class="campo"><label for="vTit">Título</label><input id="vTit" required maxlength="120"></div>' +
     '<div class="campo"><label for="vMat">Tipo de decisión</label><select id="vMat">' + Object.keys(MATERIAS).map(function (k) { return '<option value="' + k + '">' + MATERIAS[k].n + ' (' + requeridos(k, g.N) + ' de ' + g.N + ')</option>'; }).join('') + '</select></div>' +
     '<div class="campo"><label for="vDet">Detalle</label><textarea id="vDet" rows="4" maxlength="800"></textarea></div>' +
     '<div class="campo"><label for="vDias">Días para votar</label><input id="vDias" type="number" min="1" max="15" value="5"><span class="ayuda">Entre asambleas se vota por la app con 5 días hábiles de plazo.</span></div>' +
     '<button class="btn btn-oro">Abrir la votación</button></form>');
+  if (pre) { $('vTit').value = pre.titulo || ''; if (pre.materia) $('vMat').value = pre.materia; $('vDet').value = pre.detalle || ''; }
   $('formVot').onsubmit = function (e) {
     e.preventDefault(); var t = $('vTit').value.trim(); if (!t) { $('vTit').focus(); return; }
     D.votaciones.push({ id: 'v' + Date.now(), g: g.id, titulo: t, materia: $('vMat').value, detalle: $('vDet').value.trim(), abre: hoyISO(), cierra: sumarDias(hoyISO(), Math.max(1, Math.min(15, +$('vDias').value || 5))), votos: {}, por: u.id });

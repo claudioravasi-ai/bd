@@ -108,7 +108,7 @@ tr.gh td{font:700 11px var(--hf);letter-spacing:.1em;text-transform:uppercase;co
 <div class="pasos8">
 <div class="paso"><b class="n">1</b><h3>Aportamos</h3><p>Cada uno de los 10 socios pone USD 500 entre el día 1 y el 10 de cada mes.</p><span class="dato">USD 5.000 por mes el grupo</span></div>
 <div class="paso"><b class="n">2</b><h3>Compramos UP</h3><p>Cada aporte compra unidades de participación (UP) al valor del día. La UP arrancó en USD 100 y sube con las ganancias: quien paga tarde compra más caro.</p><span class="dato">Tu parte = tus UP × su valor</span></div>
-<div class="paso"><b class="n">3</b><h3>La espera trabaja</h3><p>El día 11 lo cobrado se invierte: cuenta remunerada, fondo de dinero en dólares, letras del Tesoro de EE. UU. y obligaciones negociables, con tope de 30% cada una.</p><span class="dato">≈ 3,8% por año</span></div>
+<div class="paso"><b class="n">3</b><h3>La espera trabaja</h3><p>El día 11 lo cobrado se invierte: cuenta remunerada, fondo de dinero en dólares, letras del Tesoro de EE. UU. y obligaciones negociables, con tope de 30% cada una.</p><span class="dato">≈ 3,9% por año</span></div>
 <div class="paso"><b class="n">4</b><h3>Mes 10: compramos</h3><p>Con la caja de 10 meses (unos USD 50.600) se compra un departamento de 24 m² o más. La compra es cada 10 meses, sin excepción.</p><span class="dato">24 m² × USD 2.000 + 5% = USD 50.400</span></div>
 <div class="paso"><b class="n">5</b><h3>Lo alquilamos</h3><p>Alquiler de mercado, contrato mensual en dólares. Se restan expensas y gastos (18%) e ingresos brutos (5%).</p><span class="dato">USD 450 por 25 m² · neto USD 346,50</span></div>
 <div class="paso"><b class="n">6</b><h3>Reinvertimos todo</h3><p>Aportes + alquileres + interés de la espera se juntan para la compra siguiente. Por eso cada departamento sale un poco más grande.</p><span class="dato">De 24 m² a casi 40 m²</span></div>
@@ -176,6 +176,7 @@ tr.gh td{font:700 11px var(--hf);letter-spacing:.1em;text-transform:uppercase;co
 var MARKETS = {
   ushuaia: { label: 'Ushuaia', grp: 'Argentina', m2: 2000, rent24: 432, mult: 2.5, setup: 5, lag: 1, opex: 18, iibb: 5, gan: 0, tOpex: 40, tIibb: 5, tGan: 20, risk: 3, acc: 'libre' },
   buenosaires: { label: 'Buenos Aires (CABA)', grp: 'Argentina', m2: 2471, rent24: 435, mult: 2, setup: 7, lag: 1, opex: 20, iibb: 3, gan: 0, tOpex: 40, tIibb: 3, tGan: 20, risk: 3, acc: 'libre' },
+  cordoba: { label: 'Córdoba (capital)', grp: 'Argentina', m2: 1500, rent24: 290, mult: 1.5, setup: 7, lag: 1, opex: 20, iibb: 3, gan: 0, tOpex: 40, tIibb: 3, tGan: 20, risk: 3, acc: 'libre' },
   murcia: { label: 'España · Murcia', grp: 'España', m2: 1997, rent24: 280, mult: 1.5, setup: 12, lag: 2, opex: 20, iibb: 24, gan: 0, tOpex: 40, tIibb: 24, tGan: 0, risk: 1, acc: 'libre (NIE)' },
   zamora: { label: 'España interior · Zamora', grp: 'España', m2: 1401, rent24: 210, mult: 1.5, setup: 12, lag: 2, opex: 20, iibb: 24, gan: 0, tOpex: 40, tIibb: 24, tGan: 0, risk: 1, acc: 'libre (NIE)' },
   jaen: { label: 'España interior · Jaén', grp: 'España', m2: 1473, rent24: 225, mult: 1.5, setup: 12, lag: 2, opex: 20, iibb: 24, gan: 0, tOpex: 40, tIibb: 24, tGan: 0, risk: 1, acc: 'libre (NIE)' },

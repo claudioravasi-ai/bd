@@ -1,5 +1,5 @@
 /* ===== Utilidades comunes: formato argentino, fechas, guardado y pantalla ===== */
-var VERSION_APP = '0.3.4';
+var VERSION_APP = '0.3.5';
 
 function $(id) { return document.getElementById(id); }
 function esc(s) {
@@ -14,6 +14,8 @@ function num(n, dec) {
   return Number(n).toLocaleString('es-AR', { minimumFractionDigits: dec || 0, maximumFractionDigits: dec || 0 });
 }
 function usd(n, dec) { return 'USD ' + num(n, dec || 0); }
+/* para las cuentas que se muestran (UP × valor): hasta 4 decimales, así la multiplicación cierra a la vista */
+function numFino(n) { return (n == null || !isFinite(n)) ? '—' : Number(n).toLocaleString('es-AR', { minimumFractionDigits: 2, maximumFractionDigits: 4 }); }
 function ars(n) { return '$ ' + num(n, 0); }
 function eur(n, dec) { return '€ ' + num(n, dec || 0); }
 function pct(x, dec) { return isFinite(x) ? num(x * 100, dec == null ? 1 : dec) + '%' : '—'; }

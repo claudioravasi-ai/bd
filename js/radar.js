@@ -8,9 +8,9 @@ var POLITICA = { maxPorInstrumento: 0.30, plazoMaxMeses: 12 };
 
 var RADAR_BASE = [
   { id: 'cuenta', n: 'Cuenta remunerada en dólares', d: 'Para la reserva: la plata está disponible en el momento.', y: 0.006, liq: 'Inmediata', liqDias: 0, riesgo: 1, permitido: true, fuente: 'referencia de bancos (verificar con el banco)', vivo: false, sinTope: true },
-  { id: 'pfusd', n: 'Plazo fijo en dólares', d: 'Tasa baja pero segura; la plata queda inmovilizada hasta el vencimiento.', y: 0.015, liq: '30 días o más', liqDias: 30, riesgo: 1, permitido: true, fuente: 'referencia de bancos (verificar con el banco)', vivo: false, sinTope: true },
+  { id: 'pfusd', n: 'Plazo fijo en dólares', d: 'Tasa baja pero segura; la plata queda inmovilizada hasta el vencimiento.', y: 0.015, liq: '30 días o más', liqDias: 30, riesgo: 1, permitido: true, fuente: 'referencia de agosto de 2026: Banco Nación 1,60%, Macro 1,50%, Galicia y Provincia 1,25% (iProUP); cambia mucho de un mes a otro: verificar con el banco', vivo: false, sinTope: true },
   { id: 'fcimm', n: 'Fondo común de dinero en dólares', d: 'Rescate en 24 horas. Buena opción para la plata que se usa en la próxima compra.', y: 0.02, liq: '24 horas', liqDias: 1, riesgo: 1, permitido: true, fuente: 'referencia', vivo: false },
-  { id: 'tbill', n: 'Letras del Tesoro de EE. UU. (hasta 12 meses)', d: 'Dólar duro. Se compran por un agente (broker) habilitado; conviene que venzan antes de la compra.', y: 0.038, liq: '2 a 3 días', liqDias: 3, riesgo: 1, permitido: true, fuente: 'referencia', vivo: false },
+  { id: 'tbill', n: 'Letras del Tesoro de EE. UU. (hasta 12 meses)', d: 'Dólar duro. Se compran por un agente (broker) habilitado; conviene que venzan antes de la compra.', y: 0.043, liq: '2 a 3 días', liqDias: 3, riesgo: 1, permitido: true, fuente: 'referencia del 23-10-2026: Tesoro de EE. UU., letras a 26 semanas 4,32% y a 52 semanas 4,41%; FRED (DGS1) 4,41% al 22-10', vivo: false },
   { id: 'on', n: 'Obligaciones negociables en dólares (empresas sólidas)', d: 'Rinde más, con riesgo de la empresa. Tope de 30% y solo emisores de primera línea.', y: 0.065, liq: '1 a 3 días', liqDias: 3, riesgo: 3, permitido: true, fuente: 'referencia de mercado (verificar con el agente)', vivo: false },
   { id: 'pfars', n: 'Plazo fijo en pesos', d: 'Tasa alta en pesos; si el dólar sube más que la tasa, se pierde en dólares.', y: 0, tna: 0.2, liq: '30 días', liqDias: 30, riesgo: 3, permitido: true, fuente: 'referencia', vivo: false, pesos: true },
   { id: 'cripto', n: 'Dólares digitales (USDT, USDC) en plataformas', d: 'Prometen tasas altas, pero el contrato prohíbe criptoactivos con fondos del fideicomiso.', y: 0.11, liq: 'Variable', liqDias: 1, riesgo: 5, permitido: false, motivo: 'Prohibido por el contrato (art. 29)', fuente: 'referencia', vivo: false },
@@ -27,7 +27,7 @@ function cargarRadar(forzar) {
     traerJSON('https://api.argentinadatos.com/v1/finanzas/tasas/plazoFijo').catch(function () { return null; }),
     traerJSON('https://api.argentinadatos.com/v1/finanzas/fci/mercadoDinero/ultimo').catch(function () { return null; }),
     traerJSON('https://api.argentinadatos.com/v1/finanzas/fci/mercadoDinero/' + hace30).catch(function () { return null; }),
-    traerJSON('https://api.fiscaldata.treasury.gov/services/api/fiscal_service/v2/accounting/od/avg_interest_rates?sort=-record_date&page%5Bsize%5D=1&filter=security_desc:eq:Treasury%20Bills').catch(function () { return null; }),
+    traerJSON('https://api.fiscaldata.treasury.gov/services/api/fiscal_service/v1/accounting/od/auctions_query?fields=auction_date,security_term,high_investment_rate&filter=security_type:eq:Bill,security_term:eq:26-Week&sort=-auction_date&page%5Bsize%5D=4').catch(function () { return null; }),
     traerJSON('https://api.argentinadatos.com/v1/finanzas/indices/inflacion').catch(function () { return null; }),
     traerJSON('https://api.argentinadatos.com/v1/finanzas/rendimientos').catch(function () { return null; })
   ];
@@ -66,9 +66,11 @@ function cargarRadar(forzar) {
         por.fcimm.fuente = 'CAFCI vía ArgentinaDatos · mediana de ' + rend.length + ' fondos grandes, últimos 30 días';
       }
     }
-    if (r[3] && r[3].data && r[3].data[0]) {
-      por.tbill.y = +r[3].data[0].avg_interest_rate_amt / 100; por.tbill.vivo = true;
-      por.tbill.fuente = 'Tesoro de EE. UU. (fiscaldata) · promedio de letras vigentes al ' + fechaCorta(r[3].data[0].record_date);
+    /* letras a 26 semanas (vencen antes de la compra): la tasa de la última subasta con resultado, que es lo que se cobra hoy */
+    var sub = r[3] && r[3].data ? r[3].data.filter(function (x) { return isFinite(+x.high_investment_rate) && +x.high_investment_rate > 0; })[0] : null;
+    if (sub) {
+      por.tbill.y = +sub.high_investment_rate / 100; por.tbill.vivo = true;
+      por.tbill.fuente = 'Tesoro de EE. UU. (fiscaldata) · subasta de letras a 26 semanas del ' + fechaCorta(sub.auction_date);
     }
     if (r[5] && r[5].length) {
       var ys = []; r[5].forEach(function (e) { (e.rendimientos || []).forEach(function (q) { if (/USDT|USDC/.test(q.moneda)) ys.push(q.apy / 100); }); });

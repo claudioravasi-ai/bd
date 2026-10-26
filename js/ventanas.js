@@ -499,7 +499,7 @@ function seccionProyeccion(g, ci) {
     sugerenciaProyeccion(g, C) +
     '<p class="chico gris" style="margin-top:10px">Pusiste en 10 años ' + usd(aportado) + '. Con la meta del 6% tu parte valdría ' + usd(C.r6[C.r6.length - 1] / N) + '; en un plazo fijo en dólares al ' + pct(tasaPlazoFijoUsd(), 1) + ', ' + usd(C.pf[C.pf.length - 1] / N) + '.</p>' +
     '<p class="chico gris">' + ESCENARIOS_UI[ek].n + ': ' + ESCENARIOS_UI[ek].d + '. Por socio, en dólares, sin vender nada (como la UP); si un día se vendiera todo, se restaría 5% de comisión y escribano. Precio ' + usd(M.m2) + ' el m²; alquiler fijo ' + usd(M.rent24 * 25 / 24) + ' por 25 m² (bruto; neto de expensas e impuestos, ' + usd(neto, 2) + '); temporario ' + num(M.mult, 1) + ' veces el fijo, con 40% de gastos. La tasa de la caja sale del radar del día. Proyección, no promesa.</p>' +
-    '<div class="fila" style="margin-top:8px"><button class="btn btn-oro" id="btnConvencemeInicio">¿Por qué comprar y no dejarlo en plazo fijo?</button><button class="btn" id="btnTirInicio">Qué es la TIR</button></div></section>';
+    '<div class="fila" style="margin-top:8px"><button class="btn btn-oro" id="btnConvencemeInicio">¿Por qué comprar y no dejarlo en plazo fijo?</button><button class="btn btn-oro" data-abrir-sg>¿Solo, con menos o con más socios?</button><button class="btn" id="btnTirInicio">Qué es la TIR</button></div></section>';
 }
 function ganchoProyeccion() {
   document.querySelectorAll('[data-esc-proy]').forEach(function (b) { b.onclick = function () { SES.escProy = b.dataset.escProy; guardarSesion(); render(); }; });

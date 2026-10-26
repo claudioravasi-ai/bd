@@ -29,7 +29,7 @@ function abrirGanancia(solapa) {
     '<circle cx="60" cy="60" r="50" class="gan-pista"/><circle cx="60" cy="60" r="50" class="gan-arco" pathLength="100"/></svg>' +
     '<div class="gan-centro"><b class="gan-num ' + (r.pct >= 0 ? 'verde' : 'rojo') + '" data-hasta="' + (r.pct * 100) + '">0%</b><span>sobre lo que aportaste</span><small>' + (ref > 0 ? num(Math.max(0, gan / ref) * 100, 0) + '% de la meta del 6%' : '') + '</small></div></div>' +
     '<div class="gan-resumen"><p class="gan-linea"><span>Aportaste</span><b>' + usd(r.aportado) + '</b></p>' +
-    '<p class="gan-linea"><span>Tenés ' + num(misUp, 2) + ' UP × ' + usd(e.vup, 2) + ': valen hoy</span><b>' + usd(r.valor) + '</b></p>' +
+    '<p class="gan-linea"><span>Tenés ' + numFino(misUp) + ' UP × USD ' + numFino(e.vup) + ': valen hoy</span><b>' + usd(r.valor, 2) + '</b></p>' +
     '<p class="gan-linea gan-total"><span>Ganaste</span><b class="' + (gan >= 0 ? 'verde' : 'rojo') + '">' + signo + usd(Math.abs(gan), 2) + '</b></p>' +
     '<p class="chico gris" style="margin:6px 0 0">Todas las UP valen lo mismo para todos: <b>' + usd(e.vup, 2) + '</b> cada una (empezaron en USD 100). Lo que cambia es cuántas tiene cada uno: las tuyas son el <b>' + pct(part, 2) + '</b> del total. <button type="button" class="btn-texto chico" data-gsol-ir="parte">¿Por qué no 10% justo?</button></p></div></div>' +
 
@@ -49,7 +49,7 @@ function abrirGanancia(solapa) {
     '<p>Una UP es una porción del fideicomiso. <b>Todas valen lo mismo, ' + usd(e.vup, 2) + ' cada una, sean de quien sean</b>: nadie tiene UP más caras ni más baratas. Lo que cambia es <b>cuántas UP tiene cada uno</b>, porque cada aporte compra UP al valor de ese mes.</p>' +
     '<ul class="chico gris"><li>Quien todavía no pagó un mes no compró esas UP: hay menos UP en total y la parte de los que pagaron es un poco más grande.</li><li>Quien puso un aporte extra tiene más UP.</li><li>Quien pagó cuando la UP ya valía más compró menos UP con los mismos USD ' + g.aporte + '.</li></ul>' +
     barrasVivas(otros.map(function (o) { return { n: esc(nombreCorto(o.u)) + (o.u.id === u.id ? ' (vos)' : ''), v: o.up, color: o.u.id === u.id ? 'linear-gradient(90deg,#22D3EE,#FBBF24)' : 'rgba(148,163,184,.6)', txt: pct(e.up ? o.up / e.up : 0, 2) + ' · puso ' + usd(o.ap), marcada: o.u.id === u.id }; })) +
-    '<p class="chico" style="margin-top:10px">Tu parte: ' + num(misUp, 2) + ' UP × ' + usd(e.vup, 2) + ' = <b class="oro">' + usd(misUp * e.vup, 2) + '</b>. Cuando todos están al día, cada parte vuelve a acercarse al 10%.</p></section>' +
+    '<p class="chico" style="margin-top:10px">Tu parte: ' + numFino(misUp) + ' UP × USD ' + numFino(e.vup) + ' = <b class="oro">' + usd(misUp * e.vup, 2) + '</b>. Cuando todos están al día, cada parte vuelve a acercarse al 10%.</p></section>' +
 
     '<section class="gan-panel" data-gpanel="sale"' + (sol === 'sale' ? '' : ' hidden') + '><h3>De dónde sale la ganancia</h3><p class="chico gris">Lo que ganó todo el fideicomiso, multiplicado por tu parte de hoy (' + pct(part, 2) + '). Tocá cada barra.</p>' +
     (comp.length ? comp.map(function (c, i) {
@@ -63,8 +63,14 @@ function abrirGanancia(solapa) {
     '<p>La <b>TIR</b> (tasa interna de retorno) es tu ganancia <b>pasada a tasa anual</b> y teniendo en cuenta <b>la fecha de cada aporte</b>. Un dólar que pusiste hace un año trabajó doce meses; el del mes pasado, uno. La TIR es la tasa de un plazo fijo imaginario que, con tus mismos depósitos en las mismas fechas, hoy te daría exactamente lo que valen tus UP.</p>' +
     '<div class="gan-tir"><div class="gt-caja g-celeste"><small>Tu TIR anual</small><b>' + pct(r.tir, 1) + '</b></div><div class="gt-caja g-oro"><small>Meta del contrato</small><b>' + pct(REFERENCIA_ANUAL, 1) + '</b></div><div class="gt-caja g-violeta"><small>Plazo fijo en dólares</small><b>' + pct(tasaPlazoFijoUsd(), 1) + '</b></div></div>' +
     '<p class="chico">Con la meta del 6% anual, tus mismos aportes valdrían hoy ' + usd(r.aportado + ref, 2) + ': ' + (r.valor >= r.aportado + ref ? '<b class="verde">vas ' + usd(r.valor - r.aportado - ref, 2) + ' adelante</b>.' : '<b class="oro">te faltan ' + usd(r.aportado + ref - r.valor, 2) + ' para alcanzarla</b>.') + '</p>' +
-    '<p class="chico gris">Por qué el primer año da menos que 6%: mientras se junta la plata para la compra, la caja rinde lo de la inversión de espera (hoy ' + pct(rendimientoDe(g.reparto || REPARTO_VIGENTE), 2) + ' por año), y al comprar se paga 5% de escritura y sellos. Eso se recupera con los alquileres y la suba del m² de los años siguientes; en los primeros meses la TIR salta mucho y con los años se estabiliza. Tu TIR se calcula con el alquiler que se cobra hoy.</p>' +
-    '<div class="fila" style="margin-top:8px"><button type="button" class="btn btn-oro btn-chico" id="ganConvenceme">¿Por qué comprar y no dejarlo en plazo fijo?</button><a class="btn btn-chico" href="#/inicio" data-cerrar data-ir-proy>Ver la proyección a 10 años</a></div></section>' +
+    '<p class="chico">Tu TIR cuenta <b>todo lo que pasó de verdad, cada cosa en su fecha</b>: el interés que ganó cada aporte mientras esperaba la compra y cada alquiler cobrado, que vuelve a la caja y también rinde.</p>' +
+    '<p class="chico gris" style="margin-bottom:4px">Por qué al principio da menos que 6%:</p><ul class="chico gris" style="margin-top:0">' +
+    '<li>Mientras se junta la plata para la compra, la caja rinde lo de la inversión de espera: hoy ' + pct(rendimientoDe(g.reparto || REPARTO_VIGENTE), 2) + ' por año, menos que 6%.</li>' +
+    '<li>Una reserva queda en la cuenta para gastos y casi no rinde.</li>' +
+    '<li>El primer alquiler llega después de la primera compra (mes ' + g.ciclo + ').</li>' +
+    '<li>Los departamentos se cuentan por lo que costaron, con la escritura incluida: la escritura no te baja la TIR, pero la suba del m² recién aparece cuando se tasan o se venden.</li></ul>' +
+    '<p class="chico gris">Con los alquileres de cada mes la TIR va subiendo; en los primeros meses salta mucho y con los años se estabiliza. Lo que puede pasar en 10 años está en la proyección.</p>' +
+    '<div class="fila" style="margin-top:8px"><button type="button" class="btn btn-oro btn-chico" id="ganConvenceme">¿Por qué comprar y no dejarlo en plazo fijo?</button><button type="button" class="btn btn-chico" data-abrir-sg>¿Solo o en grupo?</button><a class="btn btn-chico" href="#/inicio" data-cerrar data-ir-proy>Ver la proyección a 10 años</a></div></section>' +
 
     '<section class="gan-panel" data-gpanel="mes"' + (sol === 'mes' ? '' : ' hidden') + '><h3>Tu parte mes a mes</h3><p class="chico gris">Deslizá para elegir el mes.</p>' +
     graficoGanancia(filas) +
@@ -113,7 +119,7 @@ function ganchoGanancia(r, filas) {
     var f = filas[i]; if (!f) return;
     var gm = f.aportado ? f.capital / f.aportado - 1 : 0, gn = f.capital - f.aportado, svg = v.querySelector('.gan-graf'), enCiclo = f.n - (f.ciclo - 1) * grupoActual().ciclo;
     $('ganMes').innerHTML = '<p style="margin:0 0 8px"><b>' + nombreMes(f.mes) + '</b> <span class="gris">· mes ' + f.n + ' del fideicomiso · mes ' + enCiclo + ' del ciclo ' + f.ciclo + '</span></p>' +
-      '<div class="gan-cuatro"><div><small>Aportaste</small><b>' + usd(f.aportado) + '</b></div><div><small>Tenías</small><b>' + num(f.up, 2) + ' UP</b><span>a ' + usd(f.vup, 2) + ' cada una</span></div>' +
+      '<div class="gan-cuatro"><div><small>Aportaste</small><b>' + usd(f.aportado) + '</b></div><div><small>Tenías</small><b>' + numFino(f.up) + ' UP</b><span>a USD ' + numFino(f.vup) + ' cada una</span></div>' +
       '<div><small>Valían</small><b>' + usd(f.capital, 2) + '</b><span class="' + (gn >= 0 ? 'verde' : 'rojo') + '">' + (gn >= 0 ? '+' : '−') + usd(Math.abs(gn), 2) + ' (' + (gm >= 0 ? '+' : '') + num(gm * 100, 2) + '%)</span></div>' +
       '<div><small>Rendía por año (TIR)</small><b>' + (isFinite(f.tir) ? pct(f.tir, 1) : '—') + '</b><span>' + (isFinite(f.tir) ? 'como un plazo fijo a esa tasa' : 'aparece desde el 2.º aporte') + '</span></div></div>';
     if (svg && filas.length > 1) {

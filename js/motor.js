@@ -2,6 +2,7 @@
 var MARKETS = {
   ushuaia: { label: 'Ushuaia', grp: 'Argentina', m2: 2000, rent24: 432, mult: 2.5, setup: 5, lag: 1, opex: 18, iibb: 5, gan: 0, tOpex: 40, tIibb: 5, tGan: 20, risk: 3, acc: 'libre' },
   buenosaires: { label: 'Buenos Aires (CABA)', grp: 'Argentina', m2: 2471, rent24: 435, mult: 2, setup: 7, lag: 1, opex: 20, iibb: 3, gan: 0, tOpex: 40, tIibb: 3, tGan: 20, risk: 3, acc: 'libre' },
+  cordoba: { label: 'Córdoba (capital)', grp: 'Argentina', m2: 1500, rent24: 290, mult: 1.5, setup: 7, lag: 1, opex: 20, iibb: 3, gan: 0, tOpex: 40, tIibb: 3, tGan: 20, risk: 3, acc: 'libre' },
   murcia: { label: 'España · Murcia', grp: 'España', m2: 1997, rent24: 280, mult: 1.5, setup: 12, lag: 2, opex: 20, iibb: 24, gan: 0, tOpex: 40, tIibb: 24, tGan: 0, risk: 1, acc: 'libre (NIE)' },
   zamora: { label: 'España interior · Zamora', grp: 'España', m2: 1401, rent24: 210, mult: 1.5, setup: 12, lag: 2, opex: 20, iibb: 24, gan: 0, tOpex: 40, tIibb: 24, tGan: 0, risk: 1, acc: 'libre (NIE)' },
   jaen: { label: 'España interior · Jaén', grp: 'España', m2: 1473, rent24: 225, mult: 1.5, setup: 12, lag: 2, opex: 20, iibb: 24, gan: 0, tOpex: 40, tIibb: 24, tGan: 0, risk: 1, acc: 'libre (NIE)' },

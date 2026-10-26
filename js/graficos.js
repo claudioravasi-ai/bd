@@ -179,7 +179,9 @@ function activarProyecciones(raiz) {
       cur.style.display = ''; cur.querySelector('line').setAttribute('x1', px); cur.querySelector('line').setAttribute('x2', px);
       var c = cur.querySelectorAll('circle'); c[0].setAttribute('cx', px); c[0].setAttribute('cy', P.Y(x.liq)); c[1].setAttribute('cx', px); c[1].setAttribute('cy', P.Y(x.contributed));
       lect.innerHTML = lecturaProy(P.r, t);
+      if (!svg._desdeAfuera) svg.dispatchEvent(new CustomEvent('proymes', { detail: t }));
     }
+    svg._mostrar = function (k) { svg._desdeAfuera = true; mostrar(k); svg._desdeAfuera = false; };
     function desdeEvento(e) { var b = svg.getBoundingClientRect(), vx = (e.clientX - b.left) / b.width * 640; mostrar(Math.round((vx - P.X(0)) / (P.X(P.n) - P.X(0)) * P.n)); }
     toque.addEventListener('pointermove', desdeEvento); toque.addEventListener('pointerdown', desdeEvento);
     svg.addEventListener('keydown', function (e) {
@@ -243,3 +245,49 @@ function svgLogo(clase) {
 }
 
 function puntosRiesgo(n) { var s = '', i; for (i = 1; i <= 5; i++) s += i <= n ? '●' : '○'; return '<span class="riesgo" aria-hidden="true">' + s + '</span><span class="solo-lector">riesgo ' + n + ' de 5</span>'; }
+
+/* ===== La torre en el tiempo (Probar otros números): al correr los meses se arma cada piso, tramo por tramo,
+   y en el mes de compra se completa; los pisos que faltan quedan punteados. Va sincronizada con el gráfico. ===== */
+function torreEnMes(r, ciclo, t) {
+  var hechas = r.purchases.filter(function (p) { return p.month <= t; }), ult = hechas.length ? hechas[hechas.length - 1].month : 0, obra = null, propias = hechas.length;
+  if (ult === t && t > 0) { propias--; obra = { mes: ciclo, de: ciclo }; }
+  else if (hechas.length < r.purchases.length) obra = { mes: Math.min(ciclo, t - ult), de: ciclo };
+  return svgTorre(propias, r.purchases.length, hechas.slice(0, propias).map(function (p) { return 'Depto ' + p.n + ' · ' + num(p.m2, 1) + ' m²'; }), obra);
+}
+function lecturaTorre(r, t) {
+  var x = r.series[t - 1], a = Math.floor(t / 12), m = t % 12;
+  return '<b>Mes ' + t + '</b> <span class="gris">(' + (a ? a + (a === 1 ? ' año' : ' años') : '') + (a && m ? ' y ' : '') + (m ? m + (m === 1 ? ' mes' : ' meses') : '') + ')</span> · <b class="oro">' + x.nProps + (x.nProps === 1 ? ' departamento' : ' departamentos') + '</b> · alquiler neto del mes ' + usd(x.rent) + ' · valor del grupo ' + usd(x.liq) + ' · pusieron ' + usd(x.contributed);
+}
+function htmlTorreTiempo(r, ciclo) {
+  var n = r.series.length;
+  TORRE_T = { r: r, ciclo: ciclo };
+  return '<div class="torre-tiempo"><div class="tt-controles"><button type="button" class="btn btn-oro btn-chico" id="ttPlay" aria-pressed="false">▶ Ver cómo crece</button>' +
+    '<input type="range" id="ttRango" min="1" max="' + n + '" step="1" value="' + n + '" aria-label="Elegir el mes de la proyección"></div>' +
+    '<p class="tt-lectura chico" id="ttLectura" aria-live="polite">' + lecturaTorre(r, n) + '</p>' +
+    '<div class="tt-torre" id="ttTorre">' + torreEnMes(r, ciclo, n) + '</div>' +
+    '<p class="chico gris" style="text-align:center;margin:4px 0 0">Cada piso es un departamento: la grúa sube un tramo por mes y en el mes ' + ciclo + ' de cada ciclo se compra. Los punteados son los que faltan comprar.</p></div>';
+}
+var TORRE_T = null;
+function ganchoTorreTiempo(raiz) {
+  var rg = $('ttRango'), pl = $('ttPlay'), svg = raiz && raiz.querySelector('[data-proy]'), tick = null;
+  if (!rg || !TORRE_T) return;
+  function poner(t, desdeGrafico) {
+    t = Math.max(1, Math.min(+rg.max, t)); rg.value = t;
+    $('ttTorre').innerHTML = torreEnMes(TORRE_T.r, TORRE_T.ciclo, t); $('ttLectura').innerHTML = lecturaTorre(TORRE_T.r, t);
+    rg.setAttribute('aria-valuetext', 'mes ' + t);
+    if (!desdeGrafico && svg && svg._mostrar) svg._mostrar(t);
+  }
+  function parar() { if (tick) clearInterval(tick); tick = null; pl.setAttribute('aria-pressed', 'false'); pl.textContent = '▶ Ver cómo crece'; $('ttLectura').setAttribute('aria-live', 'polite'); }
+  rg.oninput = function () { parar(); poner(+rg.value); };
+  if (svg) svg.addEventListener('proymes', function (e) { parar(); poner(e.detail, true); });
+  pl.onclick = function () {
+    if (tick) { parar(); return; }
+    var t = +rg.value >= +rg.max ? 0 : +rg.value;
+    pl.setAttribute('aria-pressed', 'true'); pl.textContent = '❚❚ Pausa'; $('ttLectura').setAttribute('aria-live', 'off');
+    tick = setInterval(function () {
+      if (!rg.isConnected) { clearInterval(tick); return; }
+      t++; poner(t);
+      if (t >= +rg.max) parar();
+    }, sinMovimiento() ? 60 : 280);
+  };
+}

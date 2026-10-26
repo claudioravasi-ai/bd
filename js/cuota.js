@@ -32,12 +32,27 @@ function efectoMonto(g, rc, monto) {
   var cuotas = Math.min(g.ciclo, Math.floor(pagDesp / g.aporte + 1e-9));
   return { extra: extra, pagDesp: pagDesp, cuotas: cuotas, adelanta: Math.max(0, cuotas - rc.enCiclo), completa: pagDesp >= rc.O - 0.004, faltan: Math.max(0, rc.paraAlDia - monto) };
 }
+/* un monto en la moneda que eligió el socio para pagar, con los dólares al lado (el fideicomiso lleva todo en dólares) */
+function enElegida(vUsd) {
+  var mon = SES.moneda || 'ARS';
+  return mon === 'USD' ? usd(vUsd) : enMoneda(vUsd, mon, cotAportes()) + ' <small class="gris">(' + usd(vUsd) + ')</small>';
+}
+/* un pago ya hecho en la moneda elegida: exacto si se pagó en esa moneda; si no, convertido (pesos al dólar de ese día) */
+function pagoEnMonedaNum(m, mon) {
+  if (m.pago && m.pago.moneda === mon) return m.pago.monto;
+  return mon === 'ARS' ? m.usd * (m.tc || tcAporte()) : mon === 'EUR' ? m.usd / (COT.eurUsd || 1.1) : m.usd;
+}
+function pagoEnMoneda(m, mon) {
+  var exacto = m.pago && m.pago.moneda === mon, v = pagoEnMonedaNum(m, mon);
+  return (exacto ? '' : '≈ ') + (mon === 'ARS' ? ars(v) : mon === 'EUR' ? eur(v, 2) : usd(v, 2));
+}
 function efectosHtml(g, rc, v, vup) {
   var e = efectoMonto(g, rc, v), debe = e.faltan > 0.004;
-  return '<span class="mv-ef ' + (debe ? 'mal' : 'bien') + '"><b>' + (debe ? '!' : '✓') + '</b>' + (debe ? 'Te faltan ' + usd(e.faltan) + ' para estar al día' : 'Quedás al día') + '</span>' +
+  return '<span class="mv-ef ' + (debe ? 'mal' : 'bien') + '"><b>' + (debe ? '!' : '✓') + '</b>' + (debe ? 'Te faltan ' + enElegida(e.faltan) + ' para estar al día' : 'Quedás al día') + '</span>' +
     '<span class="mv-ef' + (e.completa ? ' bien' : '') + '"><b>' + (e.completa ? '★' : e.cuotas) + '</b>' + (e.completa ? 'Completás el ciclo ' + rc.ciclo : e.cuotas + ' de ' + g.ciclo + ' cuotas del ciclo' + (e.adelanta ? ' · adelantás ' + e.adelanta + (e.adelanta === 1 ? ' mes' : ' meses') : '')) + '</span>' +
-    (e.extra > 0.004 ? '<span class="mv-ef extra"><b>+</b>' + usd(e.extra) + ' de extra: tu parte crece</span>' : '') +
-    '<span class="mv-ef"><b>UP</b>compra unas ' + num(v / vup, 2) + ' UP de ' + usd(vup, 2) + '</span>';
+    (e.extra > 0.004 ? '<span class="mv-ef extra"><b>+</b>' + enElegida(e.extra) + ' de extra: tu parte crece</span>' : '') +
+    '<span class="mv-ef"><b>UP</b>compra unas ' + num(v / vup, 2) + ' UP de ' + usd(vup, 2) + '</span>' +
+    ((SES.moneda || 'ARS') === 'USD' ? '' : '<span class="mv-ef"><b>' + { ARS: '$', EUR: '€' }[SES.moneda || 'ARS'] + '</b>Pagás ' + enMoneda(v, SES.moneda || 'ARS', cotAportes()) + ' por ' + usd(v) + '</span>');
 }
 /* «¿Cuánto ponés ahora?»: una perilla con imanes en las opciones, la cifra grande y lo que cambia, en vivo */
 function htmlCuota(g, rc, monto) {
