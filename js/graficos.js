@@ -30,6 +30,11 @@ function svgAnillo(ci, g) {
    de la grúa y en el mes de compra el piso se completa. La torre no tiene tope: crece con cada compra
    y, cuando hay muchos pisos, se achican para que entre todo. Los pisos punteados (proyectadas) solo
    se usan en las proyecciones de grupos que todavía no empezaron. */
+/* el mástil de la grúa: un tramo (escalón) por cada piso; con cada compra suma uno y la grúa sube */
+function tramosMastil(base, yJ, alto) {
+  var h = '', y; for (y = base - alto; y > yJ + 4; y -= alto) h += '<path d="M33 ' + y.toFixed(1) + ' L40 ' + (y + alto / 2).toFixed(1) + '" stroke-width="1.2"/>';
+  return h;
+}
 function svgTorre(propias, proyectadas, etiquetas, obra) {
   var conObra = !!(obra && obra.de), total = Math.max(propias + (conObra ? 1 : 0), proyectadas || 0, 1);
   var alto = total > 10 ? Math.max(9, Math.round(270 / total)) : 27, ancho = 170, x0 = 70, chico = alto < 18;
@@ -59,21 +64,21 @@ function svgTorre(propias, proyectadas, etiquetas, obra) {
     h += '</g>';
   }
   /* grúa: torre a la izquierda y pluma arriba de todo; sube sola con cada piso nuevo */
-  var tope = conObra ? base - propias * alto - Math.max(alto, 22) : base - total * alto, yJ = tope - 44, cx;
+  var tope = conObra ? base - propias * alto - Math.max(alto, 22) : base - total * alto, yJ = tope - 24, cx;
   if (conObra) { var t2 = ancho / obra.de, k = Math.min(obra.mes, obra.de) - 1; cx = x0 + k * t2 + t2 / 2; }
   else cx = x0 + ancho - 20;
   if (propias < total) {
     h += '<g stroke="var(--oro)" stroke-width="2.5" fill="none" stroke-linejoin="round">' +
-      '<path d="M40 ' + base + ' V' + (yJ - 16) + '"/><path d="M33 ' + base + ' V' + (yJ - 10) + '"/>' +
-      '<path d="M22 ' + yJ + ' H' + (x0 + ancho + 18) + '"/><path d="M37 ' + (yJ - 16) + ' L' + (x0 + ancho + 18) + ' ' + yJ + '"/><path d="M37 ' + (yJ - 16) + ' L22 ' + yJ + '"/></g>' +
+      '<path d="M40 ' + base + ' V' + (yJ - 10) + '"/><path d="M33 ' + base + ' V' + (yJ - 6) + '"/>' + tramosMastil(base, yJ, alto) +
+      '<path d="M22 ' + yJ + ' H' + (x0 + ancho + 18) + '"/><path d="M37 ' + (yJ - 10) + ' L' + (x0 + ancho + 18) + ' ' + yJ + '"/><path d="M37 ' + (yJ - 10) + ' L22 ' + yJ + '"/></g>' +
       '<rect x="12" y="' + (yJ - 2) + '" width="14" height="10" rx="2" fill="var(--gris-2)"/>' +
       '<rect x="' + (cx - 7) + '" y="' + (yJ - 3) + '" width="14" height="7" rx="2" fill="var(--oro-claro)">' + (mov ? '<animate attributeName="x" from="' + (x0 - 7) + '" to="' + (cx - 7) + '" dur="1s" fill="freeze"/>' : '') + '</rect>';
     if (conObra && obra.mes < obra.de) {
       h += '<line x1="' + cx + '" y1="' + (yJ + 4) + '" x2="' + cx + '" y2="' + tope + '" stroke="var(--gris)" stroke-width="1.5">' +
         (mov ? '<animate attributeName="y2" from="' + (yJ + 8) + '" to="' + tope + '" dur="1.6s" fill="freeze" calcMode="spline" keySplines=".3 0 .2 1"/>' : '') + '</line>';
     } else if (!conObra) {
-      h += '<line x1="' + cx + '" y1="' + (yJ + 4) + '" x2="' + cx + '" y2="' + (yJ + 26) + '" stroke="var(--gris)" stroke-width="1.5"/>' +
-        '<rect x="' + (cx - 20) + '" y="' + (yJ + 26) + '" width="40" height="12" rx="2" fill="var(--oro-claro)">' + (mov ? '<animateTransform attributeName="transform" type="translate" values="0 0; -6 0; 0 0; 6 0; 0 0" dur="4s" repeatCount="indefinite"/>' : '') + '</rect>';
+      h += '<line x1="' + cx + '" y1="' + (yJ + 4) + '" x2="' + cx + '" y2="' + (yJ + 10) + '" stroke="var(--gris)" stroke-width="1.5"/>' +
+        '<rect x="' + (cx - 20) + '" y="' + (yJ + 10) + '" width="40" height="10" rx="2" fill="var(--oro-claro)">' + (mov ? '<animateTransform attributeName="transform" type="translate" values="0 0; -6 0; 0 0; 6 0; 0 0" dur="4s" repeatCount="indefinite"/>' : '') + '</rect>';
     }
   }
   var desc = propias + ' departamento' + (propias === 1 ? '' : 's') + ' comprado' + (propias === 1 ? '' : 's') + (conObra ? '; el departamento ' + (propias + 1) + ' va por el mes ' + obra.mes + ' de ' + obra.de : '') +

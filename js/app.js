@@ -23,6 +23,7 @@ var ICONOS = {
   impuestos: '<path d="M6 3h12v18l-3-2-3 2-3-2-3 2z"/><path d="M9 8h6M9 12h6M9 16h3"/>',
   resumen: '<rect x="4" y="3" width="16" height="18" rx="2"/><path d="M8 15l3-3 2 2 3-4"/><path d="M8 7h8"/>',
   vitrina: '<path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7S2 12 2 12z"/><circle cx="12" cy="12" r="3"/>',
+  salir: '<path d="M14 4h4a2 2 0 0 1 2 2v12a2 2 0 0 1-2 2h-4"/><path d="M10 16l-4-4 4-4"/><path d="M6 12h10"/>',
   oportunidades: '<circle cx="12" cy="12" r="9.5"/><circle cx="12" cy="12" r="5.5"/><circle cx="12" cy="12" r="1.5"/><path d="M12 2.5v3M21.5 12h-3"/>'
 };
 function icono(n) { return '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">' + ICONOS[n] + '</svg>'; }
@@ -33,7 +34,6 @@ var MENU_OBSERVADOR = [['vitrina', 'Vitrina de fideicomisos'], ['meta', 'Mi meta
 
 function yo() { return SES.uid ? usuario(SES.uid) : null; }
 /* el socio fundador todavía no creó su cuenta (en la versión real: la base no tiene fundador) */
-function fundadorPendiente() { return MODO_REAL ? NUBE.instalado === false : !!(usuario('u1') && usuario('u1').sinActivar); }
 function invitacionDeAlta(a) { return a.inv || D.invitaciones.filter(function (x) { return x.codigo === a.codigo; })[0]; }
 /* cada socio ve solo sus fideicomisos; el socio fundador puede entrar a todos */
 function gruposVisibles(u) { return u.rol === 'fundador' ? D.grupos.filter(function (g) { return g.estado !== 'disuelto'; }) : gruposDe(u.id).filter(function (g) { return g.estado !== 'disuelto'; }); }
@@ -107,6 +107,7 @@ function avisosDe(u) {
   avisosGrupos(u).forEach(function (a) { out.push(a); });
   avisosDeudas(u).forEach(function (a) { out.push(a); });
   avisosInquilinos(u).forEach(function (a) { out.push(a); });
+  avisosSeguridad(u).forEach(function (a) { out.push(a); });
   gruposDe(u.id).forEach(function (g) {
     if (g.estado !== 'activo' || !D.oportunidades) return;
     excelentesNuevas(u, g).forEach(function (x) { out.push({ nivel: 'oro', titulo: '🚨 ¡Excelente oportunidad! ' + x.o.titulo, texto: num(x.o.m2) + ' m² en ' + x.o.ciudad + ' por ' + usd(x.ev.precio) + ': ' + pct(Math.max(0, x.ev.desc), 0) + ' debajo del valor de la zona, TIR estimada ' + pct(x.ev.tir) + '.', ir: '#/oportunidades?ver=' + x.o.id }); });
@@ -276,8 +277,8 @@ function render() {
   if (!$('velo').hidden) { $('velo').hidden = true; $('velo').innerHTML = ''; }
   if (!u) {
     raiz.className = 'marco';
-    var pant = r.partes[0] === 'alta' && SES.alta ? 'alta' : r.partes[0] === 'fundador' && fundadorPendiente() ? 'fundador' : 'entrada';
-    raiz.innerHTML = pant === 'alta' ? '<main id="principal">' + vistaAlta() + '</main>' : pant === 'fundador' ? '<main id="principal">' + vistaAltaFundador() + '</main>' : vistaEntrada();
+    var pant = r.partes[0] === 'alta' && SES.alta ? 'alta' : 'entrada';
+    raiz.innerHTML = pant === 'alta' ? '<main id="principal">' + vistaAlta() + '</main>' : vistaEntrada();
     despuesDe(pant);
     return;
   }
@@ -288,10 +289,13 @@ function render() {
   var nuevos = avisosNuevos(u), nAvisos = nuevos.length;
   raiz.innerHTML = menuLateral(v) +
     '<main id="principal" tabindex="-1" data-seccion="' + v + '"><div class="fila entre no-imprimir barra-arriba" style="margin-bottom:14px">' +
-    '<div class="fila" style="gap:8px"><button class="btn btn-chico hamburguesa" id="btnMenu" aria-label="Menú" aria-expanded="false" aria-controls="menuLateral"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M4 6h16M4 12h16M4 18h16"/></svg></button>' + (st.n > 0 ? '<button class="btn btn-chico" id="btnVolver" aria-label="Volver a la pantalla anterior, donde estabas">← Volver</button>' : '') + (u.rol === 'observador' ? '<span class="chip azul">Solo mirar</span>' : selectorGrupo()) + '</div>' +
-    '<button class="btn btn-chico' + (nAvisos ? ' campana-viva' : '') + '" id="btnAvisos" aria-label="Avisos: ' + nAvisos + ' sin leer">' + icono('campana').replace('<svg', '<svg width="20" height="20"') + (nAvisos ? '<span class="chip ' + (nuevos.some(function (a) { return a.nivel === 'mal'; }) ? 'mal' : 'oro') + '" style="padding:0 8px">' + nAvisos + '</span>' : '') + '</button></div>' +
+    '<div class="fila" style="gap:8px"><button class="btn btn-chico hamburguesa" id="btnMenu" aria-label="Menú" aria-expanded="false" aria-controls="menuLateral"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M4 6h16M4 12h16M4 18h16"/></svg></button>' + (st.n > 0 ? '<button class="btn btn-chico" id="btnVolver" aria-label="Volver a la pantalla anterior, donde estabas">← <span class="txt-volver">Volver</span></button>' : '') + (u.rol === 'observador' ? '<span class="chip azul">Solo mirar</span>' : selectorGrupo()) + '</div>' +
+    '<button class="btn btn-chico' + (nAvisos ? ' campana-viva' : '') + '" id="btnAvisos" aria-label="Avisos: ' + nAvisos + ' sin leer">' + icono('campana').replace('<svg', '<svg width="20" height="20"') + (nAvisos ? '<span class="chip ' + (nuevos.some(function (a) { return a.nivel === 'mal'; }) ? 'mal' : 'oro') + '" style="padding:0 8px">' + nAvisos + '</span>' : '') + '</button>' +
+    '<button class="btn btn-chico btn-salir" id="btnSalirArriba" aria-label="Cerrar sesión" title="Cerrar sesión">' + icono('salir').replace('<svg', '<svg width="20" height="20"') + '<span>Salir</span></button></div>' +
     VISTAS[v](u, r) + piePagina() + '</main>' + menuAbajo(v) + '<div class="velo-menu" id="veloMenu" hidden></div>';
   $('btnAvisos').onclick = abrirAvisos;
+  $('btnSalirArriba').onclick = salirDeLaApp;
+  if ($('btnSalirMenu')) $('btnSalirMenu').onclick = salirDeLaApp;
   $('btnMenu').onclick = alternarMenu; $('veloMenu').onclick = function () { alternarMenu(false); };
   sonarSiHayNuevos(nuevos);
   if ($('btnVolver')) $('btnVolver').onclick = volver;
@@ -304,7 +308,7 @@ function menuLateral(v) {
   return '<nav class="menu-lateral" id="menuLateral" aria-label="Menú principal"><div class="fila entre" style="flex-wrap:nowrap"><a class="marca" href="#/inicio">' + svgLogo() + '<span><b>B&amp;D</b><small>Building Dreams</small></span></a>' +
     '<button class="btn-texto chico fijar-menu" id="btnFijar" aria-pressed="' + fijo + '" title="' + (fijo ? 'Ocultar el menú solo (se abre con ☰)' : 'Dejar el menú siempre a la vista') + '">' + (fijo ? '📌 Fijo' : '📌 Fijar') + '</button></div>' +
     '<div class="menu-items">' + menuDe(yo()).map(function (m) { return '<a data-m="' + m[0] + '" href="#/' + m[0] + '"' + (m[0] === v ? ' aria-current="page"' : '') + '>' + icono(m[0]) + m[1] + '</a>'; }).join('') + '</div>' +
-    '<div class="pie-menu">Versión ' + VERSION_APP + ' · modo prueba<br>' + esc(yo().nombre) + '</div></nav>';
+    '<div class="pie-menu">Versión ' + VERSION_APP + (MODO_REAL ? '' : ' · modo prueba') + '<br>' + esc(yo().nombre) + '<button class="btn btn-chico btn-salir" id="btnSalirMenu" style="margin-top:8px;width:100%">' + icono('salir').replace('<svg', '<svg width="18" height="18"') + ' Cerrar sesión</button></div></nav>';
 }
 /* ☰ abre y cierra el menú; con «Fijar» queda siempre a la vista (en computadora) */
 function alternarMenu(abrir) {
@@ -365,21 +369,51 @@ function ganchoFrasesGriegas() {
   caja.addEventListener('focus', frenar); caja.addEventListener('blur', seguir);
   caja.addEventListener('click', function () { if (quieta) seguir(); else frenar(); });
 }
+/* La entrada tiene dos caminos que no se mezclan:
+   «Ya soy socio» es para quien ya tiene cuenta (socios, fundador y quien solo mira): correo, clave y Google Authenticator, nunca un código de invitación.
+   «Tengo una invitación» es solo la primera vez, para crear la cuenta con el código que llegó por correo.
+   Abre siempre en «Ya soy socio», salvo que se llegue con el enlace del correo, que ya trae el código (#/entrada?inv=…). */
+var TEXTO_ENTRADA = {
+  soc: { explica: 'Entrás con tu correo, tu clave y el código de 6 números de Google Authenticator. No hace falta ningún código de invitación.', boton: 'Entrar' },
+  inv: { explica: 'Es solo la primera vez: con el código que te llegó por correo creás tu cuenta y completás tus datos. Después entrás siempre por «Ya soy socio».', boton: 'Crear mi cuenta' }
+};
+function modoEntrada() { return ruta().q.inv ? 'inv' : 'soc'; }
+function modoEntradaActual() { var b = document.querySelector('[data-modo][aria-pressed="true"]'); return b ? b.dataset.modo : 'soc'; }
+/* cambia de camino sin borrar el correo; aviso explica por qué (por ejemplo, una invitación que ya se usó) */
+function ponerModoEntrada(m, aviso) {
+  if (!$('formEntrada')) return;
+  document.querySelectorAll('[data-modo]').forEach(function (x) { x.setAttribute('aria-pressed', x.dataset.modo === m); });
+  $('campoCodigo').hidden = m !== 'inv'; $('campoClave').hidden = m === 'inv'; $('campoTotp').hidden = true;
+  if ($('eOlvide')) $('eOlvide').hidden = m === 'inv';
+  if ($('lugarHuella')) $('lugarHuella').hidden = m !== 'soc';
+  /* el aviso no es un error: va en el recuadro dorado, que se ilumina un momento */
+  var ex = $('eExplica'); ex.textContent = aviso || TEXTO_ENTRADA[m].explica; ex.classList.remove('cambio'); if (aviso) { void ex.offsetWidth; ex.classList.add('cambio'); }
+  $('eBoton').textContent = TEXTO_ENTRADA[m].boton; $('eError').textContent = '';
+  if (typeof LOGIN !== 'undefined') LOGIN = null;
+}
+var ICONO_LLAVE = '<svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="8" cy="15" r="4"/><path d="M10.8 12.2 20 3M16.5 6.5l3 3M14 9l2 2"/></svg>';
+var ICONO_SOBRE = '<svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="5" width="18" height="14" rx="2"/><path d="m3 7 9 6 9-6"/></svg>';
 function vistaEntrada() {
+  var m = modoEntrada();
   return '<div class="entrada"><div class="entrada-caja entrar">' + svgLogo('logo-completo') +
     '<div class="frases-griegas" id="frasesGr" tabindex="0" role="group" aria-label="Frases en griego. Pasá el mouse, tocá o enfocá para ver la traducción."><p class="fg-griego" id="fgGr" lang="el">' + FRASES_GRIEGAS[0][0] + '</p><p class="fg-trad" id="fgEs" aria-live="polite"></p></div>' +
     '<h1 class="solo-lector">B&amp;D · Building Dreams</h1><p class="gris">Construyendo sueños, un aporte a la vez. Fideicomisos de amigos que compran departamentos, los alquilan y reinvierten.</p>' +
     (SESION_VENCIDA ? '<div class="aviso" role="status" style="text-align:left;margin-top:14px"><b>Por seguridad se cerró tu sesión</b> (' + MINUTOS_SESION + ' minutos sin uso). Entrá de nuevo con tu clave y tu código.</div>' : '') +
     '<div class="tarjeta dorada" style="text-align:left;margin-top:18px">' +
-    '<div class="segmentos" role="group" aria-label="Cómo entrar" style="margin-bottom:14px"><button type="button" aria-pressed="true" data-modo="inv">Tengo una invitación</button><button type="button" aria-pressed="false" data-modo="soc">Ya soy socio</button></div>' +
+    '<div class="modos-entrada" role="group" aria-label="Cómo entrar">' +
+    '<button type="button" data-modo="soc" aria-pressed="' + (m === 'soc') + '">' + ICONO_LLAVE + '<b>Ya soy socio</b><small>Ya tengo cuenta: entro con mi clave</small></button>' +
+    '<button type="button" data-modo="inv" aria-pressed="' + (m === 'inv') + '">' + ICONO_SOBRE + '<b>Tengo una invitación</b><small>Es mi primera vez: creo mi cuenta</small></button></div>' +
+    '<p class="entrada-explica" id="eExplica" aria-live="polite">' + TEXTO_ENTRADA[m].explica + '</p>' +
+    '<div id="lugarHuella"' + (m === 'soc' ? '' : ' hidden') + '>' + bloqueHuellaEntrada() + '</div>' +
     '<form id="formEntrada" class="apilar" novalidate>' +
     '<div class="campo"><label for="eCorreo">Correo electrónico</label><input id="eCorreo" type="email" autocomplete="email" required></div>' +
-    '<div class="campo" id="campoCodigo"><label for="eCodigo">Código de invitación</label><input id="eCodigo" autocomplete="one-time-code" maxlength="8" style="text-transform:uppercase;letter-spacing:.2em" required><span class="ayuda">Te llegó por correo de un socio fundador. Vence a los 7 días.</span></div>' +
-    '<div class="campo" id="campoClave" hidden><label for="eClave">Clave</label><input id="eClave" type="password" autocomplete="current-password"></div>' +
-    '<div class="campo" id="campoTotp" hidden><label for="eTotp">Código de Google Authenticator (6 números)</label><input id="eTotp" inputmode="numeric" autocomplete="one-time-code" maxlength="7" style="letter-spacing:.3em;text-align:center"><span class="ayuda">Abrí Google Authenticator en tu teléfono y copiá el código de B&amp;D.</span></div>' +
+    '<div class="campo" id="campoCodigo"' + (m === 'inv' ? '' : ' hidden') + '><label for="eCodigo">Código de invitación</label><input id="eCodigo" autocomplete="one-time-code" maxlength="8" style="text-transform:uppercase;letter-spacing:.2em" value="' + esc(String(ruta().q.inv || '').toUpperCase().replace(/[^A-Z0-9]/g, '').slice(0, 8)) + '"><span class="ayuda">Te llegó por correo de un socio fundador. Vence a los 7 días.</span></div>' +
+    '<div class="campo" id="campoClave"' + (m === 'soc' ? '' : ' hidden') + '><label for="eClave">Clave</label><input id="eClave" type="password" autocomplete="current-password"></div>' +
+    '<div class="campo" id="campoTotp" hidden><label for="eTotp">Código de Google Authenticator (6 números)</label><input id="eTotp" inputmode="numeric" autocomplete="one-time-code" maxlength="7" style="letter-spacing:.3em;text-align:center"><span class="ayuda">Abrí Google Authenticator en tu teléfono y copiá el código de B&amp;D.</span>' +
+    '<button type="button" class="btn btn-chico btn-huella" id="eHuella2" hidden>' + ICONO_HUELLA + 'Usar huella o cara en vez del código</button>' +
+    '<button type="button" class="enlace chico" id="eUsarRec">¿Perdiste el teléfono? Usá un código de recuperación</button></div>' +
     '<p class="error rojo chico" id="eError" role="alert"></p>' +
-    '<button class="btn btn-oro" style="width:100%">Entrar</button>' + (MODO_REAL ? '<button type="button" class="enlace" id="eOlvide" hidden>¿Olvidaste tu clave?</button>' : '') + '</form></div>' +
-    (fundadorPendiente() ? '<div class="tarjeta" style="text-align:left;margin-top:14px"><b>¿Sos el socio fundador?</b><p class="chico gris" style="margin:4px 0 10px">Tu cuenta se crea una sola vez, con CUIL, correo, clave y Google Authenticator. Después nadie más puede entrar como fundador.</p><a class="btn btn-oro btn-chico" href="#/fundador">Crear la cuenta del socio fundador</a></div>' : '') +
+    '<button class="btn btn-oro" id="eBoton" style="width:100%">' + TEXTO_ENTRADA[m].boton + '</button>' + (MODO_REAL ? '<button type="button" class="enlace" id="eOlvide"' + (m === 'soc' ? '' : ' hidden') + '>¿Olvidaste tu clave?</button>' : '') + '</form></div>' +
     (modoPrueba() ? '<div class="aviso prueba" style="text-align:left;margin-top:16px"><b>Modo prueba.</b> Los datos son inventados y quedan solo en este equipo.<div class="fila" style="margin-top:10px">' +
     '<button class="btn btn-chico" data-demo="u2">Probar como socia de ejemplo</button>' +
     '<button class="btn btn-chico" data-demo="inv">Probar una invitación</button><button class="btn btn-chico" data-demo="obs">Probar como invitado que solo mira</button></div></div>' : '') +
@@ -448,7 +482,7 @@ function terminarAlta() {
     if (inv.tipo === 'mirar') {
       D.usuarios.push({ id: id, nombre: d.nombre || inv.nombre, email: a.email, rol: 'observador', alta: hoyISO(), invitadoPor: inv.por, clave: h, ficha: { nombre: inv.nombre, cuit: '', condIva: '', condGanancias: '', telefono: '', domicilio: '', localidad: '', provincia: '', cp: '', cbu: '', sustituto: {}, consentimiento: { fecha: hoyISO(), version: '1' } } });
       inv.usada = true; inv.usadaEl = hoyISO(); anotar(id, 'Entró a la vitrina con una invitación para mirar'); guardarDatos();
-      SES = { uid: id }; guardarSesion(); tostada('Bienvenido/a: podés mirar la vitrina.'); irLimpio('#/vitrina'); return;
+      SES = { uid: id }; guardarSesion(); despuesDeEntrar(usuario(id)); tostada('Bienvenido/a: podés mirar la vitrina.'); irLimpio('#/vitrina'); return;
     }
     var u = { id: id, nombre: d.nombre.trim(), email: a.email, rol: 'invitado', alta: hoyISO(), invitadoPor: inv.por, clave: h,
       ficha: { nombre: d.nombre.trim(), dni: d.dni, nacimiento: d.nacimiento, nacionalidad: d.nacionalidad, estadoCivil: d.estadoCivil, profesion: d.profesion,
@@ -461,7 +495,7 @@ function terminarAlta() {
     if (g && g.socios.length >= g.N && g.estado !== 'activo') { g.estado = 'completo'; g.completo = hoyISO(); reunionDe(g); }
     inv.usada = true; inv.usadaEl = hoyISO();
     anotar(id, 'Aceptó la invitación y completó su alta'); guardarDatos();
-    SES = { uid: id, g: g ? g.id : null }; guardarSesion(); lluviaDorada(); tostada('¡Bienvenido/a a B&D!'); irLimpio('#/inicio');
+    SES = { uid: id, g: g ? g.id : null }; guardarSesion(); despuesDeEntrar(usuario(id)); lluviaDorada(); tostada('¡Bienvenido/a a B&D!'); irLimpio('#/inicio');
   });
 }
 
@@ -576,7 +610,7 @@ function vistaGrupoConvocando(u, g) {
     '<div class="heroe-titulo"><span class="letra-griega">' + g.simbolo + '</span><div><h1>' + esc(g.letra) + '</h1><p class="gris" style="margin:0">' + g.N + ' socios · ' + usd(g.aporte) + ' por mes · ' + MARKETS[g.mercado].label + '</p></div></div>' +
     '<p style="margin-top:14px">Van <b>' + g.socios.length + ' de ' + g.N + '</b>. ' + (falta ? 'Faltan ' + falta + '. ' : '') + 'Cuando se complete y todos firmen el contrato de adhesión, se constituye el fideicomiso y empiezan los aportes. Hasta entonces nadie paga nada.</p>' +
     '<div class="medidor" style="height:12px;max-width:420px"><i style="width:' + (g.socios.length / g.N * 100) + '%"></i></div></div>' +
-    '<div class="tarjeta dorada">' + svgTorre(0, Math.min(pr.r.purchases.length, 12)) + '</div></section>' +
+    '<div class="tarjeta dorada">' + svgTorre(0, 0, [], { mes: 0, de: g.ciclo }) + '<p class="chico gris" style="text-align:center;margin:6px 0 0">Los pisos se suman con cada compra: el primero, en el mes ' + g.ciclo + '.</p></div></section>' +
     '<section class="tarjeta seccion">' + svgProyeccion(pr.r) + '</section>' +
     (MODO_REAL && g.id === 'alfa' && u.id === (NUBE.instalado || {}).fundador ? '<section class="tarjeta dorada seccion"><h3>Arrancar el fideicomiso Alfa</h3><p class="chico gris">Cuando estén los socios y firmado el contrato, tocá acá: los aportes empiezan con el de ' + nombreMes(mesDe(inicioAlfa())) + ' (del 1 al ' + DIA_VENCE + '), la mora corre desde el día ' + (DIA_VENCE + 1) + ' y la primera compra es en el mes ' + g.ciclo + '.</p><button class="btn btn-oro" id="btnArrancarAlfa">Arrancar Alfa</button></section>' : '') +
     '<div class="aviso seccion">Los grupos fuera del piloto Alfa necesitan antes el dictamen de un abogado de mercado de capitales y la estructura que corresponda (fiduciaria autorizada o club cerrado). La app no los activa sola.</div>';
@@ -930,7 +964,7 @@ function vistaSocios(u, r) {
 function mandarInvitacion(inv) {
   var g = grupo(inv.g), por = usuario(inv.por), url = location.origin + location.pathname;
   var cuerpo = 'Hola ' + inv.nombre + ':\n\n' + por.nombre + ' te invita a sumarte al fideicomiso ' + g.letra + ' de B&D · Building Dreams.\n\n' +
-    '1. Entrá a ' + url + '\n2. Elegí "Tengo una invitación" y escribí este correo y el código: ' + inv.codigo + '\n3. Completá tus datos personales y fiscales.\n\nEl código vence el ' + fechaCorta(inv.vence) + '.\n\nEs una invitación personal: no la reenvíes.';
+    '1. Tocá este enlace, que ya trae tu código: ' + url + '#/entrada?inv=' + inv.codigo + '\n2. Escribí este mismo correo y tocá «Crear mi cuenta».\n3. Completá tus datos personales y fiscales.\n\nSi el enlace no abre, entrá a ' + url + ', elegí «Tengo una invitación» y escribí el código: ' + inv.codigo + '\n\nLa invitación es solo para la primera vez: después entrás siempre por «Ya soy socio», con tu correo y tu clave.\n\nEl código vence el ' + fechaCorta(inv.vence) + '.\n\nEs una invitación personal: no la reenvíes.';
   location.href = 'mailto:' + encodeURIComponent(inv.email) + '?subject=' + encodeURIComponent('Tu invitación a B&D · Building Dreams') + '&body=' + encodeURIComponent(cuerpo);
 }
 function verFicha(sid) {
@@ -955,7 +989,7 @@ function vistaPerfil(u) {
     '<div class="campo"><label for="p_cbu">CBU o CVU</label><input id="p_cbu" name="cbu" inputmode="numeric" maxlength="22" value="' + esc(f.cbu || '') + '"></div>' +
     '<p class="chico gris">El DNI, el CUIT y la condición fiscal se cambian pidiéndoselo al fiduciario, con constancia.</p><button class="btn btn-oro">Guardar cambios</button></form>' +
     '<div class="apilar"><div class="tarjeta"><h3>Tus derechos sobre tus datos</h3><p class="chico gris">Ley 25.326: acceso, corrección, actualización y baja. Respuesta en 10 días hábiles. Autoridad de control: AAIP.</p><div class="fila"><button class="btn btn-chico" id="btnMisDatos">Descargar mis datos</button><button class="btn btn-chico" id="btnBaja">Pedir la baja de mis datos</button></div></div>' +
-    '<div class="tarjeta"><h3>Seguridad de la cuenta</h3><p class="chico gris">' + (u.totp ? '<span class="chip ok">Google Authenticator activado ✓</span> Para entrar hacen falta tu clave y el código del teléfono.' : 'Sumá un segundo factor: además de la clave, un código de 6 números de Google Authenticator.') + '</p>' + (u.totp || u.rol === 'observador' ? '' : '<button class="btn btn-oro btn-chico" id="btnTotp">Activar Google Authenticator</button>') + '</div>' +
+    tarjetaSeguridad(u) +
     (u.rol === 'observador' ? '' : tarjetaNtfy(u) + tarjetaCanales(u)) +
     '<div class="tarjeta"><h3>Avisos y resumen</h3><label class="casilla"><input type="checkbox" id="chkSon"' + (PREF.sinSonido ? '' : ' checked') + '><span>Sonido de campanita con cada aviso nuevo</span></label><label class="casilla" style="margin-top:10px"><input type="checkbox" id="chkResumen"' + (u.sinResumen ? '' : ' checked') + '><span>Recibir el resumen semanal en PDF a ' + esc(u.email) + '</span></label></div>' +
     '<div class="tarjeta"><h3>Accesibilidad</h3><label class="casilla"><input type="checkbox" id="chkLetra"' + (PREF.letraGrande ? ' checked' : '') + '><span>Letra más grande</span></label><label class="casilla" style="margin-top:10px"><input type="checkbox" id="chkMov"' + (PREF.sinMovimiento ? ' checked' : '') + '><span>Sin animaciones (la cinta de cotizaciones queda quieta)</span></label></div>' +
@@ -963,8 +997,14 @@ function vistaPerfil(u) {
 }
 
 /* =================== AYUDA: ver ayuda.js (manual, preguntas, derechos y deberes, presentación, simulador y demo) =================== */
+/* cerrar sesión: desde arriba (Salir), desde el menú o desde Más; también se cierra sola a los 10 minutos sin uso */
+function salirDeLaApp() {
+  var u = yo(), l = llaveLocal(), conHuella = !!(u && l && l.uid === u.id); if (u) { anotar(u.id, 'Cerró la sesión'); guardarDatos(); }
+  if (MODO_REAL) nubeDormir();
+  SES = {}; guardarSesion(); cerrarModal(); irLimpio('#/'); render(); tostada(conHuella ? 'Sesión cerrada. Para volver a entrar, tocá el sensor con tu huella o tu cara.' : 'Sesión cerrada. Para volver a entrar: correo, clave y código.');
+}
 function vistaMas() {
-  return '<h1>Más</h1><section class="apilar seccion">' + menuDe(yo()).filter(function (m) { return ['inicio', 'inversiones', 'pagar', 'chat'].indexOf(m[0]) < 0; }).map(function (m) { return '<a class="tarjeta fila" style="text-decoration:none;color:inherit" href="#/' + m[0] + '">' + icono(m[0]).replace('<svg', '<svg width="24" height="24"') + '<b>' + m[1] + '</b></a>'; }).join('') + '</section>';
+  return '<h1>Más</h1><section class="apilar seccion">' + menuDe(yo()).filter(function (m) { return ['inicio', 'inversiones', 'pagar', 'chat'].indexOf(m[0]) < 0; }).map(function (m) { return '<a class="tarjeta fila" style="text-decoration:none;color:inherit" href="#/' + m[0] + '">' + icono(m[0]).replace('<svg', '<svg width="24" height="24"') + '<b>' + m[1] + '</b></a>'; }).join('') + '<button class="tarjeta fila btn-salir-mas" id="btnSalirMas">' + icono('salir').replace('<svg', '<svg width="24" height="24"') + '<b>Cerrar sesión</b></button></section>';
 }
 
 var VISTAS = { oportunidades: vistaOportunidades, chat: vistaChat, impuestos: vistaImpuestos, resumen: vistaResumen, vitrina: vistaVitrina, inversiones: vistaInversiones, contratos: vistaContratos, inicio: vistaInicio, pagar: vistaPagar, mercado: vistaMercado, carpeta: vistaCarpeta, grupos: vistaGrupos, votos: vistaVotos, socios: vistaSocios, perfil: vistaPerfil, ayuda: vistaAyuda, meta: vistaMeta, estadisticas: vistaEstadisticas, mas: vistaMas };
@@ -975,39 +1015,46 @@ var GANCHOS = {
   meta: function () { ganchoMeta(); },
   estadisticas: function () { ganchoEstadisticas(); },
   entrada: function () {
-    var modo = 'inv';
     ganchoFrasesGriegas();
+    ganchoRecuperacionEntrada();
+    ganchoSensorHuella();
     document.querySelectorAll('[data-modo]').forEach(function (b) {
       b.onclick = function () {
-        modo = b.dataset.modo; document.querySelectorAll('[data-modo]').forEach(function (x) { x.setAttribute('aria-pressed', x === b); });
-        $('campoCodigo').hidden = modo !== 'inv'; $('campoClave').hidden = modo === 'inv'; $('campoTotp').hidden = true; $('eError').textContent = '';
-        if ($('eOlvide')) $('eOlvide').hidden = modo === 'inv';
+        var m = b.dataset.modo; ponerModoEntrada(m);
+        (!$('eCorreo').value ? $('eCorreo') : m === 'inv' ? $('eCodigo') : $('eClave')).focus();
       };
     });
     $('formEntrada').onsubmit = function (e) {
-      e.preventDefault(); var correo = $('eCorreo').value.trim().toLowerCase(), err = $('eError');
+      e.preventDefault(); var correo = $('eCorreo').value.trim().toLowerCase(), err = $('eError'), modo = modoEntradaActual();
       if (!correoValido(correo)) { err.textContent = 'Revisá el correo.'; $('eCorreo').focus(); return; }
       if (modo === 'inv' && MODO_REAL) { entrarConInvitacionReal(correo, $('eCodigo').value.trim().toUpperCase().replace(/[^A-Z0-9]/g, ''), err); return; }
       if (modo !== 'inv' && MODO_REAL) { entrarSocioReal(correo, err); return; }
       if (modo === 'inv') {
-        var cod = $('eCodigo').value.trim().toUpperCase().replace(/[^A-Z0-9]/g, '');
+        var cod = $('eCodigo').value.trim().toUpperCase().replace(/[^A-Z0-9]/g, ''), ya = usuarioPorCorreo(correo);
+        /* quien ya es socio no necesita código: se lo pasa a «Ya soy socio» con el correo escrito */
+        if (ya) { ponerModoEntrada('soc', 'Ese correo ya es de un socio: no necesitás código de invitación. Entrá con tu clave.'); $('eClave').focus(); return; }
+        if (!cod) { err.textContent = 'Escribí el código de la invitación.'; $('eCodigo').focus(); return; }
         var inv = D.invitaciones.filter(function (i) { return i.codigo === cod && i.email === correo; })[0];
         if (!inv) { err.textContent = 'El código no corresponde a ese correo.'; return; }
-        if (inv.usada) { err.textContent = 'Esa invitación ya se usó. Entrá con "Ya soy socio".'; return; }
+        if (inv.usada) { ponerModoEntrada('soc', 'Esa invitación ya se usó: tu cuenta ya existe. Entrá con tu clave.'); $('eClave').focus(); return; }
         if (hoyISO() > inv.vence) { err.textContent = 'La invitación venció. Pedile una nueva a quien te invitó.'; return; }
         SES = { alta: { codigo: cod, email: correo, paso: 0, datos: { nombre: inv.nombre, nacionalidad: 'argentina', provincia: 'Tierra del Fuego', localidad: 'Ushuaia', cp: '9410', residenciaFiscal: 'Argentina' } } };
         guardarSesion(); irLimpio('#/alta');
       } else {
         var u = usuarioPorCorreo(correo);
-        if (!u) { err.textContent = 'No hay un socio con ese correo.'; return; }
+        if (!u && D.invitaciones.some(function (i) { return i.email === correo && !i.usada && hoyISO() <= i.vence; })) {
+          ponerModoEntrada('inv', 'Todavía no creaste tu cuenta: tenés una invitación pendiente. Escribí el código que te llegó por correo.'); $('eCodigo').focus(); return;
+        }
+        if (!u) { err.textContent = 'No hay un socio con ese correo. Si es tu primera vez, elegí «Tengo una invitación».'; return; }
         if (!u.clave) { err.textContent = 'Los socios de prueba entran con los botones de abajo.'; return; }
         huella(correo + '|' + $('eClave').value).then(function (h) {
           if (h !== u.clave) { err.textContent = 'La clave no es correcta.'; return; }
-          if (!u.totp) { SES = { uid: u.id }; guardarSesion(); anotar(u.id, 'Entró a la app'); guardarDatos(); irLimpio('#/inicio'); return; }
-          if ($('campoTotp').hidden) { $('campoTotp').hidden = false; $('eTotp').focus(); err.textContent = 'Falta el código de 6 números de Google Authenticator.'; return; }
-          totpValido(u.totp, $('eTotp').value).then(function (ok) {
-            if (!ok) { err.textContent = 'El código de Google Authenticator no es correcto (cambia cada 30 segundos).'; anotar(u.id, 'Intento de entrada con código equivocado'); guardarDatos(); return; }
-            SES = { uid: u.id }; guardarSesion(); anotar(u.id, 'Entró a la app con clave y segundo factor'); guardarDatos(); irLimpio('#/inicio');
+          function entrar(como) { SES = { uid: u.id }; guardarSesion(); anotar(u.id, textoEntrada(como)); despuesDeEntrar(u, como); irLimpio('#/inicio'); }
+          if (!u.totp) { entrar(); return; }
+          if ($('campoTotp').hidden) { mostrarSegundoPaso(u.id, u, entrar); err.textContent = 'Falta el código de 6 números de Google Authenticator.'; return; }
+          verificarSegundoPaso(u.id, u, $('eTotp').value).then(function (r) {
+            if (!r.ok) { err.textContent = r.msg; anotar(u.id, 'Intento de entrada con código equivocado'); guardarDatos(); return; }
+            entrar(r);
           });
         });
       }
@@ -1024,7 +1071,7 @@ var GANCHOS = {
           document.querySelector('[data-modo="inv"]').click(); $('eCorreo').value = i.email; $('eCodigo').value = i.codigo; $('eCodigo').focus(); return;
         }
         if (b.dataset.demo === 'obs') { entrarObservadorDemo(); return; }
-        SES = { uid: b.dataset.demo }; guardarSesion(); anotar(b.dataset.demo, 'Entró a la app'); guardarDatos(); irLimpio('#/inicio');
+        SES = { uid: b.dataset.demo }; guardarSesion(); anotar(b.dataset.demo, 'Entró a la app'); despuesDeEntrar(usuario(b.dataset.demo)); irLimpio('#/inicio');
       };
     });
   },
@@ -1193,19 +1240,18 @@ var GANCHOS = {
       descargar('mis-datos-bd.json', JSON.stringify(mios, null, 2), 'application/json'); anotar(u.id, 'Descargó sus datos');
     };
     $('btnBaja').onclick = function () { anotar(u.id, 'Pidió la baja de sus datos'); guardarDatos(); tostada('Pedido registrado. El fiduciario responde en 10 días hábiles (los datos contables se guardan el plazo que exige la ley).'); };
-    if ($('btnTotp')) $('btnTotp').onclick = function () { ventana(abrirActivarTotp); };
+    ganchoSeguridad();
     ganchoNtfy();
     $('chkSon').onchange = function () { PREF.sinSonido = !this.checked; guardar('bd.preferencias', PREF); };
     $('chkResumen').onchange = function () { u.sinResumen = !this.checked; anotar(u.id, this.checked ? 'Activó el resumen semanal' : 'Desactivó el resumen semanal'); guardarDatos(); };
     $('chkLetra').onchange = function () { PREF.letraGrande = this.checked; guardar('bd.preferencias', PREF); aplicarPreferencias(); };
     $('chkMov').onchange = function () { PREF.sinMovimiento = this.checked; guardar('bd.preferencias', PREF); aplicarPreferencias(); };
-    $('btnSalir').onclick = function () { if (MODO_REAL) nubeSalir(); SES = {}; guardarSesion(); irLimpio('#/'); };
+    $('btnSalir').onclick = function () { if (MODO_REAL) nubeDormir(); SES = {}; guardarSesion(); irLimpio('#/'); };
     if (MODO_REAL) $('btnReiniciar').hidden = true;
     else $('btnReiniciar').onclick = function () { reiniciarDemo(); SES = {}; guardarSesion(); tostada('Datos de prueba restablecidos.'); irLimpio('#/'); };
   }
 };
-GANCHOS.mas = function () {};
-GANCHOS.fundador = ganchoAltaFundador;
+GANCHOS.mas = function () { if ($('btnSalirMas')) $('btnSalirMas').onclick = salirDeLaApp; };
 GANCHOS.oportunidades = ganchoOportunidades;
 Object.keys(GANCHOS_EXTRA).forEach(function (k) { GANCHOS[k] = GANCHOS_EXTRA[k]; });
 GANCHOS.inversiones = ganchoInversiones; GANCHOS.contratos = ganchoContratos;

@@ -8,7 +8,9 @@
      bd/inst/fundador        quién es el socio fundador (se escribe una sola vez)
      bd/usuarios/<uid>       nombre, correo y rol (lo ven los socios)
      bd/fichas/<uid>         datos personales y fiscales (los ven el socio y el fundador)
-     bd/seg/<uid>            clave de Google Authenticator (solo el socio)
+     bd/seg/<uid>            Google Authenticator, códigos de recuperación (solo su huella), llaves públicas de huella o cara,
+                             equipos que entraron y canales de avisos (solo el socio)
+     bd/avisosEntrada/<uid>  pedidos de correo por una entrada desde un equipo nuevo (los lee y borra solo el servidor)
      bd/yo/<uid>             leídos, oportunidades vistas y cartera copiada (solo el socio)
      bd/buzon/<uid>          mensajes privados del chat (solo el socio)
      bd/inv/<código>         invitaciones (se leen sabiendo el código)
@@ -62,7 +64,8 @@ function nubeIniciar() {
   }).then(function (r) {
     var u = r[1];
     if (u && SES.uid === u.uid && !sesionVencida()) return nubeEntrar(u.uid);
-    if (u) return NUBE.auth.signOut();
+    var l = typeof llaveLocal === 'function' ? llaveLocal() : null;
+    if (u && !(l && l.uid === u.uid)) return NUBE.auth.signOut();
   });
 }
 
@@ -89,6 +92,13 @@ function nubeEntrar(uid) {
   });
 }
 function nubeSalirEscucha() { NUBE.refs.forEach(function (r) { r.off(); }); NUBE.refs = []; NUBE.listo = false; NUBE.uid = null; NUBE.admin = false; NUBE.enviado = {}; }
+/* al salir o cuando se cierra sola: si este equipo tiene la huella de esa cuenta, la sesión de Firebase queda abierta
+   (la app igual se cierra y para volver hace falta la huella o la cara); si no, se cierra del todo */
+function nubeDormir() {
+  var l = typeof llaveLocal === 'function' ? llaveLocal() : null, cu = NUBE.auth && NUBE.auth.currentUser;
+  if (l && cu && l.uid === cu.uid) { nubeSalirEscucha(); D = datosVacios(); return Promise.resolve(); }
+  return nubeSalir();
+}
 function nubeSalir() {
   nubeSalirEscucha(); D = datosVacios();
   return NUBE.auth ? NUBE.auth.signOut().catch(function () {}) : Promise.resolve();
@@ -110,6 +120,8 @@ function redibujarSiSePuede() {
 setInterval(redibujarSiSePuede, 1500);
 
 /* ---------- de la base a los datos de la app ---------- */
+/* lo privado de cada socio que vive en bd/seg/<uid> */
+var CAMPOS_SEG = ['totp', 'rec', 'recFecha', 'llaves', 'equipos', 'ntfy', 'canales'];
 var FICHA_VACIA = { nombre: '', dni: '', cuit: '', condIva: '', condGanancias: '', telefono: '', domicilio: '', localidad: '', provincia: '', cp: '', cbu: '', banco: '', sustituto: {}, consentimiento: {} };
 function valores(o) { return o ? Object.keys(o).map(function (k) { return o[k]; }) : []; }
 function construirDesdeNube() {
@@ -118,7 +130,7 @@ function construirDesdeNube() {
   d.usuarios = valores(s.usuarios).map(function (p) {
     var u = Object.assign({}, p), f = (s.fichas || {})[p.id];
     u.ficha = f ? Object.assign({}, FICHA_VACIA, f) : Object.assign({}, FICHA_VACIA, { nombre: p.nombre, _ajena: true });
-    if (p.id === uid && s.seg[uid] && s.seg[uid].totp) u.totp = s.seg[uid].totp;
+    if (p.id === uid && s.seg[uid]) CAMPOS_SEG.forEach(function (k) { if (s.seg[uid][k] != null) u[k] = s.seg[uid][k]; });
     return u;
   });
   COLECCIONES.forEach(function (c) { d[c] = valores(dd[c]); });
@@ -166,7 +178,7 @@ function serializar(d) {
     var p = { id: u.id, nombre: u.nombre, email: u.email, rol: u.rol, alta: u.alta, invitadoPor: u.invitadoPor, invitacion: u.invitacion, sinResumen: u.sinResumen || undefined };
     arbol.usuarios[u.id] = limpio(p);
     if (u.ficha && !u.ficha._ajena && (NUBE.admin || u.id === uid)) arbol.fichas[u.id] = limpio(u.ficha);
-    if (u.id === uid && u.totp) arbol.seg[uid] = { totp: u.totp };
+    if (u.id === uid) { var sg = {}; CAMPOS_SEG.forEach(function (k) { if (u[k] != null) sg[k] = u[k]; }); sg = limpio(sg); if (sg) arbol.seg[uid] = sg; }
   });
   COLECCIONES.forEach(function (c) {
     var m = {};
@@ -244,14 +256,14 @@ function serializarServidor() {
 /* ---------- cuentas ---------- */
 function errorCuenta(e) {
   var c = e && e.code || '';
-  return { 'auth/invalid-credential': 'El correo o la clave no son correctos.', 'auth/wrong-password': 'La clave no es correcta.', 'auth/user-not-found': 'No hay una cuenta con ese correo.',
+  return { 'auth/invalid-credential': 'El correo o la clave no son correctos. Si es tu primera vez, elegí «Tengo una invitación».', 'auth/wrong-password': 'La clave no es correcta.', 'auth/user-not-found': 'No hay una cuenta con ese correo. Si es tu primera vez, elegí «Tengo una invitación».',
     'auth/invalid-email': 'Revisá el correo.', 'auth/too-many-requests': 'Demasiados intentos. Esperá unos minutos y probá de nuevo.', 'auth/email-already-in-use': 'Ese correo ya tiene una cuenta. Entrá con «Ya soy socio».',
     'auth/weak-password': 'La clave es muy débil: usá al menos 8 caracteres con letras y números.', 'auth/network-request-failed': 'Sin conexión a internet. Probá de nuevo.',
     'PERMISSION_DENIED': 'La base no aceptó el cambio. ¿Están publicadas las reglas de Firebase?' }[c] || ('No se pudo completar (' + (c || (e && e.message) || 'error') + ').');
 }
 function nubeLogin(correo, clave) { return NUBE.auth.signInWithEmailAndPassword(correo, clave).then(function (r) { return r.user; }); }
 function nubeCrearCuenta(correo, clave) { return NUBE.auth.createUserWithEmailAndPassword(correo, clave).then(function (r) { return r.user; }); }
-function nubeTotpDe(uid) { return NUBE.db.ref('bd/seg/' + uid + '/totp').once('value').then(function (s) { return s.val(); }, function () { return null; }); }
+function nubeSegDe(uid) { return NUBE.db.ref('bd/seg/' + uid).once('value').then(function (s) { return s.val() || {}; }, function () { return {}; }); }
 function nubeInvitacion(codigo) { return NUBE.db.ref('bd/inv/' + claveSegura(codigo)).once('value').then(function (s) { return s.val(); }); }
 function nubeOlvideClave(correo) { return NUBE.auth.sendPasswordResetEmail(correo); }
 /* escribe de una vez varias cosas (alta del fundador o de un invitado): o entra todo o nada */

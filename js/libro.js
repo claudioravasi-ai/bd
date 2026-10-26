@@ -62,7 +62,7 @@ var CLAVE_DATOS = 'bd.prueba.datos.v1';
 var D = null;
 function cargarDatos() {
   if (MODO_REAL) { if (!D) D = datosVacios(); return D; }
-  D = leer(CLAVE_DATOS, null); if (!D || D.v !== 10 || !D.documentos) reiniciarDemo();
+  D = leer(CLAVE_DATOS, null); if (!D || D.v !== 11 || !D.documentos) reiniciarDemo();
   if (!D.lineasBanco) { D.lineasBanco = []; D.conciliaciones = []; }
   if (!D.mensajes) D.mensajes = []; if (!D.oportunidades) D.oportunidades = []; if (!D.leidos) D.leidos = {}; if (!D.pagosPendientes) D.pagosPendientes = [];
   return D;
@@ -108,8 +108,6 @@ function generarDemo() {
     var f = fichaDemo(i, x[0], x[2]); f.consentimiento.fecha = inicio;
     return { id: 'u' + (i + 1), nombre: x[0], email: x[1], rol: i === 0 ? 'fundador' : 'socio', alta: inicio, invitadoPor: i === 0 ? null : 'u1', ficha: f, demo: true };
   });
-  /* el socio fundador NO entra con un botón: crea su cuenta con CUIL, correo, clave y Google Authenticator */
-  usuarios[0].sinActivar = true;
   var M = MARKETS.ushuaia, tasa = rendimientoDe(REPARTO_VIGENTE, true);
   var g = {
     id: 'alfa', letra: 'Alfa', simbolo: 'α', estado: 'activo', N: 10, aporte: 500, ciclo: 10, mercado: 'ushuaia', modo: 'mensual', m2min: M2_MINIMO,
@@ -169,7 +167,7 @@ function generarDemo() {
     { id: 'delta', letra: 'Delta', simbolo: 'δ', estado: 'abierto', N: 8, aporte: 1000, ciclo: 10, mercado: 'ushuaia', modo: 'mixto', fee: 0.05, reserva: 1000, tasaEspera: tasa, inicio: null, socios: ['u1', 'u5', 'u8', 'u10', 'u4'], creadoPor: 'u1', estructura: 'B · fiduciaria autorizada (a definir)', creado: sumarDias(hoy, -84) }
   ];
   return {
-    v: 10, creado: hoy, usuarios: usuarios, grupos: grupos, movimientos: movs, propiedades: props, votaciones: votaciones,
+    v: 11, creado: hoy, usuarios: usuarios, grupos: grupos, movimientos: movs, propiedades: props, votaciones: votaciones,
     invitaciones: [{ codigo: 'BD7K4M', email: 'invitado@demo.bd', nombre: 'Invitado de ejemplo', g: 'delta', por: 'u1', fecha: sumarDias(hoy, -1), vence: sumarDias(hoy, 6), usada: false }],
     bitacora: [{ f: new Date().toISOString(), quien: 'sistema', que: 'Se armaron los datos de prueba' }],
     inquilinos: props.length ? [{ id: 'iq1', g: 'alfa', prop: props[0].id, nombre: 'Ana Torres (inquilina de prueba)', dni: '', tel: '+5492901000000', email: 'inquilina@example.com', creado: props[0].fecha, contrato: { inicio: props[0].fecha, fin: sumarDias(props[0].fecha, 730), monto: props[0].alquiler, moneda: 'USD', diaPago: 10, ajuste: 'Fijo en dólares, sin ajuste', deposito: props[0].alquiler, garantia: 'Seguro de caución' } }] : [],

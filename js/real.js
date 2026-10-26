@@ -1,16 +1,16 @@
 /* ===== Pantallas y pasos que cambian en la versión real (Firebase) =====
-   Entrar con correo, clave y Google Authenticator; alta del fundador y de cada invitado con cuenta de verdad;
+   Entrar con correo, clave y Google Authenticator (o huella o cara, o un código de recuperación); alta de cada invitado con cuenta de verdad;
    el socio avisa su transferencia y el fiduciario la confirma (nadie se acredita un aporte solo);
    el fundador arranca Alfa cuando están los socios. */
 
-var LOGIN = null, FUND_CLAVE = null;
+var LOGIN = null;
 
 /* ---------- entrar ---------- */
 function entrarSocioReal(correo, err) {
   if (LOGIN && LOGIN.correo === correo && !$('campoTotp').hidden) {
-    totpValido(LOGIN.totp, $('eTotp').value).then(function (ok) {
-      if (!ok) { err.textContent = 'El código de Google Authenticator no es correcto (cambia cada 30 segundos).'; return; }
-      completarEntrada(LOGIN.uid, err);
+    verificarSegundoPaso(LOGIN.uid, LOGIN.seg, $('eTotp').value).then(function (r) {
+      if (!r.ok) { err.textContent = r.msg; return; }
+      completarEntrada(LOGIN.uid, err, r);
     });
     return;
   }
@@ -18,24 +18,43 @@ function entrarSocioReal(correo, err) {
   if (!clave) { err.textContent = 'Escribí tu clave.'; $('eClave').focus(); return; }
   err.textContent = 'Entrando…';
   nubeLogin(correo, clave).then(function (user) {
-    return nubeTotpDe(user.uid).then(function (t) {
-      if (t) { LOGIN = { uid: user.uid, totp: t, correo: correo }; $('campoTotp').hidden = false; $('eTotp').focus(); err.textContent = 'Falta el código de 6 números de Google Authenticator.'; return; }
+    return nubeSegDe(user.uid).then(function (seg) {
+      if (seg.totp) {
+        LOGIN = { uid: user.uid, seg: seg, correo: correo };
+        mostrarSegundoPaso(user.uid, seg, function (como) { completarEntrada(user.uid, err, como); });
+        err.textContent = 'Falta el código de 6 números de Google Authenticator.'; return;
+      }
       return completarEntrada(user.uid, err);
     });
   }).catch(function (e) { err.textContent = errorCuenta(e); });
 }
-function completarEntrada(uid, err) {
+/* en el equipo donde activó la huella, la sesión de Firebase quedó abierta: la huella o la cara la reabren.
+   Devuelve la función que entra (la llama el sensor después de la animación). */
+function huellaReal(l) {
+  var cu = NUBE.auth && NUBE.auth.currentUser;
+  if (!cu || cu.uid !== l.uid) return Promise.reject({ msg: 'Por seguridad, esta vez entrá con tu correo y tu clave. En el paso del código vas a poder usar la huella.' });
+  return nubeSegDe(cu.uid).then(function (seg) {
+    var llave = seg.llaves && seg.llaves[l.id];
+    if (!llave) { nubeSalir(); throw { msg: 'La huella de este equipo se quitó. Entrá con correo y clave.', quitar: true }; }
+    return comprobarHuella(l.id, llave).then(function (ok) {
+      if (!ok) throw { msg: 'No se pudo comprobar la huella. Entrá con correo y clave.' };
+      return function () { completarEntrada(cu.uid, $('eError'), { huella: l.id }); };
+    });
+  });
+}
+function completarEntrada(uid, err, como) {
   return nubeEntrar(uid).then(function () {
-    if (!usuario(uid)) { err.textContent = 'Esa cuenta no está habilitada en B&D. Pedí una invitación al socio fundador.'; LOGIN = null; nubeSalir(); return; }
-    LOGIN = null; SES = { uid: uid }; guardarSesion(); anotar(uid, 'Entró a la app'); guardarDatos(); irLimpio('#/inicio'); render();
+    var u = usuario(uid);
+    if (!u) { err.textContent = 'Esa cuenta no está habilitada en B&D. Pedí una invitación al socio fundador.'; LOGIN = null; nubeSalir(); return; }
+    LOGIN = null; SES = { uid: uid }; guardarSesion(); anotar(uid, textoEntrada(como)); despuesDeEntrar(u, como); irLimpio('#/inicio'); render();
   });
 }
 function entrarConInvitacionReal(correo, cod, err) {
-  if (!cod) { err.textContent = 'Escribí el código de la invitación.'; return; }
+  if (!cod) { err.textContent = 'Escribí el código de la invitación. Si ya sos socio no hace falta: elegí «Ya soy socio».'; $('eCodigo').focus(); return; }
   err.textContent = 'Buscando la invitación…';
   nubeInvitacion(cod).then(function (inv) {
     if (!inv || inv.email !== correo) { err.textContent = 'El código no corresponde a ese correo.'; return; }
-    if (inv.usada) { err.textContent = 'Esa invitación ya se usó. Entrá con «Ya soy socio».'; return; }
+    if (inv.usada) { ponerModoEntrada('soc', 'Esa invitación ya se usó: tu cuenta ya existe. Entrá con tu clave.'); $('eClave').focus(); return; }
     if (hoyISO() > inv.vence) { err.textContent = 'La invitación venció. Pedile una nueva a quien te invitó.'; return; }
     SES = { alta: { codigo: cod, email: correo, paso: 0, inv: inv, datos: { nombre: inv.nombre, nacionalidad: 'argentina', provincia: 'Tierra del Fuego', localidad: 'Ushuaia', cp: '9410', residenciaFiscal: 'Argentina' } } };
     guardarSesion(); irLimpio('#/alta');
@@ -64,38 +83,13 @@ function terminarAltaReal() {
     c['datos/bitacora/' + claveDe('bitacora', b)] = b;
     return nubeEscribir(c).then(function () { return nubeEntrar(uid); }, function (e) { return user.delete().catch(function () {}).then(function () { throw e; }); })
       .then(function () {
-        SES = { uid: uid, g: mirar ? null : inv.g }; guardarSesion(); lluviaDorada();
+        SES = { uid: uid, g: mirar ? null : inv.g }; guardarSesion(); if (usuario(uid)) despuesDeEntrar(usuario(uid)); lluviaDorada();
         tostada(mirar ? 'Bienvenido/a: podés mirar la vitrina.' : '¡Bienvenido/a a B&D!'); irLimpio(mirar ? '#/vitrina' : '#/inicio'); render();
       });
   }).catch(function (e) { if ($('altaError')) $('altaError').textContent = errorCuenta(e); });
 }
 
 /* ---------- alta del socio fundador (una sola vez en la base) ---------- */
-function grupoAlfaInicial(uid) {
-  var so = {}; so[uid] = 0;
-  return { id: 'alfa', letra: 'Alfa', simbolo: 'α', estado: 'abierto', sinPlazo: true, N: 10, aporte: 500, ciclo: 10, mercado: 'ushuaia', modo: 'mensual', m2min: M2_MINIMO,
-    fee: 0, reserva: 1000, tasaEspera: rendimientoDe(REPARTO_VIGENTE, true), socios: so, creadoPor: uid, estructura: 'A · proyecto cerrado por invitación',
-    creado: hoyISO(), fiduciario: 'A designar en el contrato', reparto: REPARTO_VIGENTE };
-}
-function crearFundadorReal(a, err) {
-  if (!FUND_CLAVE) { a.paso = 0; render(); tostada('Por seguridad, escribí la clave otra vez.'); return; }
-  err.textContent = 'Creando la cuenta…';
-  nubeCrearCuenta(a.email, FUND_CLAVE).then(function (user) {
-    var uid = user.uid, hoy = hoyISO(), c = {};
-    c['inst'] = { fundador: uid, fecha: hoy };
-    c['usuarios/' + uid] = { id: uid, nombre: a.nombre, email: a.email, rol: 'fundador', alta: hoy };
-    c['fichas/' + uid] = limpio(Object.assign({}, FICHA_VACIA, { nombre: a.nombre, cuit: a.cuil, provincia: 'Tierra del Fuego', localidad: 'Ushuaia', consentimiento: { fecha: hoy, version: '1' } }));
-    c['seg/' + uid] = { totp: a.secreto };
-    c['datos/grupos/alfa'] = limpio(grupoAlfaInicial(uid));
-    var b = { f: new Date().toISOString(), quien: uid, que: 'Creó la cuenta de socio fundador con segundo factor y el fideicomiso Alfa' };
-    c['datos/bitacora/' + claveDe('bitacora', b)] = b;
-    return nubeEscribir(c).then(function () { NUBE.instalado = { fundador: uid, fecha: hoy }; return nubeEntrar(uid); }, function (e) { return user.delete().catch(function () {}).then(function () { throw e; }); })
-      .then(function () {
-        FUND_CLAVE = null; SES = { uid: uid }; guardarSesion(); lluviaDorada(); tostada('Cuenta de fundador creada. Ahora invitá a los socios desde «Socios».'); irLimpio('#/inicio'); render();
-      });
-  }).catch(function (e) { err.textContent = errorCuenta(e); });
-}
-
 /* ---------- aportes: el socio avisa, el fiduciario confirma ---------- */
 function avisarTransferencia(g, u, per, mon, met, monto) {
   monto = monto || g.aporte;

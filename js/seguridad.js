@@ -2,7 +2,7 @@
    Al activar, la app crea una clave secreta al azar y la muestra como código QR. Google Authenticator
    (o Microsoft Authenticator, 1Password, Authy) la guarda y genera un código de 6 números que cambia cada 30 segundos.
    Para entrar hacen falta las tres cosas: correo, clave y el código del teléfono.
-   El socio fundador no entra con un botón: crea su cuenta una sola vez con CUIL, correo, clave y este código.
+   La cuenta del socio fundador ya está creada en la versión real: la app no ofrece crear otra.
    Modo prueba: la clave secreta queda en este equipo. En la versión real queda en el servidor y nunca vuelve al teléfono. */
 
 var B32 = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ234567';
@@ -57,58 +57,6 @@ function bloqueActivarTotp(secreto, correo) {
     '<div class="campo"><label for="tCodigo">Código de 6 números de Google Authenticator</label><input id="tCodigo" inputmode="numeric" autocomplete="one-time-code" maxlength="7" style="letter-spacing:.3em;font-size:1.3rem;text-align:center"></div>';
 }
 
-/* ---------- alta del socio fundador (una sola vez) ---------- */
-function vistaAltaFundador() {
-  var a = SES.altaFundador || { paso: 0 };
-  if (a.paso === 1) {
-    return '<div class="entrada"><div class="entrada-caja form-alta entrar" style="max-width:520px"><div style="text-align:center">' + svgLogo('logo-grande').replace('logo-grande', 'logo-grande" style="width:72px;height:72px') +
-      '<p class="etiqueta">Paso 2 de 2</p><h2>Segundo factor: Google Authenticator</h2></div>' +
-      '<form id="formFundador" class="tarjeta dorada apilar" novalidate>' + bloqueActivarTotp(a.secreto, a.email) +
-      '<p class="rojo chico" id="fundError" role="alert"></p><div class="fila entre"><button type="button" class="btn" id="fundAtras">← Atrás</button><button class="btn btn-oro">Activar y entrar</button></div></form></div></div>';
-  }
-  return '<div class="entrada"><div class="entrada-caja form-alta entrar" style="max-width:520px"><div style="text-align:center">' + svgLogo('logo-grande').replace('logo-grande', 'logo-grande" style="width:72px;height:72px') +
-    '<p class="etiqueta">Paso 1 de 2</p><h2>Cuenta del socio fundador</h2><p class="gris chico">Se hace una sola vez. Después, para entrar hacen falta tu correo, tu clave y el código de tu teléfono: nadie más puede entrar como fundador.</p></div>' +
-    '<form id="formFundador" class="tarjeta dorada apilar" novalidate>' +
-    '<div class="campo"><label for="fNombre">Nombre y apellido</label><input id="fNombre" autocomplete="name" value="' + esc(a.nombre || '') + '"></div>' +
-    '<div class="campo"><label for="fCuil">CUIL o CUIT</label><input id="fCuil" inputmode="numeric" maxlength="13" autocomplete="off" value="' + esc(a.cuil || '') + '"><span class="ayuda">Se controla el dígito verificador. Queda en tu ficha y solo la ven vos y el contador.</span></div>' +
-    '<div class="campo"><label for="fCorreo">Correo electrónico</label><input id="fCorreo" type="email" autocomplete="email" value="' + esc(a.email || '') + '"><span class="ayuda">Ahí te llegan los avisos y el resumen semanal en PDF.</span></div>' +
-    '<div class="campo"><label for="fClave1">Clave (mínimo 10 caracteres, con letras y números)</label><input id="fClave1" type="password" autocomplete="new-password"></div>' +
-    '<div class="campo"><label for="fClave2">Repetí la clave</label><input id="fClave2" type="password" autocomplete="new-password"></div>' +
-    '<p class="rojo chico" id="fundError" role="alert"></p><div class="fila entre"><button type="button" class="btn" id="fundCancelar">← Atrás</button><button class="btn btn-oro">Seguir</button></div></form></div></div>';
-}
-function ganchoAltaFundador() {
-  var a = SES.altaFundador || (SES.altaFundador = { paso: 0 }), f = $('formFundador'), err = $('fundError');
-  if ($('fundCancelar')) $('fundCancelar').onclick = function () { delete SES.altaFundador; guardarSesion(); irLimpio('#/'); };
-  if ($('fundAtras')) $('fundAtras').onclick = function () { a.paso = 0; render(); };
-  f.onsubmit = function (e) {
-    e.preventDefault(); err.textContent = '';
-    if (a.paso === 0) {
-      var nombre = $('fNombre').value.trim(), cuil = $('fCuil').value.replace(/\D/g, ''), correo = $('fCorreo').value.trim().toLowerCase(), c1 = $('fClave1').value, c2 = $('fClave2').value;
-      if (nombre.split(/\s+/).length < 2) { err.textContent = 'Escribí nombre y apellido.'; return; }
-      if (!cuitValido(cuil)) { err.textContent = 'El CUIL no es válido: revisá los 11 números.'; return; }
-      if (!correoValido(correo)) { err.textContent = 'Revisá el correo.'; return; }
-      if (usuarioPorCorreo(correo) && usuarioPorCorreo(correo).id !== 'u1') { err.textContent = 'Ese correo ya es de otro socio.'; return; }
-      if (c1.length < 10 || !/[a-zA-Z]/.test(c1) || !/\d/.test(c1)) { err.textContent = 'La clave necesita al menos 10 caracteres, con letras y números.'; return; }
-      if (c1 !== c2) { err.textContent = 'Las dos claves no coinciden.'; return; }
-      if (MODO_REAL) FUND_CLAVE = c1;
-      huella(correo + '|' + c1).then(function (h) {
-        Object.assign(a, { paso: 1, nombre: nombre, cuil: cuil, email: correo, huella: h, secreto: secretoNuevo() });
-        render();
-      });
-      return;
-    }
-    totpValido(a.secreto, $('tCodigo').value).then(function (ok) {
-      if (!ok) { err.textContent = 'El código no coincide. Fijate que la hora del teléfono esté en automático y probá con el código nuevo.'; return; }
-      if (MODO_REAL) { crearFundadorReal(a, err); return; }
-      var u = usuario('u1');
-      u.nombre = a.nombre; u.email = a.email; u.clave = a.huella; u.totp = a.secreto; u.ficha.nombre = a.nombre; u.ficha.cuit = a.cuil; delete u.sinActivar; delete u.demo;
-      anotar('u1', 'Creó la cuenta de socio fundador con segundo factor'); guardarDatos();
-      SES = { uid: 'u1' }; guardarSesion(); lluviaDorada(); tostada('Cuenta de fundador activada con Google Authenticator.'); irLimpio('#/inicio');
-    });
-  };
-  var c = $('tCodigo'); if (c) c.focus();
-}
-
 /* activar o desactivar el segundo factor desde Mis datos (cualquier socio) */
 function abrirActivarTotp() {
   var u = yo(), s = secretoNuevo();
@@ -117,7 +65,9 @@ function abrirActivarTotp() {
     e.preventDefault();
     totpValido(s, $('tCodigo').value).then(function (ok) {
       if (!ok) { $('totpError').textContent = 'El código no coincide. Probá con el código nuevo.'; return; }
-      u.totp = s; anotar(u.id, 'Activó el segundo factor'); guardarDatos(); cerrarModal(true); render(); tostada('Listo: desde ahora entrás con clave y código del teléfono.');
+      var antes = !!u.totp; u.totp = s; anotar(u.id, antes ? 'Pasó Google Authenticator a otro teléfono' : 'Activó el segundo factor'); guardarDatos(); cerrarModal(true); render();
+      tostada(antes ? 'Listo: desde ahora vale el código del teléfono nuevo.' : 'Listo: desde ahora entrás con clave y código del teléfono.');
+      if (!(u.rec || []).length) setTimeout(function () { ventana(abrirCodigosRecuperacion); }, 300);
     });
   };
 }
