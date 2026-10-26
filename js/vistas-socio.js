@@ -14,34 +14,23 @@ function vistaInversiones(u) {
   var props = propiedadesActivas(g.id), ultimaInv = movsDe(g.id).filter(function (m) { return m.tipo === 'inversion'; }).pop(), tot = e.caja + e.inv + e.inm;
   var tabla = SES.tablaCapital || 'ciclo';
 
-  /* tres escenarios a la vez (idea de la app de inversiones) y opción de subir el aporte */
-  var crec = SES.crecimiento || 0, colores = { pesimista: '#FF6B6B', basico: '#FBBF24', optimista: '#34D399' }, res = {};
-  ['pesimista', 'basico', 'optimista'].forEach(function (x) { res[x] = simulate(paramsEsc(g, x, { contribGrowth: crec })); });
-  var rB = res.basico, anios = Math.round(rB.T / 12), ey = [], lin = { pesimista: [], basico: [], optimista: [] }, pa = [], pb = [];
-  for (k = 0; k <= anios; k++) {
-    ey.push(k === 0 ? 'inicio' : 'año ' + k);
-    Object.keys(lin).forEach(function (x) { lin[x].push(k ? res[x].series[k * 12 - 1].liq / g.N : 0); });
-    pa.push(k ? rB.series[k * 12 - 1].contributed / g.N : 0); pb.push(k ? rB.series[k * 12 - 1].bench / g.N : 0);
-  }
-  var hitos = [1, 2, 3, 5, 10].filter(function (a) { return a <= anios; }).map(function (a) { var x = rB.series[a * 12 - 1], d = desglose(rB, a * 12); return { a: a, ap: x.contributed / g.N, v: x.liq / g.N, costos: (d.gastos + d.venta) / g.N, tir: tirHasta(rB, a * 12, g.N) }; });
-
   var filasTabla = (tabla === 'mes' ? cmp : cmp.filter(function (f) { return f.cierraCiclo; })).map(function (f) {
     var d = f.capital - f.ref, ini = tabla === 'ciclo' ? cmp[(f.ciclo - 1) * g.ciclo - 1] : null;
     var apCiclo = f.aportado - (ini ? ini.aportado : 0), ganCiclo = f.capital - (ini ? ini.capital : 0) - apCiclo, ganRef = f.ref - (ini ? ini.ref : 0) - apCiclo;
     return '<tr' + (f.cierraCiclo && tabla === 'mes' ? ' style="border-bottom:2px solid var(--borde)"' : '') + '><td>' + (tabla === 'mes' ? 'Mes ' + f.n + '<br><span class="chico gris">' + nombreMesCorto(f.mes) + '</span>' : 'Ciclo ' + f.ciclo + '<br><span class="chico gris">meses ' + ((f.ciclo - 1) * g.ciclo + 1) + ' a ' + f.n + (f.n % g.ciclo ? ' (en curso)' : '') + '</span>') + '</td>' +
       '<td class="n">' + num(f.aportado) + '</td><td class="n"><b>' + num(f.capital, 2) + '</b></td><td class="n">' + num(f.ref, 2) + '</td>' +
-      '<td class="n ' + (d >= 0 ? 'verde' : 'rojo') + '">' + (d >= 0 ? '+' : '') + num(d, 2) + '</td>' +
-      (tabla === 'ciclo' ? '<td class="n ' + (ganCiclo >= ganRef ? 'verde' : 'rojo') + '">' + num(ganCiclo, 2) + ' <span class="gris chico">vs ' + num(ganRef, 2) + '</span></td>' : '') +
+      '<td class="n ' + (d >= 0 ? 'verde' : 'rojo') + '">' + (d >= 0 ? '+' : '−') + num(Math.abs(d), 2) + '<br><span class="chico">' + (d >= 0 ? 'adelante' : 'atrás') + '</span></td>' +
+      (tabla === 'ciclo' ? '<td class="n ' + (ganCiclo >= ganRef ? 'verde' : 'rojo') + '">' + num(ganCiclo, 2) + ' <span class="gris chico">· ' + num(ganRef, 2) + '</span></td>' : '') +
       '<td class="n">' + (isFinite(f.tir) ? pct(f.tir) : '<span class="chico gris">con 2 aportes</span>') + '</td></tr>';
   }).join('');
 
   var c1 = cmp[0], pp = porcentajes100([e.inm, e.inv, e.caja]), part = e.up ? misUp / e.up : 0;
   var ap1 = movsDe(g.id).filter(function (m) { return m.tipo === 'aporte' && m.socio === u.id; })[0];
   return '<h1>Mis inversiones</h1><p class="gris">Tu parte del fideicomiso ' + esc(g.letra.toUpperCase()) + ', cómo creció, contra qué se compara, en qué está invertido el grupo y hacia dónde puede ir.</p>' +
-    '<section class="rejilla r4 seccion">' + kpi('Aporté', aport, 'usd', 'en ' + nAportes + ' aportes') +
-    kpi('Vale hoy', valor, 'usd', num(misUp, 3) + ' UP × ' + usd(e.vup, 2)) +
-    kpi('Contra la meta del 6%', null, '', vsRef >= 0 ? 'mi capital va adelante (en dólares)' : 'el 6% va adelante (en dólares)', '<span class="' + (vsRef >= 0 ? 'verde' : 'rojo') + '">' + (vsRef >= 0 ? '+' : '−') + usd(Math.abs(vsRef), 2) + '</span>') +
-    kpiBoton('btnTirInv', 'Mi TIR real', null, '', 'interés anual de mi plata, alquiler fijo · tocá para ver escenarios', isFinite(tir) ? pct(tir) : '—') + '</section>' +
+    '<section class="rejilla r4 seccion">' + kpi('Aportaste', aport, 'usd', 'en ' + nAportes + ' aportes') +
+    kpiBoton('btnPorQueParte', 'Tu parte vale hoy', valor, 'usd', num(misUp, 2) + ' UP × ' + usd(e.vup, 2) + ' · tocá para entenderlo') +
+    kpi('Ganaste', null, '', (vsRef >= 0 ? 'vas ' + usd(vsRef, 2) + ' adelante' : 'te faltan ' + usd(-vsRef, 2) + ' para ir') + ' igual que la meta del 6%', '<span class="' + (valor >= aport ? 'verde' : 'rojo') + '">' + (valor >= aport ? '+' : '−') + usd(Math.abs(valor - aport), 2) + '</span>') +
+    kpiBoton('btnTirInv', 'Rinde por año (TIR)', null, '', 'como un plazo fijo que te diera lo mismo · tocá para entenderlo', isFinite(tir) ? pct(tir) : '—') + '</section>' +
     seccionDosMedidas(g, u, tir) +
     (deuda.total ? '<section class="tarjeta seccion entrar" style="border-color:rgba(255,146,132,.5)"><h3 class="rojo">Tenés aportes vencidos</h3><p>Debés ' + deuda.meses.map(function (m) { return nombreMes(m.periodo); }).join(', ') + ': ' + moraVivo(deuda.aportes, deuda.meses[0].periodo, { base: deuda.aportes, dec: 6 }) + ' con el interés que corre en vivo.</p>' +
       '<p>Tu parte neta (lo que valen tus UP menos lo que debés): <b class="num">' + usd(valor - deuda.total, 2) + '</b>. Lo adeudado se descuenta de tu parte en las ganancias (art. 25)' + (deuda.suspendido ? ' y <b>tenés suspendidos el voto y la renta</b> (art. 26).' : '; a los 30 días se suspenden el voto y la renta (art. 26).') + '</p><a class="btn btn-oro btn-chico" href="#/pagar">Pagar ahora</a></section>' : '') +
@@ -53,9 +42,10 @@ function vistaInversiones(u) {
       { nombre: 'Mi ganancia real', color: '#FBBF24', vals: cmp.map(function (f) { return f.capital - f.aportado; }), grueso: 3.6, area: true }
     ], { meses: cmp.map(function (f) { return nombreMesCorto(f.mes); }), desc: 'Tu ganancia en dólares mes a mes contra la meta del 6% y un plazo fijo.', lectura: function (t) { var f = cmp[t - 1]; return '<b>Mes ' + f.n + '</b> (' + nombreMes(f.mes) + ') · aportado ' + usd(f.aportado) + ' · <span class="oro">mi capital ' + usd(f.capital, 2) + ' (ganancia ' + usd(f.capital - f.aportado, 2) + ')</span> · <span class="gris">al 6% ' + usd(f.ref, 2) + '</span> · <span style="color:#60A5FA">plazo fijo ' + usd(f.pf, 2) + '</span> · TIR real ' + (isFinite(f.tir) ? pct(f.tir) : '—'); } }) +
     (c1 && ap1 ? '<details class="aviso" style="margin-top:12px"><summary style="cursor:pointer"><b>¿De dónde sale cada número del mes 1?</b></summary><p class="chico" style="margin-top:8px">Pagaste ' + usd(ap1.usd) + ' el ' + fechaCorta(ap1.fecha) + '. Al ' + fechaCorta(c1.fecha) + ' (' + diasEntre(ap1.fecha, c1.fecha) + ' días después) tu capital era <b>' + usd(c1.capital, 2) + '</b>: tus UP por su valor de ese día, que subió con lo que ganó la inversión de espera. Al 6% anual, esos mismos ' + diasEntre(ap1.fecha, c1.fecha) + ' días dan <b>' + usd(c1.ref, 2) + '</b> (6% por año es más o menos 0,49% por mes, no 0,6%: 500 × 1,06 elevado a ' + diasEntre(ap1.fecha, c1.fecha) + '/365). La diferencia, <b>' + (c1.capital - c1.ref >= 0 ? '+' : '−') + usd(Math.abs(c1.capital - c1.ref), 2) + '</b>, es en dólares. La TIR aparece desde el mes 2 porque con un solo aporte no hay con qué compararla; la del mes 2 es el interés anual que equivale a lo que ganaron tus dos aportes en esos días.</p></details>' : '') +
-    '<div class="fila entre" style="margin-top:12px"><div class="segmentos" role="group" aria-label="Ver la tabla">' + [['ciclo', 'Cada ' + g.ciclo + ' meses'], ['mes', 'Mes a mes']].map(function (x) { return '<button type="button" data-tabla-cap="' + x[0] + '" aria-pressed="' + (x[0] === tabla) + '">' + x[1] + '</button>'; }).join('') + '</div></div>' +
-    '<div class="tabla-scroll" style="margin-top:10px"><table><tr><th>' + (tabla === 'mes' ? 'Mes' : 'Ciclo') + '</th><th class="n">Aportado</th><th class="n">Mi capital</th><th class="n">Al 6%</th><th class="n">Diferencia con el 6% (USD)</th>' + (tabla === 'ciclo' ? '<th class="n">Ganancia del ciclo<br><span class="chico">mía vs 6%</span></th>' : '') + '<th class="n">TIR real<br><span class="chico">(alquiler fijo)</span></th></tr>' + filasTabla + '</table></div>' +
-    '<p class="chico gris" style="margin-top:8px">La TIR real es la de lo que pasó: el Departamento 1 está alquilado por mes (fijo). Las de alquiler temporario y los escenarios están en «Mi TIR real» y en la proyección. Con pocos meses de historia, pasar el rendimiento a un año exagera para arriba o para abajo. Mientras se junta la plata para la compra, el capital rinde como la inversión de espera (hoy ' + pct(rendimientoDe(g.reparto || REPARTO_VIGENTE), 2) + '); al comprar se pagan los gastos de escritura (5%), y el 6% se alcanza con los alquileres y la suba del m² de los años siguientes.</p></section>' +
+    '<p class="chico" style="margin:14px 0 0"><b>Cómo leer la tabla.</b> «Al 6%» es lo que valdrían tus mismos aportes, en las mismas fechas, si hubieran rendido 6% por año. «Contra el 6%» es la diferencia en dólares: <span class="rojo">−0,96 atrás</span> quiere decir que tu parte vale 96 centavos menos que eso; <span class="verde">+5,00 adelante</span>, 5 dólares más. Al principio va atrás porque la caja espera la compra en inversiones seguras (rinden menos que 6%) y la escritura cuesta 5%; con los alquileres se pasa adelante.</p>' +
+    '<div class="fila entre" style="margin-top:10px"><div class="segmentos" role="group" aria-label="Ver la tabla">' + [['ciclo', 'Por ciclo (cada ' + g.ciclo + ' meses, una compra)'], ['mes', 'Mes a mes']].map(function (x) { return '<button type="button" data-tabla-cap="' + x[0] + '" aria-pressed="' + (x[0] === tabla) + '">' + x[1] + '</button>'; }).join('') + '</div></div>' +
+    '<div class="tabla-scroll" style="margin-top:10px"><table><tr><th>' + (tabla === 'mes' ? 'Mes' : 'Ciclo') + '</th><th class="n">Aportado</th><th class="n">Mi capital</th><th class="n">Al 6%</th><th class="n">Contra el 6% <br><span class="chico">(dólares)</span></th>' + (tabla === 'ciclo' ? '<th class="n">Ganado en ese ciclo: <br><span class="chico">vos · al 6%</span></th>' : '') + '<th class="n">Rinde por año <br><span class="chico">(TIR)</span></th></tr>' + filasTabla + '</table></div>' +
+    '<p class="chico gris" style="margin-top:8px">Es lo que pasó de verdad, con el alquiler que se cobra hoy. Con pocos meses de historia, pasar el rendimiento a un año exagera para arriba o para abajo. Lo que puede pasar en 10 años, con alquiler fijo y temporario, está en la proyección de Inicio.</p></section>' +
 
     '<section class="rejilla r2 seccion"><div class="tarjeta entrar"><h3>En qué está invertido el fideicomiso</h3>' +
     '<div class="barra-cartera" style="margin:8px 0 12px" role="img" aria-label="Inmuebles ' + pct(tot ? e.inm / tot : 0, 0) + ', inversiones ' + pct(tot ? e.inv / tot : 0, 0) + ', caja ' + pct(tot ? e.caja / tot : 0, 0) + '">' +
@@ -65,23 +55,13 @@ function vistaInversiones(u) {
     '<tr><td><i style="display:inline-block;width:10px;height:10px;border-radius:3px;background:var(--azul);margin-right:6px"></i>Caja y reserva</td><td class="n">' + usd(e.caja) + '</td><td class="n">' + pp[2] + '%</td></tr>' +
     '<tr class="total"><td>Patrimonio</td><td class="n">' + usd(tot) + '</td><td class="n">100%</td></tr></table>' +
     (ultimaInv ? '<p class="chico gris" style="margin-top:10px">Inversión de espera: ' + esc(ultimaInv.desc) + '. <a href="#/mercado">Ver la propuesta de hoy</a>.</p>' : '') +
-    '<p class="chico gris">Los porcentajes se redondean para que sumen 100%. Tu parte de cada cosa: ' + pct(part, 2) + ' (en inmuebles, ' + usd(e.inm * part) + '). <button class="btn-texto chico" id="btnPorQueParte">¿Por qué no es 10% justo?</button></p></div>' +
+    '<p class="chico gris">Los porcentajes se redondean para que sumen 100%. Tu parte de cada cosa: ' + pct(part, 2) + ' (en inmuebles, ' + usd(e.inm * part) + '). <button class="btn-texto chico" id="btnPorQueParte2">¿Por qué no es 10% justo?</button></p></div>' +
     '<div class="tarjeta entrar"><h3>Departamentos</h3>' + (props.length ? '<div class="tabla-scroll"><table><tr><th>Inmueble</th><th class="n">m²</th><th class="n">Costo</th><th class="n">Renta/mes</th><th class="n">Bruta anual</th></tr>' +
       props.map(function (q) { var rr = movsDe(g.id).filter(function (m) { return m.tipo === 'renta' && m.prop === q.id; }).pop(), rm = rr ? rr.usd : 0; return '<tr><td>' + esc(q.nombre) + '<br><span class="chico gris">desde ' + fechaCorta(q.fecha) + ' · ' + esc(q.estado) + '</span></td><td class="n">' + num(q.m2, 1) + '</td><td class="n">' + num(q.precio + q.gastos) + '</td><td class="n">' + num(rm) + '</td><td class="n">' + pct(rm * 12 / q.precio) + '</td></tr>'; }).join('') + '</table></div>' : '<p class="gris">Todavía no se compró ninguno.</p>') +
     '<p class="chico gris">La compra ' + ci.ciclo + ' es en ' + nombreMes(mesDe(ci.fechaCompra)) + '.</p></div></section>' +
     '<section class="tarjeta seccion entrar"><h3>El fideicomiso mes a mes</h3>' + svgApilado(et, [{ vals: inmV, color: '#C9A24B', nombre: 'Inmuebles' }, { vals: invV, color: '#6BD3A4', nombre: 'Inversión de espera' }, { vals: cajaV, color: '#7FB5FF', nombre: 'Caja' }], 'Composición del patrimonio del fideicomiso por mes') + '</section>' +
 
-    '<section class="tarjeta dorada seccion entrar"><h3>Mi proyección simulada</h3>' +
-    '<p class="gris chico">Tu parte (1 de ' + g.N + ') del proyecto completo a ' + anios + ' años, con el motor del simulador, en los tres escenarios a la vez. Pesimista: ' + ESCENARIOS_UI.pesimista.d + '; básico: ' + ESCENARIOS_UI.basico.d + '; optimista: ' + ESCENARIOS_UI.optimista.d + '.</p>' +
-    '<div class="campo" style="max-width:460px"><label for="rCrec">Opción contributiva: subir el aporte cada año un <b class="oro" id="vCrec">' + crec + '%</b></label><input type="range" id="rCrec" min="0" max="10" step="1" value="' + crec + '"><span class="ayuda">Si el grupo vota subir el aporte con la inflación en dólares, se compra antes y más grande. Requiere unanimidad.</span></div>' +
-    svgLineas(ey, [{ vals: pa, color: 'var(--gris)', nombre: 'Lo que aportaría' }, { vals: pb, color: 'var(--azul)', nombre: 'Plazo fijo al 6%', guiones: true },
-      { vals: lin.pesimista, color: colores.pesimista, nombre: 'Pesimista', guiones: true }, { vals: lin.optimista, color: colores.optimista, nombre: 'Optimista', guiones: true },
-      { vals: lin.basico, color: colores.basico, nombre: 'Básico', area: true, grueso: 3 }], { hoy: ci.mesN / 12, desc: 'Al año ' + anios + ' tu parte valdría ' + usd(lin.basico[anios]) + ' en el escenario básico.' }) +
-    '<div class="rejilla r3" style="margin-top:12px">' + ['pesimista', 'basico', 'optimista'].map(function (x) { return '<div class="tarjeta kpi" style="box-shadow:none"><small>' + ESCENARIOS_UI[x].n + ' · año ' + anios + '</small><b style="color:' + colores[x] + '">' + usd(lin[x][anios]) + '</b><span>TIR ' + pct(res[x].irr) + '</span></div>'; }).join('') + '</div>' +
-    '<h3 style="margin-top:18px">Hitos (escenario básico, si se vendiera todo ese día)</h3><div class="tabla-scroll"><table><tr><th>Plazo</th><th class="n">Aportado</th><th class="n">Valor estimado</th><th class="n">Ganancia</th><th class="n">Incluye gastos de compra y venta</th><th class="n">TIR</th></tr>' +
-    hitos.map(function (h) { return '<tr><td>' + h.a + (h.a === 1 ? ' año' : ' años') + '</td><td class="n">' + num(h.ap) + '</td><td class="n"><b>' + num(h.v) + '</b></td><td class="n ' + (h.v >= h.ap ? 'verde' : 'rojo') + '">' + num(h.v - h.ap) + '</td><td class="n rojo">−' + num(h.costos) + '</td><td class="n ' + (h.tir >= 0.06 ? 'verde' : '') + '">' + (isFinite(h.tir) ? pct(h.tir) : '—') + '</td></tr>'; }).join('') + '</table></div>' +
-    '<p class="chico gris" style="margin-top:8px">Si al año 1 aparece un número en rojo no es plata perdida: es el 5% de gastos de escritura que se pagó al comprar más el 5% que costaría vender ese mismo día. Si no se vende, ese costo no existe, y con los alquileres y la suba del m² se recupera en los años siguientes (por eso la TIR sube con el tiempo).</p>' +
-    '<p class="chico gris" style="margin-top:10px">Proyección, no promesa: los mercados no crecen en línea recta. Supone aportes al día de todos los socios.</p></section>';
+    '<section class="tarjeta dorada seccion entrar fila entre"><div><h3 style="margin:0">¿Y en 10 años?</h3><p class="chico gris" style="margin:4px 0 0">La proyección está en un solo lugar, en Inicio: las dos maneras de comprar, con alquiler fijo y temporario, y cuántos departamentos serían.</p></div><a class="btn btn-oro btn-chico" href="#/inicio" id="btnIrProy">Ver la proyección</a></section>';
 }
 /* las dos maneras de medir: la UP (la gestión, igual para todos) y la TIR (mi plata, según mis fechas) */
 function seccionDosMedidas(g, u, tir) {
@@ -94,10 +74,10 @@ function seccionDosMedidas(g, u, tir) {
     '<p class="chico gris" style="margin-top:10px">' + (isFinite(tir) && isFinite(R.anual) ? (tir >= R.anual - 0.002 ? 'Tu plata rinde igual o mejor que el fideicomiso: tus aportes entraron a tiempo.' : 'Tu plata rinde un poco menos que el fideicomiso: algún aporte entró más tarde que el de los demás.') : 'Con más meses de historia se comparan mejor.') + ' Las dos se calculan en dólares y con alquiler fijo, que es como está alquilado hoy.</p></div></section>';
 }
 function ganchoInversiones() {
-  if ($('btnTirInv')) $('btnTirInv').onclick = function () { ventana(ventanaTir); };
-  if ($('btnPorQueParte')) $('btnPorQueParte').onclick = function () { ventana(ventanaMiParte); };
+  if ($('btnTirInv')) $('btnTirInv').onclick = function () { abrirGanancia('tir'); };
+  ['btnPorQueParte', 'btnPorQueParte2'].forEach(function (id) { if ($(id)) $(id).onclick = function () { abrirGanancia('parte'); }; });
   document.querySelectorAll('[data-tabla-cap]').forEach(function (b) { b.onclick = function () { SES.tablaCapital = b.dataset.tablaCap; guardarSesion(); render(); }; });
-  var r = $('rCrec'); if (r) { r.oninput = function () { $('vCrec').textContent = r.value + '%'; }; r.onchange = function () { SES.crecimiento = +r.value; guardarSesion(); render(); }; }
+  if ($('btnIrProy')) $('btnIrProy').onclick = function () { SES.irProy = true; };
 }
 
 /* =================== CONTRATOS Y FIRMAS =================== */

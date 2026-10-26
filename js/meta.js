@@ -16,7 +16,7 @@ function sociosMeta() { var g = grupoActual(); return g ? g.N : 10; }
 /* parámetros del motor para un camino */
 function paramsMeta(m, extra) {
   var g = grupoActual(), p = Object.assign(applyMarket(Object.assign({}, DEFAULTS), m.mercado), SCENARIOS[m.esc]);
-  Object.assign(p, { members: sociosMeta(), monthly: m.aporte, years: m.anios, cycle: g ? g.ciclo : 10, strategy: 'ciclo', reserve: 0, fee: g ? g.fee || 0 : 0, mix: MODE_MIX[m.modo] });
+  Object.assign(p, { members: sociosMeta(), monthly: m.aporte, years: m.anios, cycle: g ? g.ciclo : 10, strategy: 'ciclo', reserve: 0, fee: g ? g.fee || 0 : 0, mix: MODE_MIX[m.modo], saleCost: 0 });
   return Object.assign(p, extra || {});
 }
 /* comprar por debajo del valor y refaccionar: cada dólar compra más valor (precio con descuento + obra), y la renta arranca más tarde */

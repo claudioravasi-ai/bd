@@ -5,7 +5,7 @@
    En la versión de prueba se muestra un ejemplo, marcado como tal. */
 
 var MERCADO_EJEMPLO = {
-  ushuaia: { nombre: 'Ushuaia', fecha: '', fuente: 'Ejemplo (versión de prueba)', ejemplo: true, venta: { m2: 2310, p25: 1980, p75: 2650, n: 64 }, alquiler: { m2Mes: 12.4, n: 38 } },
+  ushuaia: { nombre: 'Ushuaia', fecha: '', fuente: 'Ejemplo (versión de prueba)', ejemplo: true, venta: { m2: 2310, p25: 1980, p75: 2650, n: 64 }, alquiler: { m2Mes: 18.6, n: 38 } },
   buenosaires: { nombre: 'Buenos Aires (CABA)', fecha: '', fuente: 'Ejemplo (versión de prueba)', ejemplo: true, venta: { m2: 2390, p25: 2020, p75: 2850, n: 187 }, alquiler: { m2Mes: 17.1, n: 152 } }
 };
 function fuenteCorta(f) { return String(f || 'MercadoLibre').replace(/ \(.*\)$/, ''); }

@@ -62,7 +62,7 @@ var CLAVE_DATOS = 'bd.prueba.datos.v1';
 var D = null;
 function cargarDatos() {
   if (MODO_REAL) { if (!D) D = datosVacios(); return D; }
-  D = leer(CLAVE_DATOS, null); if (!D || D.v !== 11 || !D.documentos) reiniciarDemo();
+  D = leer(CLAVE_DATOS, null); if (!D || D.v !== 13 || !D.documentos) reiniciarDemo();
   if (!D.lineasBanco) { D.lineasBanco = []; D.conciliaciones = []; }
   if (!D.mensajes) D.mensajes = []; if (!D.oportunidades) D.oportunidades = []; if (!D.leidos) D.leidos = {}; if (!D.pagosPendientes) D.pagosPendientes = [];
   return D;
@@ -108,6 +108,8 @@ function generarDemo() {
     var f = fichaDemo(i, x[0], x[2]); f.consentimiento.fecha = inicio;
     return { id: 'u' + (i + 1), nombre: x[0], email: x[1], rol: i === 0 ? 'fundador' : 'socio', alta: inicio, invitadoPor: i === 0 ? null : 'u1', ficha: f, demo: true };
   });
+  /* una regla de ejemplo para clasificar solo el extracto: el alquiler que deposita la inmobiliaria (solo la ve el fiduciario) */
+  usuarios[0].reglasBanco = [{ id: 'rb1', texto: 'INMOBILIARIA AUSTRAL', signo: 1, decision: 'renta:p1', usada: 2, creada: inicio }];
   var M = MARKETS.ushuaia, tasa = rendimientoDe(REPARTO_VIGENTE, true);
   var g = {
     id: 'alfa', letra: 'Alfa', simbolo: 'α', estado: 'activo', N: 10, aporte: 500, ciclo: 10, mercado: 'ushuaia', modo: 'mensual', m2min: M2_MINIMO,
@@ -142,7 +144,7 @@ function generarDemo() {
       /* mes 10: se rescata la inversión de espera y se compra (la compra es cada 10 meses, sin excepción) */
       if (inv > 0 && mov({ fecha: mes + '-18', tipo: 'rescate', usd: Math.round(inv * 100) / 100, desc: 'Rescate de la inversión de espera para la compra' })) { caja += inv; inv = 0; }
       var tope = Math.floor(caja - 150), precio = Math.round(tope / (1 + M.setup / 100)), m2 = Math.round(precio / M.m2 * 10) / 10, gastos = Math.round(precio * M.setup / 100);
-      var p = { id: 'p' + (props.length + 1), g: 'alfa', nombre: 'Departamento ' + (props.length + 1), direccion: 'Ushuaia · dirección de prueba', m2: m2, precio: precio, gastos: gastos, fecha: mes + '-20', modo: 'mensual', estado: 'alquilado', alquiler: Math.round(m2 * 300 / 25) };
+      var p = { id: 'p' + (props.length + 1), g: 'alfa', nombre: 'Departamento ' + (props.length + 1), direccion: 'Ushuaia · dirección de prueba', m2: m2, precio: precio, gastos: gastos, fecha: mes + '-20', modo: 'mensual', estado: 'alquilado', alquiler: Math.round(m2 * M.rent24 / 24) };
       if (mov({ fecha: mes + '-20', tipo: 'compra', usd: precio + gastos, prop: p.id, desc: 'Compra de ' + p.nombre + ' (' + num(m2, 1) + ' m²): precio ' + usd(precio) + ' + gastos ' + usd(gastos) })) { caja -= precio + gastos; props.push(p); }
     } else {
       var aInv = Math.floor(caja - colchon);
@@ -156,10 +158,10 @@ function generarDemo() {
   }
   var mesCompra = mesDe(sumarMeses(inicio, g.ciclo - 1));
   var votaciones = [
-    { id: 'v1', g: 'alfa', titulo: 'Compra del Departamento 1', materia: 'compra', detalle: 'Monoambiente de 24 m² en Ushuaia (USD 2.000 el m²), tasación independiente, alquiler de mercado USD 288 por mes. Se compra en el mes 10, como dice el contrato.', abre: mesCompra + '-11', cierra: mesCompra + '-16', votos: { u1: 'si', u2: 'si', u3: 'si', u4: 'si', u5: 'si', u6: 'si', u7: 'si', u8: 'si', u9: 'si', u10: 'si' }, por: 'u1' },
+    { id: 'v1', g: 'alfa', titulo: 'Compra del Departamento 1', materia: 'compra', detalle: 'Monoambiente de 24 m² en Ushuaia (USD 2.000 el m²), tasación independiente, alquiler de mercado USD 432 por mes (USD 450 por 25 m²). Se compra en el mes 10, como dice el contrato.', abre: mesCompra + '-11', cierra: mesCompra + '-16', votos: { u1: 'si', u2: 'si', u3: 'si', u4: 'si', u5: 'si', u6: 'si', u7: 'si', u8: 'si', u9: 'si', u10: 'si' }, por: 'u1' },
     { id: 'v2', g: 'alfa', titulo: 'Alquilar el Departamento 1 por mes, con contrato en dólares', materia: 'ordinaria', detalle: 'Contrato a 2 años, garantía de caución, actualización pactada. Administra un socio sin comisión.', abre: mesCompra + '-21', cierra: mesCompra + '-26', votos: { u1: 'si', u2: 'si', u3: 'si', u4: 'abst', u5: 'si', u6: 'si', u7: 'si', u8: 'si', u9: 'si', u10: 'si' }, por: 'u5' },
     { id: 'v3', g: 'alfa', titulo: 'Inversión de espera del ciclo 2 (antes del primer aporte)', materia: 'inversion', detalle: 'Se mantiene la política vigente desde el primer aporte del ciclo 2: así ningún dólar queda quieto.', cartera: REPARTO_VIGENTE, abre: mesCompra + '-21', cierra: mesCompra + '-27', votos: { u1: 'si', u2: 'si', u3: 'si', u4: 'si', u6: 'si', u7: 'no', u8: 'si', u10: 'si' }, por: 'u2' },
-    { id: 'v4', g: 'alfa', argumentos: [{ id: 'a1', uid: 'u2', lado: 'favor', t: 'Con las tasas de hoy rinde casi un punto más por año que la cartera vigente y sigue con tope de 30% por instrumento.', f: sumarDias(hoy, -2) + 'T10:12', apoyos: { u3: true, u4: true, u6: true } }, { id: 'a2', uid: 'u7', lado: 'contra', t: 'El plazo fijo en dólares traba la plata hasta el vencimiento: si aparece una oportunidad en el radar, no la podemos usar.', f: sumarDias(hoy, -1) + 'T18:40', apoyos: { u10: true } }, { id: 'a3', uid: 'u3', lado: 'favor', t: 'La cuenta remunerada queda en 10%: alcanza para la reserva del mes.', f: sumarDias(hoy, -1) + 'T20:05', apoyos: {} }], motivos: { u2: 'Más rendimiento sin más riesgo.', u7: 'Prefiero liquidez para el radar.' }, titulo: 'Más rendimiento para la espera del ciclo 2', materia: 'inversion', detalle: 'Bajar la cuenta remunerada al 10% y repartir el resto en partes iguales entre letras del Tesoro de EE. UU., obligaciones negociables y fondo de dinero, con tope de 30% por instrumento.', cartera: [{ id: 'cuenta', pct: 0.1 }, { id: 'tbill', pct: 0.3 }, { id: 'on', pct: 0.3 }, { id: 'pfusd', pct: 0.3 }], abre: sumarDias(hoy, -2), cierra: sumarDias(hoy, 5), votos: { u2: 'si', u3: 'si', u4: 'si', u6: 'si', u7: 'no', u10: 'si' }, por: 'u2' }
+    { id: 'v4', g: 'alfa', argumentos: [{ id: 'a1', uid: 'u2', lado: 'favor', t: 'El plazo fijo tiene la tasa garantizada por el banco: no depende de cómo le vaya al fondo.', f: sumarDias(hoy, -2) + 'T10:12', apoyos: { u3: true, u4: true, u6: true } }, { id: 'a2', uid: 'u7', lado: 'contra', t: 'Rinde un poco menos que el fondo de dinero y traba la plata hasta el vencimiento: si aparece una oportunidad en el radar, no la podemos usar.', f: sumarDias(hoy, -1) + 'T18:40', apoyos: { u10: true } }, { id: 'a3', uid: 'u3', lado: 'favor', t: 'La cuenta remunerada sigue en 10%: alcanza para la reserva del mes.', f: sumarDias(hoy, -1) + 'T20:05', apoyos: {} }], motivos: { u2: 'Prefiero una tasa garantizada.', u7: 'Prefiero rendimiento y liquidez para el radar.' }, titulo: 'Plazo fijo en dólares en lugar del fondo de dinero (ciclo 2)', materia: 'inversion', detalle: 'Pasar el 30% que hoy está en el fondo común de dinero a un plazo fijo en dólares a 30 días, con tasa garantizada por el banco. La cuenta remunerada sigue en 10% y las letras del Tesoro y las obligaciones negociables, en 30% cada una.', cartera: [{ id: 'cuenta', pct: 0.1 }, { id: 'tbill', pct: 0.3 }, { id: 'on', pct: 0.3 }, { id: 'pfusd', pct: 0.3 }], abre: sumarDias(hoy, -2), cierra: sumarDias(hoy, 5), votos: { u2: 'si', u3: 'si', u4: 'si', u6: 'si', u7: 'no', u10: 'si' }, por: 'u2' }
   ];
   var grupos = [g,
     { id: 'beta', letra: 'Beta', simbolo: 'β', estado: 'propuesto', N: 10, aporte: 300, ciclo: 10, mercado: 'buenosaires', modo: 'temporario', fee: 0.05, reserva: 1000, tasaEspera: tasa, inicio: null, socios: ['u3'], creadoPor: 'u3', estructura: 'B · fiduciaria autorizada (a definir)', creado: sumarDias(hoy, -12) },
@@ -167,7 +169,7 @@ function generarDemo() {
     { id: 'delta', letra: 'Delta', simbolo: 'δ', estado: 'abierto', N: 8, aporte: 1000, ciclo: 10, mercado: 'ushuaia', modo: 'mixto', fee: 0.05, reserva: 1000, tasaEspera: tasa, inicio: null, socios: ['u1', 'u5', 'u8', 'u10', 'u4'], creadoPor: 'u1', estructura: 'B · fiduciaria autorizada (a definir)', creado: sumarDias(hoy, -84) }
   ];
   return {
-    v: 11, creado: hoy, usuarios: usuarios, grupos: grupos, movimientos: movs, propiedades: props, votaciones: votaciones,
+    v: 13, creado: hoy, usuarios: usuarios, grupos: grupos, movimientos: movs, propiedades: props, votaciones: votaciones,
     invitaciones: [{ codigo: 'BD7K4M', email: 'invitado@demo.bd', nombre: 'Invitado de ejemplo', g: 'delta', por: 'u1', fecha: sumarDias(hoy, -1), vence: sumarDias(hoy, 6), usada: false }],
     bitacora: [{ f: new Date().toISOString(), quien: 'sistema', que: 'Se armaron los datos de prueba' }],
     inquilinos: props.length ? [{ id: 'iq1', g: 'alfa', prop: props[0].id, nombre: 'Ana Torres (inquilina de prueba)', dni: '', tel: '+5492901000000', email: 'inquilina@example.com', creado: props[0].fecha, contrato: { inicio: props[0].fecha, fin: sumarDias(props[0].fecha, 730), monto: props[0].alquiler, moneda: 'USD', diaPago: 10, ajuste: 'Fijo en dólares, sin ajuste', deposito: props[0].alquiler, garantia: 'Seguro de caución' } }] : [],
@@ -177,7 +179,7 @@ function generarDemo() {
 function mensajesDemo(hoy) {
   return [
     { id: 'c1', g: 'alfa', de: 'u5', a: 'todos', f: sumarDias(hoy, -3) + 'T10:12', t: 'El inquilino del Depto 1 pagó el 8, todo en orden.' },
-    { id: 'c2', g: 'alfa', de: 'u2', a: 'todos', f: sumarDias(hoy, -2) + 'T18:40', t: 'Abrí la votación para subir el rendimiento de la espera del ciclo 2. ¿La miran?' },
+    { id: 'c2', g: 'alfa', de: 'u2', a: 'todos', f: sumarDias(hoy, -2) + 'T18:40', t: 'Abrí la votación para pasar el fondo de dinero a plazo fijo en dólares. ¿La miran?' },
     { id: 'c3', g: 'alfa', de: 'u3', a: 'u1', f: sumarDias(hoy, -1) + 'T09:05', t: 'Claudio, ¿me pasás la constancia de la escritura del Depto 1 para mi contador?' },
     { id: 'c4', g: 'alfa', de: 'u4', a: 'todos', f: sumarDias(hoy, -1) + 'T20:30', t: '¿Probamos alquiler temporario en el Depto 2 cuando lo compremos?', encuesta: { opciones: ['Sí, probemos', 'No, mensual fijo', 'Lo charlamos en la reunión'], votos: { u4: 0, u5: 0, u2: 2, u7: 1, u10: 0 }, formal: null } }
   ];
@@ -447,7 +449,7 @@ function capitalComparado(gid, sid) {
     var mes = mesDe(sumarMeses(g.inicio, k)), f = k === ci.mesN - 1 ? hoy : finDeMes(mes), e = estadoGrupo(gid, f), ap = 0, ref = 0;
     var pf = 0, tpf = tasaPlazoFijoUsd();
     aportes.forEach(function (m) { if (m.fecha <= f) { ap += m.usd; ref += m.usd * Math.pow(1 + REFERENCIA_ANUAL, diasEntre(m.fecha, f) / 365); pf += m.usd * Math.pow(1 + tpf, diasEntre(m.fecha, f) / 365); } });
-    filas.push({ n: k + 1, mes: mes, fecha: f, aportado: ap, capital: (e.upSocio[sid] || 0) * e.vup + especieDe(gid, sid, f), ref: ref, pf: pf, tir: tirSocio(gid, sid, f), ciclo: Math.ceil((k + 1) / g.ciclo), cierraCiclo: (k + 1) % g.ciclo === 0 || k === ci.mesN - 1 });
+    filas.push({ n: k + 1, mes: mes, fecha: f, aportado: ap, capital: (e.upSocio[sid] || 0) * e.vup + especieDe(gid, sid, f), up: e.upSocio[sid] || 0, vup: e.vup, ref: ref, pf: pf, tir: tirSocio(gid, sid, f), ciclo: Math.ceil((k + 1) / g.ciclo), cierraCiclo: (k + 1) % g.ciclo === 0 || k === ci.mesN - 1 });
   }
   estadoGrupo(gid);
   return filas;
@@ -459,15 +461,13 @@ function parametrosDe(g) {
   applyMarket(p, g.mercado);
   p.members = g.N; p.monthly = g.aporte; p.cycle = g.ciclo; p.mix = MODE_MIX[g.modo]; p.fee = g.fee || 0; p.years = g.anios || 10;
   p.reserve = 0; p.strategy = 'ciclo';
+  /* el valor de la parte de cada socio es sin vender nada, como la UP: el costo de vender solo existe si un día se vende */
+  p.saleCost = 0;
   return p;
 }
 function proyectar(g) { var p = parametrosDe(g); return { p: p, r: simulate(p) }; }
-/* mes en que la renta + interés de los últimos 10 meses alcanza para un departamento de USD 50.000 con gastos */
-function ruedaSola(g) {
-  var p = parametrosDe(g); p.years = 25; var r = simulate(p), meta = 50000 * (1 + p.setup / 100), s = r.series, t, k;
-  for (t = 10; t < s.length; t++) { var sum = 0; for (k = t - 9; k <= t; k++) sum += s[k].rent + s[k].int; if (sum >= meta) return t + 1; }
-  return null;
-}
+/* mes en que el grupo «rueda solo»: ver ruedaSolaDe en ventanas.js (todo capitalizado y el precio del m² indexado) */
+function ruedaSola(g) { var x = ruedaSolaDe(g, 'basico', { mix: MODE_MIX[g.modo] || 0 }); return x ? x.S : null; }
 
 /* Rendimiento del fideicomiso medido por tiempo (TWR, idea de Ghostfolio y Portfolio Performance).
    Como la UP es una cuota, su valor ya descuenta los aportes: lo que sube la UP es lo que ganó la gestión,

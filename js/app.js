@@ -273,7 +273,7 @@ function gananciaDe(u) {
 function render() {
   var r = ruta(), u = yo(), raiz = $('app'), st = marcarEntrada();
   quienEnCinta();
-  PROYS = {}; CURVAS = {}; pintarProyeccion.ya = false;
+  PROYS = {}; CURVAS = {}; SINC = {}; pintarProyeccion.ya = false;
   if (!$('velo').hidden) { $('velo').hidden = true; $('velo').innerHTML = ''; }
   if (!u) {
     raiz.className = 'marco';
@@ -508,7 +508,7 @@ function vistaInicioGrupo(u) {
   if (!g) return '<h1>Hola, ' + esc(u.nombre.split(' ')[0]) + '</h1><p class="gris">Todavía no estás en ningún fideicomiso.</p><a class="btn btn-oro" href="#/grupos">Ver los fideicomisos griegos</a>';
   if (g.estado !== 'activo') return vistaGrupoConvocando(u, g);
   var e = estadoGrupo(g.id), ci = cicloInfo(g), mesHoy = mesDe(hoyISO()), pagado = pagoDe(g.id, u.id, mesHoy), misUp = e.upSocio[u.id] || 0;
-  var mora = moraDe(g.id), miMora = mora.filter(function (m) { return m.socio === u.id; }), pr = proyectar(g), rs = ruedaSola(g), tir = tirSocio(g.id, u.id);
+  var mora = moraDe(g.id), miMora = mora.filter(function (m) { return m.socio === u.id; }), pr = proyectar(g), tir = tirSocio(g.id, u.id);
   var props = propiedadesActivas(g.id), proyectados = pr.r.purchases.length;
   var abiertas = D.votaciones.filter(function (v) { return v.g === g.id && hoyISO() <= v.cierra; });
   var botonPago = miMora.length ? '<a class="btn btn-oro" href="#/pagar?periodo=' + miMora[0].periodo + '">Pagar el aporte vencido de ' + nombreMes(miMora[0].periodo) + '</a>'
@@ -524,9 +524,9 @@ function vistaInicioGrupo(u) {
 
     '<section class="rejilla r4 seccion" aria-label="Números principales">' +
     kpi('Patrimonio del grupo', e.patrimonio, 'usd', 'caja + inversiones + inmuebles') +
-    kpi('Valor de la UP (unidad de participación)', e.vup, 'usd2', 'tu porción del fideicomiso; empezó en USD 100 y lo que pasa de 100 es ganancia') +
+    kpi('Valor de la UP (unidad de participación)', e.vup, 'usd2', 'vale lo mismo para todos los socios; empezó en USD 100 y lo que pasa de 100 es ganancia') +
     kpiBoton('btnMiParte', 'Mi parte hoy', misUp * e.vup, 'usd', num(misUp, 2) + ' UP · ' + pct(e.up ? misUp / e.up : 0, 2) + ' del grupo · tocá para entenderlo') +
-    kpiBoton('btnMiTir', 'Mi rendimiento real (TIR)', null, '', isFinite(tir) ? 'interés anual de mi plata, con alquiler fijo · tocá para ver escenarios' : 'se calcula con más aportes', isFinite(tir) ? pct(tir) : '—') + '</section>' +
+    kpiBoton('btnMiTir', 'Mi rendimiento por año (TIR)', null, '', isFinite(tir) ? 'como un plazo fijo que me diera lo mismo · tocá para entenderlo' : 'se calcula con más aportes', isFinite(tir) ? pct(tir) : '—') + '</section>' +
 
     htmlSaldosDeudores(g, u, false) +
     '<section class="rejilla r2 seccion pares">' + tarjetaDepartamentos(g, ci, props, proyectados) + tarjetaRuedaAportes(g, ci) + '</section>' +
@@ -647,8 +647,7 @@ function vistaPagar(u, r) {
     (MODO_REAL ? '<div class="aviso seccion"><b>Cómo se paga:</b> transferí el aporte a la cuenta del fideicomiso desde una cuenta a tu nombre y tocá «Ya transferí». El fiduciario lo confirma cuando lo ve en el banco y se compran tus UP con la fecha de tu aviso. Los datos de la cuenta te los da el fiduciario.</div>' : '') +
     (ya ? '<div class="aviso">Ya completaste el ciclo ' + rc.ciclo + ' y el aporte extra llegó a su tope. El próximo aporte es del ciclo ' + (rc.ciclo + 1) + '.</div>' : '') +
     '<section class="rejilla r2 seccion"><div class="tarjeta dorada apilar">' +
-    '<div class="fila entre"><div><p class="etiqueta">Aporte de ' + nombreMes(per) + '</p><p class="chico gris" style="margin:0">' + (tarde ? '<span class="rojo">Debés ' + usd(rc.vencido) + ' vencidos hace ' + dias + ' días</span>' : rc.paraAlDia > 0.004 ? 'Para estar al día, hasta el ' + fechaLarga(vence) + ': ' + usd(rc.paraAlDia) : 'Estás al día: lo que pongas adelanta el ciclo') + '</p></div>' +
-    '<span class="chip ' + (tarde ? 'mal' : 'oro') + '">' + (tarde ? 'En mora' : rc.paraAlDia > 0.004 ? 'Pendiente' : 'Al día') + '</span></div>' +
+    heroeAporte(g, rc, per, vence, tarde, dias, monto) +
     htmlCuota(g, rc, monto) +
     '<div class="segmentos" role="group" aria-label="Moneda de pago">' + ['ARS', 'USD', 'EUR'].map(function (m) { return '<button type="button" data-moneda="' + m + '" aria-pressed="' + (m === mon) + '">' + { ARS: 'Pesos', USD: 'Dólares', EUR: 'Euros' }[m] + '</button>'; }).join('') + '</div>' +
     '<div><span class="gris chico">Total a pagar</span><div class="num" style="font-size:clamp(2rem,7vw,2.8rem);color:var(--oro-claro);line-height:1.1" id="totalPago">' + enMoneda(total, mon, cotAportes()) + '</div>' +
@@ -671,6 +670,35 @@ function vistaPagar(u, r) {
     '<div class="tarjeta"><h3>Mis pagos</h3><div class="tabla-scroll"><table><tr><th>Mes</th><th>Pagado</th><th>Cómo</th><th class="n">USD</th><th></th></tr>' +
     mis.map(function (m) { return '<tr><td>' + nombreMesCorto(m.periodo) + '</td><td>' + fechaCorta(m.fecha) + (m.fecha > venceDe(m.periodo) ? ' <span class="chip">tarde</span>' : '') + '</td><td class="chico">' + metodoTxt(m.pago.metodo) + ' · ' + m.pago.moneda + '</td><td class="n">' + num(m.usd) + '</td><td><button class="btn-texto chico" data-recibo="' + m.id + '">Recibo</button></td></tr>'; }).join('') +
     '</table></div></div></div></section>';
+}
+/* el estado del aporte de un vistazo: un anillo con lo que llevás del ciclo, el estado en grande con su color
+   (al día, pendiente o vencido) y los meses del ciclo como casilleros que se llenan con lo que pusiste */
+function heroeAporte(g, rc, per, vence, tarde, dias, monto) {
+  var quieto = heroeAporte.quieto; heroeAporte.quieto = false;
+  var pre = efectoMonto(g, rc, monto || g.aporte), est = tarde ? 'mora' : rc.paraAlDia > 0.004 ? 'pend' : 'aldia', O = rc.O, frac = O ? Math.min(1, rc.pagado / O) : 0;
+  var titulo = est === 'mora' ? 'Debés ' + usd(rc.vencido) : est === 'pend' ? 'Te falta ' + usd(rc.paraAlDia) : 'Estás al día';
+  var icono = est === 'mora' ? '!' : est === 'pend' ? '…' : '✓', meses = [], k;
+  for (k = 0; k < g.ciclo; k++) meses.push(mesDe(sumarMeses(g.inicio, (rc.ciclo - 1) * g.ciclo + k)));
+  /* en palabras simples: qué meses ya están pagos, hasta cuándo se paga el que sigue y qué pasa si se adelanta */
+  var nPagos = Math.min(g.ciclo, Math.floor(rc.pagado / g.aporte + 1e-9)), pagos = meses.slice(0, nPagos).map(function (m) { return MESES[deISO(m + '-01').getMonth()]; });
+  var lista = pagos.length > 1 ? pagos.slice(0, -1).join(', ') + ' y ' + pagos[pagos.length - 1] : pagos[0] || '';
+  var yaPago = pagos.length ? 'Ya pagaste ' + lista + ' (' + nPagos + ' de los ' + g.ciclo + ' meses de este ciclo).' : 'Todavía no pagaste ningún mes de este ciclo.';
+  var texto = est === 'mora' ? 'Debés ese monto desde hace ' + dias + ' día' + (dias === 1 ? '' : 's') + '. Cada día que pasa se suman ' + usd(porDia(g.aporte), 2) + ' de interés por cada mes vencido. Pagalo y se frena.'
+    : est === 'pend' ? 'Pagalo hasta el ' + fechaLarga(vence) + ' y no pagás nada de más. Desde el día ' + (DIA_VENCE + 1) + ' se suma un interés por cada día de atraso.'
+    : yaPago + ' ' + (nombreMes(per) ? 'El de ' + nombreMes(per) + ' se paga del 1 al ' + DIA_VENCE + ' de ese mes.' : '');
+  var casilleros = meses.map(function (m, i) {
+    var lleno = Math.max(0, Math.min(1, (rc.pagado - i * g.aporte) / g.aporte)), previa = Math.max(0, Math.min(1, (pre.pagDesp - i * g.aporte) / g.aporte)), actual = i + 1 === rc.enCiclo;
+    return '<span class="ah-mes' + (actual ? ' actual' : '') + (i + 1 < rc.enCiclo && rc.pagado < minimoAl(g, i + 1) - 0.004 ? ' falta' : '') + '" style="--l:' + (lleno * 100).toFixed(0) + '%;--lp:' + (previa * 100).toFixed(0) + '%;--d:' + (i * 60) + 'ms" title="' + nombreMes(m) + ': ' + (lleno >= 1 ? 'cubierto' : lleno > 0 ? 'cubierto en parte' : 'sin cubrir') + '"><i></i><small>' + MESES[deISO(m + '-01').getMonth()].slice(0, 3) + '</small></span>';
+  }).join('');
+  return '<div class="aporte-heroe ah-' + est + (quieto ? ' ah-quieto' : '') + '">' +
+    '<div class="ah-anillo" role="img" aria-label="Llevás ' + usd(rc.pagado) + ' de ' + usd(O) + ' del ciclo ' + rc.ciclo + '"><svg viewBox="0 0 120 120" aria-hidden="true"><defs><linearGradient id="ahGrad" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#E6C979"/><stop offset="1" stop-color="#4FD1C5"/></linearGradient></defs><circle cx="60" cy="60" r="50" class="ah-pista"/><circle cx="60" cy="60" r="50" class="ah-arco-previa" pathLength="100" style="--pp:' + (Math.min(1, pre.pagDesp / O) * 100).toFixed(1) + '"/><circle cx="60" cy="60" r="50" class="ah-arco" pathLength="100" style="--p:' + (frac * 100).toFixed(1) + '"/></svg>' +
+    '<div class="ah-centro"><b class="num">' + num(frac * 100) + '%</b><span>del ciclo ' + rc.ciclo + '</span></div></div>' +
+    '<div class="ah-texto"><p class="etiqueta" style="margin:0">Aporte de ' + nombreMes(per) + '</p>' +
+    '<p class="ah-estado"><span class="ah-icono" aria-hidden="true">' + icono + '</span>' + titulo + '</p><p class="chico" style="margin:2px 0 0">' + texto + '</p>' +
+    (est === 'aldia' ? '<p class="chico gris" style="margin:6px 0 0">Si querés, podés pagar meses por adelantado: se descuentan de los que vienen y tu plata empieza a rendir antes.</p>' : '') +
+    '<details class="ah-regla"><summary class="chico">¿Puedo pagar menos algún mes?</summary><p class="chico gris" style="margin:4px 0 0">Sí. Cada mes tenés que llegar, como mínimo, a la mitad de lo pactado (' + usd(g.aporte * PISO_MES) + ' por mes; a este mes, ' + usd(rc.minimoMes) + ' en total). Pero el ciclo entero, ' + usd(O) + ' (' + g.ciclo + ' meses de ' + usd(g.aporte) + '), tiene que estar completo antes del ' + fechaLarga(rc.venceCiclo) + ', que es cuando se compra el departamento. Llevás ' + usd(rc.pagado) + (rc.extra ? ' y ' + usd(rc.extra) + ' de extra' : '') + '.</p></details></div>' +
+    '<div class="ah-meses" role="img" aria-label="Los ' + g.ciclo + ' meses del ciclo ' + rc.ciclo + ', cada casillero es un aporte de ' + usd(g.aporte) + '; estamos en el mes ' + rc.enCiclo + '">' + casilleros + '</div>' +
+    '<p class="chico gris ah-ley"><span><span class="ah-l lleno"></span>cubierto</span><span><span class="ah-l previa"></span>lo que cubre este pago</span><span><span class="ah-l actual"></span>este mes</span><span><span class="ah-l vacio"></span>falta</span><span>· cada casillero, un aporte de ' + usd(g.aporte) + '</span></p></div>';
 }
 /* qué pasa si alguien se atrasa y qué opciones tiene */
 function tarjetaAtraso(g, abierta) {
@@ -736,6 +764,7 @@ function vistaMercado(u) {
       '<div class="tabla-scroll" style="margin-top:12px"><table><tr><th>Instrumento</th><th>Regla</th><th class="n">Monto</th><th class="n">%</th><th class="n">Rinde</th><th class="n">Gana hasta la compra</th></tr>' +
       cp.partes.map(function (p) { return '<tr><td><span style="display:inline-block;width:10px;height:10px;border-radius:3px;background:' + (COLORES_CARTERA[p.x.id] || '#888') + ';margin-right:6px"></span>' + esc(p.x.n) + '</td><td class="chico gris">' + esc(p.rol) + '</td><td class="n">' + usd(p.monto) + '</td><td class="n">' + pct(plata ? p.monto / plata : 0, 0) + '</td><td class="n">' + pct(p.x.y, 2) + '</td><td class="n">' + usd(p.gana) + '</td></tr>'; }).join('') +
       '<tr class="total"><td colspan="2">Total</td><td class="n">' + usd(plata) + '</td><td class="n">100%</td><td class="n">' + pct(cp.rendimiento, 2) + '</td><td class="n">' + usd(cp.ganancia) + '</td></tr></table></div>' +
+      htmlRevision(revisarPropuesta(g, carteraDePartes(cp.partes, plata))) +
       '<div class="fila" style="margin-top:12px">' + (abierta ? '<a class="btn" href="#/votos">Ya hay una votación abierta sobre esto</a>' : '<button class="btn btn-oro" id="btnProponerCartera">Proponer a la Asamblea (' + requeridos('inversion', g.N) + ' de ' + g.N + ')</button>') + '</div>' +
       '<details class="aviso" style="margin-top:12px"><summary style="cursor:pointer"><b>¿Por qué no poner todo en obligaciones negociables, si rinden más?</b></summary><p class="chico" style="margin-top:8px">La cuenta remunerada no está para ganar: es la reserva que tiene que estar disponible en el momento (gastos, expensas y el día de la escritura). Las obligaciones negociables rinden más porque la empresa podría no pagar o su precio puede bajar justo cuando hay que vender para comprar; por eso el contrato pone un tope de 30% por instrumento y reparte el riesgo. La app ordena primero lo que más rinde dentro de esas reglas.</p></details>' +
       '<p class="chico gris" style="margin-top:10px">No es asesoramiento financiero: son datos públicos ordenados con la política que votó el grupo (art. 29). La decisión la toma la Asamblea y la ejecuta el fiduciario con un agente habilitado.</p></section>';
@@ -880,7 +909,7 @@ function pintarProyeccion() {
     mini('Caja por ciclo', usd(caja)) + mini('Primera compra', r.purchases.length ? usd(r.purchases[0].price) + ' · ' + num(m2, 1) + ' m²' : '—') +
     mini('Departamentos en ' + g.anios + ' años', r.purchases.length) + mini('Renta mensual al final', usd(r.last.rent)) +
     mini('Valor final del grupo', usd(r.last.liq)) + mini('Por socio', usd(r.last.liq / g.N) + ' (aporta ' + usd(g.aporte * 12 * g.anios) + ')') +
-    mini('TIR de cada socio', '<span class="' + (r.irr >= 0.06 ? 'verde' : '') + '">' + pct(r.irr) + '</span> · ref. 6%') + mini('Rueda sola', rs ? 'mes ' + rs + ' (año ' + num(rs / 12, 1) + ')' : 'más de 25 años') +
+    mini('TIR de cada socio', '<span class="' + (r.irr >= 0.06 ? 'verde' : '') + '">' + pct(r.irr) + '</span> · ref. 6%') + mini('Rueda sola', rs ? 'mes ' + rs + ' (año ' + num(rs / 12, 1) + ')' : 'más de 40 años') +
     (g.fee ? mini('Honorario total del fiduciario', usd(feeTot)) : '') + '</div>' +
     (chico ? '<p class="aviso alerta chico" style="margin-top:10px">Con ' + usd(caja) + ' por ciclo no alcanza para 20 m² en ' + M.label + '. Subí el aporte, los socios o el ciclo.</p>' : '') +
     (r.irr < 0.06 ? '<p class="chico gris" style="margin-top:8px">Con estos números el grupo rinde menos que la referencia financiera del 6% anual.</p>' : '') +
@@ -894,8 +923,10 @@ function mini(t, v) { return '<div><small class="gris chico">' + t + '</small><d
 /* una propuesta de inversión muestra su rendimiento con las tasas del día y qué quiere decir cada parte */
 function carteraEnVoto(g, v) {
   var e = estadoGrupo(g.id), plata = e.caja + e.inv, y = rendimientoDe(v.cartera), yv = rendimientoDe(g.reparto || REPARTO_VIGENTE);
-  return '<div class="voto-cartera"><div class="fila entre"><span class="chico">Rendimiento de la propuesta <b>con las tasas de hoy</b></span><b class="num ' + (y >= yv ? 'verde' : 'rojo') + '" style="font-size:1.3rem">' + pct(y, 2) + ' anual</b></div>' +
-    '<p class="chico gris" style="margin:2px 0 6px">La vigente rinde ' + pct(yv, 2) + '. Sobre la caja de hoy (' + usd(plata) + ') son ' + usd(plata * y / 12, 2) + ' por mes (' + (y >= yv ? '+' : '−') + usd(Math.abs(plata * (y - yv) / 12), 2) + ' contra la vigente).</p>' +
+  var igual = Math.abs(y - yv) < 0.00005, mejor = y > yv, dif = Math.abs(plata * (y - yv) / 12);
+  return '<div class="voto-cartera">' + (hoyISO() <= v.cierra ? htmlRevision(revisarPropuesta(g, v.cartera)) : '') + '<p class="chico" style="margin:0 0 6px">Las dos, <b>con las tasas de hoy</b> (cambian todos los días):</p>' +
+    '<div class="voto-dos"><div><small>La propuesta</small><b class="num ' + (igual ? '' : mejor ? 'verde' : 'rojo') + '">' + pct(y, 2) + '</b><span>por año</span></div><div><small>La que se usa hoy</small><b class="num">' + pct(yv, 2) + '</b><span>por año</span></div></div>' +
+    '<p class="chico" style="margin:6px 0">' + (igual ? 'Rinden lo mismo.' : '<b class="' + (mejor ? 'verde' : 'rojo') + '">La propuesta rinde ' + num(Math.abs(y - yv) * 100, 2) + ' puntos ' + (mejor ? 'más' : 'menos') + '</b>: sobre la caja de hoy (' + usd(plata) + ') son ' + usd(dif, 2) + ' por mes ' + (mejor ? 'más' : 'menos') + ' para el fideicomiso.') + (mejor || igual ? '' : ' Conviene solo si lo que se busca es otra cosa (por ejemplo, una tasa garantizada).') + '</p>' +
     '<div class="tabla-scroll"><table><tr><th>Parte</th><th class="n">%</th><th class="n">Rinde hoy</th><th>Qué es</th></tr>' + v.cartera.map(function (p) { var x = instrumento(p.id); return '<tr><td><i class="punto" style="background:' + (COLORES_VIVOS[p.id] || '#888') + '"></i>' + esc(x.n) + '</td><td class="n">' + pct(p.pct, 0) + '</td><td class="n">' + pct(x.y, 2) + '</td><td class="chico gris">' + esc(QUE_ES[p.id] || x.d) + '</td></tr>'; }).join('') + '</table></div></div>';
 }
 var QUE_ES = {
@@ -1093,8 +1124,8 @@ var GANCHOS = {
     ganchoTransferencias(); ganchoArrancarAlfa();
     ganchoProyeccion();
     if ($('btnInvHoy')) $('btnInvHoy').onclick = function () { ventana(ventanaInversionesHoy); };
-    if ($('btnMiParte')) $('btnMiParte').onclick = function () { ventana(ventanaMiParte); };
-    if ($('btnMiTir')) $('btnMiTir').onclick = function () { ventana(ventanaTir); };
+    if ($('btnMiParte')) $('btnMiParte').onclick = function () { abrirGanancia('parte'); };
+    if ($('btnMiTir')) $('btnMiTir').onclick = function () { abrirGanancia('tir'); };
     if ($('btnM2')) $('btnM2').onclick = function () { ventana(ventanaM2); };
     if ($('btnTablaAportes')) $('btnTablaAportes').onclick = function () { ventana(ventanaTablaAportes); };
     document.querySelectorAll('#torreDeptos .piso').forEach(function (el) { el.style.cursor = 'pointer'; el.addEventListener('click', function () { ventana(ventanaM2); }); });

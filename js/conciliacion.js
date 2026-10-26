@@ -84,6 +84,25 @@ function quienEs(u, desc) {
   if (toks.length > 1 && new RegExp('\\b' + toks[0] + '\\b').test(d)) { pts += 10; por.push('nombre'); }
   return { pts: pts, por: por };
 }
+/* ===== Reglas para clasificar solas las líneas del extracto (idea de las reglas de Firefly III) =====
+   «Si el concepto dice PALABRAS (y entra o sale plata) → es esto». Se crean tildando «Recordar» al decidir un renglón,
+   o a mano. Pueden tener el nombre de un inquilino o de un proveedor: se guardan solo en la cuenta del fiduciario
+   (u.reglasBanco, en la parte privada bd/seg de la versión real) y los socios no las ven. */
+var PALABRAS_BANCO = /^(TRANSFERENCIA|TRANSF|TRF|RECIBIDA|RECIBIDO|ENVIADA|DE|A|LA|EL|DEL|CUIT|CUIL|CBU|CVU|OP|NRO|N|PAGO|ACREDITACION|DEBITO|CREDITO|INMEDIATA|S|SRL|SA|SAS|Y|POR|EN)$/;
+function reglasBanco(u) { return (u && u.reglasBanco) || []; }
+function palabrasSugeridas(desc) {
+  return normalizarTexto(desc).replace(/[^A-Z0-9 ]+/g, ' ').split(/\s+/).filter(function (w) { return w.length >= 2 && !/\d/.test(w) && !PALABRAS_BANCO.test(w); }).slice(0, 3).join(' ');
+}
+function reglaQueCoincide(u, desc, monto) {
+  var d = ' ' + normalizarTexto(desc).replace(/[^A-Z0-9 ]+/g, ' ').replace(/\s+/g, ' ') + ' ';
+  return reglasBanco(u).filter(function (r) { return (r.signo > 0) === (monto > 0) && r.texto.split(' ').every(function (w) { return d.indexOf(' ' + w + ' ') >= 0; }); })[0] || null;
+}
+function guardarRegla(u, texto, signo, decision) {
+  texto = normalizarTexto(texto).replace(/[^A-Z0-9 ]+/g, ' ').replace(/\s+/g, ' ').trim(); if (!texto) return null;
+  u.reglasBanco = reglasBanco(u).filter(function (r) { return !(r.texto === texto && r.signo === signo); });
+  var r = { id: 'rb' + Date.now().toString(36) + Math.random().toString(36).slice(2, 5), texto: texto.slice(0, 60), signo: signo, decision: decision, usada: 0, creada: hoyISO() };
+  u.reglasBanco.push(r); return r;
+}
 var SIGNO_BANCO = { aporte: 1, punitorio: 1, renta: 1, rescate: 1, inversion: -1, compra: -1, gasto: -1, impuesto: -1, honorario: -1, banco: -1 };
 
 function conciliarExtracto(gid, lineas, moneda) {
@@ -112,7 +131,14 @@ function conciliarExtracto(gid, lineas, moneda) {
       it.texto = TIPO_TXT[m.tipo] + (m.socio ? ' de ' + usuario(m.socio).nombre + (m.periodo ? ' (' + nombreMes(m.periodo) + ')' : '') : '') + ', registrado el ' + fechaCorta(m.fecha) + '.';
       items.push(it); return;
     }
-    var d = normalizarTexto(l.desc);
+    var d = normalizarTexto(l.desc), regla = reglaQueCoincide(yo(), l.desc, l.monto);
+    if (regla) {
+      var dec = regla.decision, rp = dec.split(':');
+      if (rp[0] === 'aporte') { var perR = null, kk, nn = g.inicio ? mesesEntre(g.inicio, l.fecha) : -1; for (kk = 0; kk <= nn + 1; kk++) { var pp = mesDe(sumarMeses(g.inicio, kk)); if (!pagos[rp[1] + '|' + pp]) { perR = pp; break; } } dec = perR ? 'aporte:' + rp[1] + ':' + perR : 'pend'; if (perR) pagos[rp[1] + '|' + perR] = true; }
+      it.estado = dec === 'pend' ? 'sin' : 'nuevo'; it.prop = dec; it.regla = regla.id;
+      it.texto = 'Lo clasificó tu regla «' + regla.texto + '»: ' + etiquetaDecision(dec) + '.';
+      items.push(it); return;
+    }
     if (l.monto > 0) {
       /* 2) ¿aporte nuevo de un socio? */
       var mejor = null;
@@ -170,13 +196,14 @@ function aplicarConciliacion(gid, res, decisiones, moneda, u) {
         pago: { moneda: moneda, monto: Math.abs(l.monto), metodo: 'transferencia' }, recibo: g.letra.toUpperCase() + '-' + p[2].replace('-', '') + '-' + (++n) }, base));
       if (extra > 0.5) D.movimientos.push(Object.assign({ id: id(), tipo: 'punitorio', usd: extra, socio: p[1], periodo: p[2] }, base, { conc: null }));
     } else if (p[0] === 'renta') {
-      var prop = propiedadesActivas(gid)[0];
+      var prop = (p[1] && propiedadesActivas(gid).filter(function (x) { return x.id === p[1]; })[0]) || propiedadesActivas(gid)[0];
       D.movimientos.push(Object.assign({ id: id(), tipo: 'renta', usd: usdL, prop: prop ? prop.id : null, desc: 'Alquiler acreditado en el banco' + (prop ? ' · ' + prop.nombre : '') }, base));
     } else if (p[0] === 'banco') D.movimientos.push(Object.assign({ id: id(), tipo: 'banco', usd: usdL, desc: 'Comisión bancaria' }, base));
     else if (p[0] === 'impuesto') D.movimientos.push(Object.assign({ id: id(), tipo: 'impuesto', usd: usdL, desc: 'Impuesto cobrado por el banco (débitos y créditos u otros)' }, base));
     else if (p[0] === 'gasto') D.movimientos.push(Object.assign({ id: id(), tipo: 'gasto', usd: usdL, desc: 'Gasto pagado desde el banco (ver comprobante)' }, base));
     else return;
     D.lineasBanco.push(it.hash); reg++;
+    if (it.regla) { var rr = reglasBanco(u).filter(function (x) { return x.id === it.regla; })[0]; if (rr) rr.usada = (rr.usada || 0) + 1; }
   });
   var r2 = conciliarExtracto(gid, res.items.map(function (x) { return x.l; }), moneda);
   var resumen = { fecha: hoyISO(), g: gid, desde: res.desde, hasta: res.hasta, moneda: moneda, renglones: res.items.length, registrados: reg, yaEstaban: conc,
@@ -206,6 +233,9 @@ function extractoEjemplo(gid) {
   var falta = moraDe(gid, hoy).filter(function (x) { return x.periodo === mesDe(hoy); })[0];
   if (falta) { var uf = usuario(falta.socio); lin.push([hoy, 'TRANSFERENCIA RECIBIDA DE ' + normalizarTexto(uf.nombre.split(' ').reverse().join(' ')) + ' CUIT ' + uf.ficha.cuit, g.aporte + falta.interes]); }
   lin.push([sumarDias(desde, Math.min(9, diasEntre(desde, hoy))), 'TRANSFERENCIA RECIBIDA DE PEREZ JUAN CARLOS CUIT 20289991115', 300]);
+  /* el alquiler de este mes que todavía no está en los libros, depositado por la inmobiliaria: lo clasifica la regla de ejemplo */
+  var p1 = propiedadesActivas(gid)[0], yaRenta = p1 && movs.some(function (m) { return m.tipo === 'renta' && m.prop === p1.id && mesDe(m.fecha) === mesDe(hoy); });
+  if (p1 && !yaRenta) lin.push([sumarDias(desde, Math.min(7, diasEntre(desde, hoy))), 'TRANSFERENCIA RECIBIDA DE INMOBILIARIA AUSTRAL SRL', p1.alquiler || 0]);
   lin.push([desde, 'COMISION MANTENIMIENTO CUENTA', -12]);
   lin.push([sumarDias(desde, Math.min(2, diasEntre(desde, hoy))), 'IMP LEY 25413 S/DEBITOS', -0.9]);
   lin.sort(function (a, b) { return a[0] < b[0] ? -1 : a[0] > b[0] ? 1 : 0; });
@@ -223,14 +253,15 @@ function primerImpago(g, sid) {
 }
 function etiquetaDecision(dec) {
   var p = dec.split(':');
-  if (p[0] === 'aporte') return 'Aporte de ' + usuario(p[1]).nombre + ' · ' + nombreMes(p[2]);
+  if (p[0] === 'aporte') return 'Aporte de ' + usuario(p[1]).nombre + (p[2] ? ' · ' + nombreMes(p[2]) : '');
+  if (p[0] === 'renta' && p[1]) { var pr = D.propiedades.filter(function (x) { return x.id === p[1]; })[0]; return 'Alquiler cobrado · ' + (pr ? pr.nombre : ''); }
   return { renta: 'Alquiler cobrado', banco: 'Comisión bancaria', impuesto: 'Impuesto bancario', gasto: 'Gasto del inmueble', pend: 'Dejar pendiente' }[p[0]];
 }
 function selectorDecision(g, it) {
   var pref = it.prop || it.sugerido, ops = [], vistos = {};
   function sumar(v) { if (v && !vistos[v]) { vistos[v] = 1; ops.push(v); } }
   if (it.estado === 'nuevo') { sumar(pref); sumar('pend'); } else { sumar('pend'); sumar(pref); }
-  if (it.l.monto > 0) { g.socios.forEach(function (sid) { var per = primerImpago(g, sid); if (per) sumar('aporte:' + sid + ':' + per); }); sumar('renta'); }
+  if (it.l.monto > 0) { g.socios.forEach(function (sid) { var per = primerImpago(g, sid); if (per) sumar('aporte:' + sid + ':' + per); }); propiedadesActivas(g.id).forEach(function (x) { sumar('renta:' + x.id); }); }
   else ['banco', 'impuesto', 'gasto'].forEach(sumar);
   return '<label class="solo-lector" for="dec' + it.i + '">Qué hacer con este renglón</label><select class="btn btn-chico" style="max-width:100%;text-align:left" id="dec' + it.i + '" data-dec="' + it.i + '">' +
     ops.map(function (v) { return '<option value="' + v + '">' + esc(etiquetaDecision(v)) + '</option>'; }).join('') + '</select>';
@@ -250,8 +281,9 @@ function resultadoConciliacion(g, C) {
       var e = ESTADO_CONC[it.estado], editable = !C.hecho && (it.estado === 'nuevo' || it.estado === 'dudoso' || it.estado === 'sin');
       return '<div class="tarjeta" style="padding:12px 14px;box-shadow:none"><div class="fila entre" style="gap:8px"><span class="chico gris mono">' + fechaCorta(it.l.fecha) + '</span><b class="num ' + (it.l.monto < 0 ? 'rojo' : 'verde') + '">' + (it.l.monto < 0 ? '−' : '+') + ' ' + (C.moneda === 'USD' ? usd(Math.abs(it.l.monto), 2) : ars(Math.abs(it.l.monto)) + ' <span class="chico gris">≈ ' + usd(Math.abs(it.usd), 2) + '</span>') + '</b></div>' +
         '<p class="chico" style="margin:4px 0;word-break:break-word">' + esc(it.l.desc) + '</p>' +
-        '<div class="fila entre" style="gap:8px"><span class="chip ' + e[1] + '">' + e[0] + '</span>' + (editable ? selectorDecision(g, it) : '') + '</div>' +
-        (it.texto ? '<p class="chico gris" style="margin:6px 0 0">' + esc(it.texto) + '</p>' : '') + '</div>';
+        '<div class="fila entre" style="gap:8px"><span class="chip ' + e[1] + '">' + (it.regla ? 'Por tu regla' : e[0]) + '</span>' + (editable ? selectorDecision(g, it) : '') + '</div>' +
+        (it.texto ? '<p class="chico gris" style="margin:6px 0 0">' + esc(it.texto) + '</p>' : '') +
+        (editable && !it.regla && palabrasSugeridas(it.l.desc) ? '<div class="recordar"><label class="casilla"><input type="checkbox" data-recordar="' + it.i + '"><span>Recordar: la próxima vez que el concepto diga</span></label><input class="recordar-txt" data-palabras="' + it.i + '" value="' + esc(palabrasSugeridas(it.l.desc)) + '" maxlength="60" aria-label="Palabras de la regla"><span class="chico gris">→ hacer lo mismo que elegí arriba (' + (it.l.monto > 0 ? 'cuando entra plata' : 'cuando sale plata') + ').</span></div>' : '') + '</div>';
   }
   return '<section class="tarjeta seccion entrar" id="resConc"><div class="fila entre"><h2 style="margin:0">' + (C.hecho ? 'Conciliación registrada' : 'Lo que encontré') + '</h2><span class="chip">' + esc(C.origen) + '</span></div>' +
     '<p class="gris chico">' + r.items.length + ' renglones del ' + fechaCorta(r.desde) + ' al ' + fechaCorta(r.hasta) + (C.salteadas ? ' · ' + C.salteadas + ' renglones sin fecha o importe salteados (títulos, saldo anterior)' : '') + '</p>' +
@@ -273,6 +305,15 @@ function historialConciliaciones(g) {
   return '<section class="tarjeta seccion"><h3>Conciliaciones anteriores</h3><div class="tabla-scroll"><table><tr><th>Hecha</th><th>Período del extracto</th><th class="n">Renglones</th><th class="n">Registrados</th><th class="n">Pendientes</th><th>Saldos</th></tr>' +
     cs.map(function (c) { var d = c.saldoBanco - c.saldoLibros; return '<tr><td>' + fechaCorta(c.fecha) + '</td><td>' + (c.desde ? fechaCorta(c.desde) + ' al ' + fechaCorta(c.hasta) : '—') + '</td><td class="n">' + c.renglones + '</td><td class="n">' + c.registrados + '</td><td class="n">' + c.pendientes + '</td><td>' + (c.moneda !== 'USD' || !isFinite(d) ? '<span class="chip">' + c.moneda + '</span>' : Math.abs(d) < 0.01 ? '<span class="chip ok">✓ cuadra</span>' : '<span class="chip mal">dif. ' + usd(d, 2) + '</span>') + '</td></tr>'; }).join('') + '</table></div></section>';
 }
+function tarjetaReglasBanco(u, g) {
+  var rs = reglasBanco(u), ops = ['gasto', 'impuesto', 'banco'].concat(propiedadesActivas(g.id).map(function (x) { return 'renta:' + x.id; })).concat(g.socios.map(function (s) { return 'aporte:' + s; })).concat(['pend']);
+  return '<section class="tarjeta seccion"><h3 style="margin:0">Reglas para clasificar el extracto solo</h3>' +
+    '<p class="gris chico">Si el concepto del banco dice esas palabras, la app lo clasifica sola en la próxima conciliación. Se crean tildando «Recordar» en un renglón, o acá. Las ves solo vos (pueden tener nombres de inquilinos o proveedores).</p>' +
+    (rs.length ? '<div class="reglas-lista">' + rs.map(function (r) { return '<div class="regla"><span class="regla-si">Si dice <b>«' + esc(r.texto) + '»</b> y ' + (r.signo > 0 ? 'entra' : 'sale') + ' plata</span><span class="regla-flecha" aria-hidden="true">→</span><span class="regla-es">' + esc(etiquetaDecision(r.decision)) + '</span><span class="chico gris">usada ' + (r.usada || 0) + (r.usada === 1 ? ' vez' : ' veces') + '</span><button type="button" class="btn-texto chico" data-borrar-regla="' + r.id + '">Borrar</button></div>'; }).join('') + '</div>' : '<p class="chico gris">Todavía no hay reglas.</p>') +
+    '<form id="formRegla" class="rejilla r4" style="margin-top:10px;align-items:end"><div class="campo"><label for="rgTxt">Si el concepto dice</label><input id="rgTxt" maxlength="60" placeholder="por ejemplo: INMOBILIARIA AUSTRAL"></div>' +
+    '<div class="campo"><label for="rgSigno">y</label><select id="rgSigno"><option value="1">entra plata</option><option value="-1">sale plata</option></select></div>' +
+    '<div class="campo"><label for="rgDec">es</label><select id="rgDec">' + ops.map(function (v) { return '<option value="' + v + '">' + esc(etiquetaDecision(v)) + '</option>'; }).join('') + '</select></div><div><button class="btn btn-chico">Agregar la regla</button></div></form></section>';
+}
 function vistaConciliar(u, g) {
   var volver = '';
   if (!g || g.estado !== 'activo') return volver + '<h1>Conciliación bancaria</h1><p class="gris">Empieza cuando el fideicomiso tiene cuenta y movimientos.</p>';
@@ -283,7 +324,7 @@ function vistaConciliar(u, g) {
     [['USD', 'En dólares'], ['ARS', 'En pesos']].map(function (x) { return '<button type="button" data-cuenta="' + x[0] + '" aria-pressed="' + (x[0] === mon) + '">' + x[1] + '</button>'; }).join('') + '</div></div>' +
     '<div class="campo"><label for="archExtracto">Extracto del banco (CSV)</label><input type="file" id="archExtracto" accept=".csv,.txt,text/csv,text/plain"><span class="ayuda">Se lee en este equipo y no se guarda: quedan solo huellas de los renglones conciliados y un resumen con totales.</span></div>' +
     '<div class="fila"><button class="btn btn-chico" id="btnEjemplo">Probar con un extracto de ejemplo</button><button class="btn-texto chico" id="btnBajarEjemplo">Bajar el extracto de ejemplo</button></div></section>' +
-    (CONC && CONC.g === g.id ? resultadoConciliacion(g, CONC) : '') + historialConciliaciones(g);
+    (CONC && CONC.g === g.id ? resultadoConciliacion(g, CONC) : '') + tarjetaReglasBanco(u, g) + historialConciliaciones(g);
 }
 function ganchoConciliar() {
   var g = grupoActual(), u = yo(); if (!g || g.estado !== 'activo' || u.rol !== 'fundador') return;
@@ -308,9 +349,18 @@ function ganchoConciliar() {
   $('btnBajarEjemplo').onclick = function () { descargar('extracto-ejemplo-bd-' + g.id + '.csv', extractoEjemplo(g.id)); };
   var b = $('btnConciliar');
   if (b) b.onclick = function () {
-    var dec = {}; document.querySelectorAll('[data-dec]').forEach(function (s) { dec[s.dataset.dec] = s.value; });
+    var dec = {}, nuevas = 0; document.querySelectorAll('[data-dec]').forEach(function (s) { dec[s.dataset.dec] = s.value; });
+    document.querySelectorAll('[data-recordar]').forEach(function (c) {
+      if (!c.checked) return; var i = +c.dataset.recordar, it = CONC.res.items.filter(function (x) { return x.i === i; })[0], d = dec[i];
+      if (!it || !d) return; var p = d.split(':'), guardada = guardarRegla(u, document.querySelector('[data-palabras="' + i + '"]').value, it.l.monto > 0 ? 1 : -1, p[0] === 'aporte' ? 'aporte:' + p[1] : d);
+      if (guardada) { guardada.usada = 1; nuevas++; }
+    });
     var out = aplicarConciliacion(g.id, CONC.res, dec, CONC.moneda, u);
+    if (nuevas) anotar(u.id, 'Creó ' + nuevas + (nuevas === 1 ? ' regla' : ' reglas') + ' para clasificar el extracto');
     CONC.res = out.res; CONC.hecho = out.resumen; render(); lluviaDorada();
-    tostada(out.resumen.registrados + ' registrados · ' + out.resumen.yaEstaban + ' confirmados contra el banco.');
+    tostada(out.resumen.registrados + ' registrados · ' + out.resumen.yaEstaban + ' confirmados contra el banco.' + (nuevas ? ' ' + nuevas + (nuevas === 1 ? ' regla nueva.' : ' reglas nuevas.') : ''));
   };
+  var fr = $('formRegla');
+  if (fr) fr.onsubmit = function (ev) { ev.preventDefault(); var r = guardarRegla(u, $('rgTxt').value, +$('rgSigno').value, $('rgDec').value); if (!r) { tostada('Escribí las palabras del concepto.'); return; } anotar(u.id, 'Creó una regla para clasificar el extracto'); guardarDatos(); render(); tostada('Regla guardada: la próxima conciliación la usa sola.'); };
+  document.querySelectorAll('[data-borrar-regla]').forEach(function (b2) { b2.onclick = function () { u.reglasBanco = reglasBanco(u).filter(function (r) { return r.id !== b2.dataset.borrarRegla; }); anotar(u.id, 'Borró una regla del extracto'); guardarDatos(); render(); }; });
 }

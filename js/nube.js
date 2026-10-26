@@ -121,7 +121,7 @@ setInterval(redibujarSiSePuede, 1500);
 
 /* ---------- de la base a los datos de la app ---------- */
 /* lo privado de cada socio que vive en bd/seg/<uid> */
-var CAMPOS_SEG = ['totp', 'rec', 'recFecha', 'llaves', 'equipos', 'ntfy', 'canales'];
+var CAMPOS_SEG = ['totp', 'rec', 'recFecha', 'llaves', 'equipos', 'ntfy', 'canales', 'reglasBanco'];
 var FICHA_VACIA = { nombre: '', dni: '', cuit: '', condIva: '', condGanancias: '', telefono: '', domicilio: '', localidad: '', provincia: '', cp: '', cbu: '', banco: '', sustituto: {}, consentimiento: {} };
 function valores(o) { return o ? Object.keys(o).map(function (k) { return o[k]; }) : []; }
 function construirDesdeNube() {

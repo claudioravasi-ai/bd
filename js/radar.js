@@ -109,3 +109,39 @@ function proponerCartera(caja, reserva, mesesHastaCompra) {
   return { partes: partes, ganancia: gan, rendimiento: caja > 0 ? yProm / caja : 0 };
 }
 var COLORES_CARTERA = { cuenta: '#8FA2B8', pfusd: '#7FB5FF', fcimm: '#E6C979', tbill: '#6BD3A4', on: '#C9A24B', pfars: '#D9A6FF' };
+
+/* ===== Revisión automática de una propuesta de inversión, antes de votarla (idea del «X-ray» de Ghostfolio) =====
+   Mira la propuesta con las reglas del contrato (art. 29) y con los números de hoy, y dice en palabras simples qué
+   está bien, qué conviene mirar y qué no se puede. Devuelve { items: [{ nivel: 'ok'|'ojo'|'mal', t }], veredicto }. */
+function revisarPropuesta(g, cartera) {
+  var e = estadoGrupo(g.id), ci = cicloInfo(g), plata = e.caja + e.inv, hoy = hoyISO(), items = [];
+  var dias = ci && ci.faltan ? Math.max(0, diasEntre(hoy, venceDe(mesDe(ci.fechaCompra)))) : 0;
+  var vig = g.reparto || REPARTO_VIGENTE, y = rendimientoDe(cartera), yv = rendimientoDe(vig);
+  var suma = cartera.reduce(function (s, p) { return s + p.pct; }, 0);
+  function pon(nivel, t) { items.push({ nivel: nivel, t: t }); }
+  pon(Math.abs(suma - 1) < 0.001 ? 'ok' : 'mal', Math.abs(suma - 1) < 0.001 ? 'Reparte el 100% de la plata.' : 'Reparte el ' + num(suma * 100, 1) + '% de la plata: tiene que sumar 100%.');
+  var prohibidos = cartera.filter(function (p) { var x = instrumento(p.id); return x && !x.permitido; });
+  pon(prohibidos.length ? 'mal' : 'ok', prohibidos.length ? 'Incluye algo que el contrato no permite: ' + prohibidos.map(function (p) { return instrumento(p.id).n; }).join(', ') + ' (art. 29).' : 'Nada prohibido: sin criptomonedas ni acciones (art. 29).');
+  var pasados = cartera.filter(function (p) { var x = instrumento(p.id); return x && !x.sinTope && p.pct > POLITICA.maxPorInstrumento + 0.0001; });
+  pon(pasados.length ? 'mal' : 'ok', pasados.length ? 'Pasa el tope de 30% por instrumento: ' + pasados.map(function (p) { return instrumento(p.id).n + ' ' + pct(p.pct, 0); }).join(', ') + '.' : 'Ningún instrumento pasa el 30% (la cuenta y el plazo fijo del banco no tienen tope).');
+  var dif = y - yv, porMes = plata * dif / 12;
+  pon(dif >= -0.00005 ? 'ok' : 'ojo', Math.abs(dif) < 0.00005 ? 'Rinde lo mismo que lo que se usa hoy (' + pct(yv, 2) + ' por año).' : dif > 0 ? 'Rinde ' + pct(y, 2) + ' por año: ' + num(dif * 100, 2) + ' puntos más que lo de hoy, unos ' + usd(porMes, 2) + ' más por mes.' : 'Rinde ' + pct(y, 2) + ' por año: ' + num(-dif * 100, 2) + ' puntos MENOS que lo de hoy (' + pct(yv, 2) + '), unos ' + usd(-porMes, 2) + ' menos por mes.');
+  var trabados = ci && ci.faltan ? cartera.filter(function (p) { var x = instrumento(p.id); return x && x.liqDias > dias; }) : [];
+  pon(trabados.length ? 'mal' : 'ok', trabados.length ? 'Traba plata hasta después de la compra (' + fechaCorta(venceDe(mesDe(ci.fechaCompra))) + '): ' + trabados.map(function (p) { return instrumento(p.id).n + ' (' + instrumento(p.id).liq + ')'; }).join(', ') + '.' : 'Toda la plata se puede sacar antes de la compra' + (ci && ci.faltan ? ' del ' + fechaCorta(venceDe(mesDe(ci.fechaCompra))) : '') + '.');
+  var cuenta = cartera.filter(function (p) { return p.id === 'cuenta'; }).reduce(function (s, p) { return s + p.pct; }, 0), reserva = g.reserva || 0;
+  if (reserva) pon(plata * cuenta >= reserva - 0.5 ? 'ok' : 'ojo', plata * cuenta >= reserva - 0.5 ? 'Deja la reserva del grupo disponible al instante (' + usd(plata * cuenta) + ' en la cuenta; hace falta ' + usd(reserva) + ').' : 'Deja solo ' + usd(plata * cuenta) + ' disponible al instante y la reserva del grupo es ' + usd(reserva) + '.');
+  var riesgo = function (c) { return c.reduce(function (s, p) { var x = instrumento(p.id); return s + p.pct * (x ? x.riesgo : 0); }, 0); }, r = riesgo(cartera), rv = riesgo(vig);
+  pon(r <= rv + 0.05 ? 'ok' : 'ojo', 'Riesgo de ' + num(r, 1) + ' sobre 5 (lo de hoy: ' + num(rv, 1) + ')' + (r > rv + 0.05 ? ': más riesgo que lo que se usa hoy.' : '.'));
+  var mal = items.filter(function (i) { return i.nivel === 'mal'; }).length, ojo = items.filter(function (i) { return i.nivel === 'ojo'; }).length;
+  return { items: items, mal: mal, ojo: ojo, veredicto: mal ? 'No cumple el contrato: no conviene votarla así.' : ojo ? 'Cumple el contrato, pero hay ' + ojo + (ojo === 1 ? ' punto' : ' puntos') + ' para mirar antes de votar.' : 'Cumple el contrato y no empeora nada: se puede votar tranquilo.' };
+}
+function htmlRevision(rv) {
+  var ico = { ok: '✓', ojo: '!', mal: '✕' };
+  return '<div class="revision ' + (rv.mal ? 'r-mal' : rv.ojo ? 'r-ojo' : 'r-ok') + '"><p class="rev-tit"><span aria-hidden="true">' + (rv.mal ? '✕' : rv.ojo ? '!' : '✓') + '</span><b>Revisión automática</b> · ' + esc(rv.veredicto) + '</p>' +
+    '<ul class="rev-lista">' + rv.items.map(function (i, k) { return '<li class="rev-' + i.nivel + '" style="--d:' + (k * 60) + 'ms"><span aria-hidden="true">' + ico[i.nivel] + '</span>' + esc(i.t) + '</li>'; }).join('') + '</ul></div>';
+}
+/* la propuesta automática viene en montos: se pasa a porcentajes (juntando lo que va dos veces a la cuenta) */
+function carteraDePartes(partes, plata) {
+  var por = {}; partes.forEach(function (p) { por[p.x.id] = (por[p.x.id] || 0) + (plata ? p.monto / plata : 0); });
+  return Object.keys(por).map(function (id) { return { id: id, pct: por[id] }; });
+}
