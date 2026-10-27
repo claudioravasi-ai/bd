@@ -10,34 +10,91 @@
 <style>
 :root { --noche: #0D1824; --oro: #C9A24B; --oro2: #E6C979; --crema: #F6F3EC; --gris: #B4C2D2; }
 * { box-sizing: border-box; }
-body { margin: 0; background: radial-gradient(1000px 500px at 80% -10%, rgba(201, 162, 75, .16), transparent 60%), var(--noche); color: var(--crema); font-family: 'IBM Plex Sans', system-ui, sans-serif; padding: 24px 16px 48px; }
+body { margin: 0; background: radial-gradient(1000px 500px at 80% -10%, rgba(201, 162, 75, .16), transparent 60%), var(--noche); color: var(--crema); font-family: 'IBM Plex Sans', system-ui, sans-serif; padding: 18px 16px 48px; }
 h1, h2 { font-family: 'EB Garamond', Georgia, serif; font-weight: 500; margin: 0; }
-h1 { font-size: clamp(2rem, 5vw, 3rem); }
-.sub { color: var(--gris); max-width: 900px; margin: 8px 0 0; }
-.pasos { display: flex; flex-wrap: wrap; gap: 8px; margin: 18px 0 24px; }
-.pasos span { border: 1px solid rgba(201, 162, 75, .35); border-radius: 999px; padding: 6px 12px; font-size: .9rem; }
-.pasos b { color: var(--oro2); }
-.cabeza { display: flex; align-items: center; gap: 18px; flex-wrap: wrap; }
-.logo-demo { display: inline-flex; flex-direction: column; align-items: center; background: #fff; border-radius: 18px; overflow: hidden; width: 96px; padding-bottom: 6px; box-shadow: 0 8px 24px rgba(0,0,0,.35); }
-.logo-demo img { width: 112px; margin: -6px -8px -14px; display: block; } .logo-demo b { font-size: .62rem; color: #2B3A9E; letter-spacing: .04em; }
-.probar { display: flex; flex-wrap: wrap; gap: 8px; margin: 0 0 22px; padding: 14px; border-radius: 16px; border: 1px solid rgba(192, 132, 252, .35); background: rgba(124, 58, 237, .08); }
-.probar b { width: 100%; color: #E9D5FF; } .probar span { border-radius: 999px; padding: 6px 12px; background: rgba(255,255,255,.05); border: 1px solid rgba(255,255,255,.1); font-size: .88rem; }
-.moviles { display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 28px; align-items: start; }
-.movil { display: flex; flex-direction: column; gap: 12px; }
-.movil h2 { font-size: 1.5rem; }
-.movil h2 i { font-style: normal; color: var(--oro2); margin-right: 8px; }
-.movil p { margin: 0; color: var(--gris); font-size: .92rem; line-height: 1.45; }
-.movil ul { margin: 0; padding-left: 18px; color: var(--gris); font-size: .9rem; line-height: 1.45; }
-.marco { width: 100%; max-width: 340px; aspect-ratio: 390 / 800; border: 10px solid #05090e; border-radius: 42px; overflow: hidden; background: #000; box-shadow: 0 24px 50px rgba(0, 0, 0, .5), 0 0 0 1px rgba(201, 162, 75, .3); position: relative; }
-.marco iframe { width: 390px; height: 800px; border: 0; transform-origin: 0 0; }
-.recargar { align-self: flex-start; background: none; border: 1px solid rgba(201, 162, 75, .4); color: var(--crema); border-radius: 999px; padding: 6px 12px; cursor: pointer; font: inherit; font-size: .85rem; }
-.nota { margin-top: 28px; padding: 12px 14px; border-left: 3px solid var(--oro); background: rgba(201, 162, 75, .08); border-radius: 0 12px 12px 0; color: var(--gris); font-size: .9rem; max-width: 900px; }
+h1 { font-size: clamp(1.6rem, 3.4vw, 2.4rem); }
+.cabeza { display: flex; align-items: center; gap: 14px; flex-wrap: wrap; }
+.logo-demo { display: inline-flex; flex-direction: column; align-items: center; background: #fff; border-radius: 14px; overflow: hidden; width: 64px; padding-bottom: 4px; box-shadow: 0 8px 24px rgba(0,0,0,.35); }
+.logo-demo img { width: 76px; margin: -4px -6px -10px; display: block; } .logo-demo b { font-size: .42rem; color: #2B3A9E; letter-spacing: .04em; }
+.sub { color: var(--gris); margin: 4px 0 0; font-size: .95rem; }
+.barra { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; margin: 14px 0 16px; }
+.barra button, .botones button { background: rgba(255,255,255,.04); border: 1px solid rgba(201, 162, 75, .45); color: var(--crema); border-radius: 999px; padding: 7px 14px; cursor: pointer; font: inherit; font-size: .86rem; }
+.barra button:hover, .botones button:hover { background: rgba(201, 162, 75, .16); }
+.barra label { display: inline-flex; gap: 6px; align-items: center; font-size: .86rem; color: var(--gris); cursor: pointer; }
+/* los cuatro celulares en fila, del mismo tamaño y enteros en la pantalla */
+.fila { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 18px; align-items: start; justify-items: center; }
+.movil { display: flex; flex-direction: column; gap: 8px; width: 100%; max-width: min(360px, calc((100vh - 270px) * 390 / 800)); }
+.rotulo { display: flex; gap: 10px; align-items: flex-start; min-height: 54px; }
+.rotulo i { font-style: normal; flex: none; width: 28px; height: 28px; border-radius: 50%; display: grid; place-items: center; background: var(--oro); color: var(--noche); font-weight: 600; }
+.rotulo h2 { font-size: 1.15rem; line-height: 1.15; } .rotulo small { color: var(--gris); font-size: .78rem; line-height: 1.3; display: block; margin-top: 2px; }
+.marco { width: 100%; aspect-ratio: 390 / 800; border: 8px solid #05090e; border-radius: 36px; overflow: hidden; background: #000; box-shadow: 0 20px 44px rgba(0, 0, 0, .5), 0 0 0 1px rgba(201, 162, 75, .3); position: relative; transition: box-shadow .3s; }
+.marco iframe { width: 390px; height: 800px; border: 0; transform-origin: 0 0; display: block; }
+.movil.activo .marco { box-shadow: 0 20px 44px rgba(0,0,0,.5), 0 0 0 3px var(--oro2); }
+.destello { position: absolute; left: 50%; top: 10px; transform: translateX(-50%); background: var(--oro); color: var(--noche); font-size: .72rem; font-weight: 600; padding: 4px 10px; border-radius: 999px; opacity: 0; transition: opacity .3s; pointer-events: none; white-space: nowrap; }
+.destello.ve { opacity: 1; }
+.botones { display: flex; gap: 6px; flex-wrap: wrap; } .botones button { padding: 5px 10px; font-size: .78rem; }
+/* un celular agrandado, sin recargarlo */
+.velo-demo { position: fixed; inset: 0; background: rgba(5, 9, 14, .78); z-index: 20; display: none; }
+body.con-grande .velo-demo { display: block; }
+.movil.grande { position: fixed; z-index: 21; left: 50%; top: 12px; transform: translateX(-50%); max-width: min(430px, calc((100vh - 110px) * 390 / 800)); }
+.movil.grande .b-agrandar::before { content: ''; }
+/* tablet: de a dos; celular: en fila, deslizando con el dedo */
+@media (max-width: 1100px) { .fila { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+@media (max-width: 640px) {
+  .fila { display: flex; overflow-x: auto; scroll-snap-type: x mandatory; gap: 14px; padding-bottom: 10px; justify-items: initial; }
+  .fila .movil { flex: none; width: 82vw; max-width: 82vw; scroll-snap-align: center; }
+}
+.mas { margin-top: 26px; display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 12px; }
+.detalle { background: rgba(255,255,255,.03); border: 1px solid rgba(255,255,255,.08); border-radius: 14px; padding: 10px 14px; }
+.detalle summary { cursor: pointer; font-family: 'EB Garamond', Georgia, serif; font-size: 1.15rem; }
+.detalle summary i { font-style: normal; color: var(--oro2); margin-right: 8px; }
+.detalle p, .detalle ul { color: var(--gris); font-size: .88rem; line-height: 1.45; } .detalle ul { padding-left: 18px; }
+details.novedades { margin-top: 18px; } details.novedades > summary { cursor: pointer; color: #E9D5FF; }
+.probar { display: flex; flex-wrap: wrap; gap: 8px; margin: 10px 0; padding: 14px; border-radius: 16px; border: 1px solid rgba(192, 132, 252, .35); background: rgba(124, 58, 237, .08); }
+.probar b { width: 100%; color: #E9D5FF; } .probar span { border-radius: 999px; padding: 6px 12px; background: rgba(255,255,255,.05); border: 1px solid rgba(255,255,255,.1); font-size: .86rem; }
+/* en la demo, «Volver a la app real» va arriba a la derecha para no tapar los botones de los celulares */
+#volverApp { left: auto !important; right: 12px !important; bottom: auto !important; top: 12px !important; }
+.nota { margin-top: 18px; padding: 12px 14px; border-left: 3px solid var(--oro); background: rgba(201, 162, 75, .08); border-radius: 0 12px 12px 0; color: var(--gris); font-size: .9rem; max-width: 900px; }
 </style>
 </head>
 <body>
-<div class="cabeza"><span class="logo-demo"><img src="logo-bd.png" alt=""><b>Building Dreams</b></span><h1>B&amp;D · Así entra cada uno</h1></div>
-<p class="sub">Cuatro celulares con la app de verdad, en modo prueba. Cada uno se maneja con el dedo o el mouse, como un teléfono. El orden es el de la vida real: primero el socio fundador, después los socios de Alfa, después quien se suma a otro fideicomiso y, por último, quien solo quiere mirar.</p>
-<div class="pasos"><span><b>1.</b> El fundador crea su cuenta</span><span><b>2.</b> Invita a los socios por correo</span><span><b>3.</b> Cada socio se da de alta con el código</span><span><b>4.</b> Para otro grupo, invita a esa gente a ese grupo</span><span><b>5.</b> A quien solo quiere conocer, le da un pase para mirar</span></div>
+<div class="cabeza"><span class="logo-demo"><img src="logo-bd.png" alt=""><b>Building Dreams</b></span><div><h1>B&amp;D · Así entra cada uno</h1><p class="sub">Cuatro celulares con la app de verdad, en modo prueba, uno al lado del otro. Tocalos con el dedo o el mouse: lo que hagas en uno aparece en los otros.</p></div></div>
+<div class="barra">
+  <label><input type="checkbox" id="enVivo" checked> Lo que cambia en un celular se ve en los otros al instante</label>
+  <button type="button" id="recargarTodos">↻ Recargar los 4</button>
+  <button type="button" id="reiniciarDatos">⟲ Volver a los datos de ejemplo</button>
+</div>
+<div class="fila">
+  <section class="movil" data-k="0">
+    <div class="rotulo"><i>1</i><div><h2>Vos, el socio fundador</h2><small>Entra con clave y código; ve y maneja todo.</small></div></div>
+    <div class="marco"><iframe data-src="./?demo=fundador#/inicio" title="Celular del socio fundador"></iframe><span class="destello" aria-live="polite"></span></div>
+    <div class="botones"><button type="button" class="b-agrandar" aria-label="Agrandar el celular 1">⤢ Agrandar</button><button type="button" class="b-empezar" aria-label="Volver a empezar el celular 1">↺ Empezar de nuevo</button></div>
+  </section>
+  <section class="movil" data-k="1">
+    <div class="rotulo"><i>2</i><div><h2>Una socia de Alfa</h2><small>Socia de Alfa: su parte, pagos, votos y chat.</small></div></div>
+    <div class="marco"><iframe data-src="./?demo=socia#/inicio" title="Celular de una socia"></iframe><span class="destello" aria-live="polite"></span></div>
+    <div class="botones"><button type="button" class="b-agrandar" aria-label="Agrandar el celular 2">⤢ Agrandar</button><button type="button" class="b-empezar" aria-label="Volver a empezar el celular 2">↺ Empezar de nuevo</button></div>
+  </section>
+  <section class="movil" data-k="2">
+    <div class="rotulo"><i>3</i><div><h2>Alguien que se suma a otro grupo</h2><small>Se da de alta con la invitación a otro grupo.</small></div></div>
+    <div class="marco"><iframe data-src="./?demo=invitacion#/" title="Celular de una persona invitada a otro grupo"></iframe><span class="destello" aria-live="polite"></span></div>
+    <div class="botones"><button type="button" class="b-agrandar" aria-label="Agrandar el celular 3">⤢ Agrandar</button><button type="button" class="b-empezar" aria-label="Volver a empezar el celular 3">↺ Empezar de nuevo</button></div>
+  </section>
+  <section class="movil" data-k="3">
+    <div class="rotulo"><i>4</i><div><h2>Alguien que solo mira</h2><small>Pase para mirar: ve los números, sin nombres.</small></div></div>
+    <div class="marco"><iframe data-src="./?demo=mira#/vitrina" title="Celular de alguien que solo mira"></iframe><span class="destello" aria-live="polite"></span></div>
+    <div class="botones"><button type="button" class="b-agrandar" aria-label="Agrandar el celular 4">⤢ Agrandar</button><button type="button" class="b-empezar" aria-label="Volver a empezar el celular 4">↺ Empezar de nuevo</button></div>
+  </section>
+</div>
+<div class="velo-demo" id="veloDemo"></div>
+<h2 style="margin-top:30px;font-size:1.4rem">Qué probar en cada celular</h2>
+<div class="mas">
+  <details class="detalle"><summary><i>1</i>Vos, el socio fundador</summary><p><b>Cómo entra:</b> su cuenta ya está creada. Entra por «Ya soy socio» con correo + clave + el código de 6 números del teléfono, o en su teléfono con la huella o la cara. Si pierde el teléfono, usa un código de recuperación.</p><ul><li>Ve todos los fideicomisos (Alfa, Beta, Gamma, Delta).</li><li>Registra compras (con o sin saldo en cuotas), ventas a un socio y el pago de cada cuota; ve la bitácora completa en Estadísticas.</li><li>Invita socios y personas que solo miran, da de baja grupos, registra al escribano y pide reservas del radar.</li><li>Ve las fichas completas (queda anotado en la bitácora) y la carpeta contable.</li></ul></details>
+  <details class="detalle"><summary><i>2</i>Una socia de Alfa</summary><p><b>Cómo entra:</b> le llega un correo con un enlace que abre la app en «Tengo una invitación» con el código de 6 letras ya puesto (vence en 7 días). Escribe su correo, completa sus datos en 6 pasos (personales, fiscales, origen de fondos, CBU) y después activa Google Authenticator en Mis datos. Desde ahí entra siempre por «Ya soy socio», con correo y clave, sin código de invitación.</p><ul><li>Ve solo Alfa: su parte, sus pagos, las inversiones en vivo, votaciones, chat y su carpeta impositiva.</li><li>Prueba «Mi meta de ingresos», las Estadísticas y pedir quedarse con un departamento (vota la Asamblea sin ella).</li><li>De los otros socios ve nombre, aportes y participación; nunca sus datos personales.</li><li>No ve los fideicomisos cerrados de otros grupos.</li></ul></details>
+  <details class="detalle"><summary><i>3</i>Alguien que se suma a otro grupo</summary><p><b>Cómo entra:</b> el fundador lo invita a un grupo nuevo (en el ejemplo, Delta). En la pantalla de entrada ya están el correo y el código de prueba: tocá «Entrar» y seguí los 6 pasos del alta.</p><ul><li>Ve las propuestas abiertas y el grupo al que entró, con su proyección.</li><li>Ese grupo tiene 90 días para completarse; una semana antes, aviso; si no, se disuelve solo.</li><li>Cuando se completa, la app agenda la reunión virtual de inicio.</li></ul></details>
+  <details class="detalle"><summary><i>4</i>Alguien que solo mira</summary><p><b>Cómo entra:</b> el fundador le genera una invitación de tipo «Solo mirar». Con el código elige una clave y entra directo a la vitrina.</p><ul><li>Ve los fideicomisos que funcionan: números del grupo, rendimiento de la UP, dónde invierten, qué compraron y sus reglas.</li><li>No ve nombres ni datos personales y no puede cambiar nada.</li><li>Puede copiar una cartera en proporción a las UP que tendría.</li></ul></details>
+</div>
+<details class="novedades"><summary>Lo nuevo de las últimas versiones</summary>
 <div class="probar"><b>Para probar lo nuevo (versión 0.3.7):</b>
 <span>👑 Fideicomisos griegos (fundador): regalía del 10% de los grupos nuevos, en vivo y proyectada</span>
 <span>⏳ Tu ganancia → De dónde sale: «Con tiempos muertos» y «Gastos de arranque»</span>
@@ -51,45 +108,43 @@ h1 { font-size: clamp(2rem, 5vw, 3rem); }
 <span>🔍 Transparencia: adónde fue cada dólar · 🔁 Se repite cada mes (fundador)</span>
 <span>🚨 Oportunidades → «Mis alertas» guardadas · 📊 Mis inversiones: mi TIR mes a mes</span>
 <span>🖥️ Cómo se usa → Presentación: se abre en otra ventana, con «Volver a la app real»</span></div>
-<div class="moviles">
-  <section class="movil">
-    <h2><i>1</i>Vos, el socio fundador</h2>
-    <p><b>Cómo entra:</b> su cuenta ya está creada. Entra por «Ya soy socio» con correo + clave + el código de 6 números del teléfono, o en su teléfono con la huella o la cara. Si pierde el teléfono, usa un código de recuperación.</p>
-    <ul><li>Ve todos los fideicomisos (Alfa, Beta, Gamma, Delta).</li><li>Registra compras (con o sin saldo en cuotas), ventas a un socio y el pago de cada cuota; ve la bitácora completa en Estadísticas.</li><li>Invita socios y personas que solo miran, da de baja grupos, registra al escribano y pide reservas del radar.</li><li>Ve las fichas completas (queda anotado en la bitácora) y la carpeta contable.</li></ul>
-    <div class="marco"><iframe data-src="./?demo=fundador#/inicio" title="Celular del socio fundador"></iframe></div>
-    <button class="recargar" data-k="0">Volver a empezar este celular</button>
-  </section>
-  <section class="movil">
-    <h2><i>2</i>Una socia de Alfa</h2>
-    <p><b>Cómo entra:</b> le llega un correo con un enlace que abre la app en «Tengo una invitación» con el código de 6 letras ya puesto (vence en 7 días). Escribe su correo, completa sus datos en 6 pasos (personales, fiscales, origen de fondos, CBU) y después activa Google Authenticator en Mis datos. Desde ahí entra siempre por «Ya soy socio», con correo y clave, sin código de invitación.</p>
-    <ul><li>Ve solo Alfa: su parte, sus pagos, las inversiones en vivo, votaciones, chat y su carpeta impositiva.</li><li>Prueba «Mi meta de ingresos», las Estadísticas y pedir quedarse con un departamento (vota la Asamblea sin ella).</li><li>De los otros socios ve nombre, aportes y participación; nunca sus datos personales.</li><li>No ve los fideicomisos cerrados de otros grupos.</li></ul>
-    <div class="marco"><iframe data-src="./?demo=socia#/inicio" title="Celular de una socia"></iframe></div>
-    <button class="recargar" data-k="1">Volver a empezar este celular</button>
-  </section>
-  <section class="movil">
-    <h2><i>3</i>Alguien que se suma a otro grupo</h2>
-    <p><b>Cómo entra:</b> el fundador lo invita a un grupo nuevo (en el ejemplo, Delta). En la pantalla de entrada ya están el correo y el código de prueba: tocá «Entrar» y seguí los 6 pasos del alta.</p>
-    <ul><li>Ve las propuestas abiertas y el grupo al que entró, con su proyección.</li><li>Ese grupo tiene 90 días para completarse; una semana antes, aviso; si no, se disuelve solo.</li><li>Cuando se completa, la app agenda la reunión virtual de inicio.</li></ul>
-    <div class="marco"><iframe data-src="./?demo=invitacion#/" title="Celular de una persona invitada a otro grupo"></iframe></div>
-    <button class="recargar" data-k="2">Volver a empezar este celular</button>
-  </section>
-  <section class="movil">
-    <h2><i>4</i>Alguien que solo mira</h2>
-    <p><b>Cómo entra:</b> el fundador le genera una invitación de tipo «Solo mirar». Con el código elige una clave y entra directo a la vitrina.</p>
-    <ul><li>Ve los fideicomisos que funcionan: números del grupo, rendimiento de la UP, dónde invierten, qué compraron y sus reglas.</li><li>No ve nombres ni datos personales y no puede cambiar nada.</li><li>Puede copiar una cartera en proporción a las UP que tendría.</li></ul>
-    <div class="marco"><iframe data-src="./?demo=mira#/vitrina" title="Celular de alguien que solo mira"></iframe></div>
-    <button class="recargar" data-k="3">Volver a empezar este celular</button>
-  </section>
-</div>
+</details>
 <p class="nota"><b>¿Presentás a varias personas?</b> Abrí <a href="sala.html?presentar" style="color:#E6C979">la sala en vivo</a>: mostrás un QR, cada uno lo escanea y ve en su celular lo que vos vas pasando.</p>
-<p class="nota">Modo prueba: los datos son inventados y quedan en este equipo; los cuatro celulares comparten los mismos datos de prueba. En el celular del fundador, la cuenta ya aparece abierta para mostrarla; en la vida real se crea una sola vez con CUIL, correo, clave y Google Authenticator.</p>
+<p class="nota">Modo prueba: los datos son inventados y quedan solo en este equipo; los cuatro celulares comparten los mismos datos de prueba. En el celular del fundador la cuenta ya aparece abierta para mostrarla.</p>
 <script>
-function ajustar() { document.querySelectorAll('.marco').forEach(function (m) { var f = m.querySelector('iframe'), k = m.clientWidth / 390; f.style.transform = 'scale(' + k + ')'; m.style.height = (800 * k) + 'px'; }); }
-var marcos = document.querySelectorAll('.marco iframe');
-marcos.forEach(function (f, i) { setTimeout(function () { f.src = f.dataset.src; }, i * 700); });
-document.querySelectorAll('.recargar').forEach(function (b) { b.onclick = function () { var f = marcos[+b.dataset.k]; f.src = 'about:blank'; setTimeout(function () { f.src = f.dataset.src; }, 50); }; });
+var movs = [].slice.call(document.querySelectorAll('.movil')), marcos = movs.map(function (m) { return m.querySelector('iframe'); });
+function ajustar() { movs.forEach(function (m) { var c = m.querySelector('.marco'), f = c.querySelector('iframe'), k = c.clientWidth / 390; f.style.transform = 'scale(' + k + ')'; }); }
+function empezar(i) { var f = marcos[i]; f.src = 'about:blank'; setTimeout(function () { f.src = f.dataset.src; }, 50); }
+/* al cargar, un celular que pone el cursor en un campo corre la fila: mientras nadie la tocó, se vuelve al primero */
+var fila = document.querySelector('.fila'), tocada = false;
+['touchstart', 'pointerdown', 'wheel'].forEach(function (ev) { fila.addEventListener(ev, function () { tocada = true; }, { passive: true }); });
+function alPrincipio() { if (!tocada) { fila.scrollLeft = 0; window.scrollTo(0, 0); } }
+marcos.forEach(function (f, i) { f.addEventListener('load', function () { alPrincipio(); setTimeout(alPrincipio, 800); setTimeout(alPrincipio, 2000); }); setTimeout(function () { f.src = f.dataset.src; }, i * 600); });
+movs.forEach(function (m, i) {
+  m.querySelector('.b-empezar').onclick = function () { empezar(i); };
+  m.querySelector('.b-agrandar').onclick = function () { var g = !m.classList.contains('grande'); cerrarGrande(); if (g) { m.classList.add('grande'); document.body.classList.add('con-grande'); this.textContent = '✕ Achicar'; } ajustar(); };
+});
+function cerrarGrande() { movs.forEach(function (m) { m.classList.remove('grande'); m.querySelector('.b-agrandar').textContent = '⤢ Agrandar'; }); document.body.classList.remove('con-grande'); ajustar(); }
+document.getElementById('veloDemo').onclick = cerrarGrande;
+document.addEventListener('keydown', function (e) { if (e.key === 'Escape') cerrarGrande(); });
+/* qué celular se está usando: el que tiene el foco */
+setInterval(function () { var a = document.activeElement; movs.forEach(function (m, i) { m.classList.toggle('activo', a === marcos[i]); }); }, 400);
+/* cada celular avisa cuando tomó un cambio de otro */
+window.addEventListener('message', function (e) {
+  if (e.origin !== location.origin || !e.data || e.data.bdDemo !== 'actualizado') return;
+  marcos.forEach(function (f, i) { if (f.contentWindow === e.source) { var d = movs[i].querySelector('.destello'); d.textContent = 'Se actualizó'; d.classList.add('ve'); setTimeout(function () { d.classList.remove('ve'); }, 1400); } });
+});
+var vivo = document.getElementById('enVivo');
+function avisarVivo() { try { localStorage.setItem('bd.demo.enVivo', vivo.checked ? '1' : '0'); } catch (e) {} }
+vivo.onchange = avisarVivo; avisarVivo();
+document.getElementById('recargarTodos').onclick = function () { marcos.forEach(function (f) { try { f.contentWindow.location.reload(); } catch (e) { f.src = f.dataset.src; } }); };
+document.getElementById('reiniciarDatos').onclick = function () {
+  if (!confirm('Se borran los cambios que hiciste en la demo y vuelven los datos de ejemplo. ¿Seguir?')) return;
+  try { localStorage.removeItem('bd.prueba.datos.v1'); } catch (e) {}
+  marcos.forEach(function (f, i) { setTimeout(function () { empezar(i); }, i * 400); });
+};
 window.addEventListener('resize', ajustar); ajustar();
 </script>
-<script src="js/volver-app.js?v=0.3.7"></script>
+<script src="js/volver-app.js?v=0.3.8"></script>
 </body>
 </html>

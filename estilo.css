@@ -1318,3 +1318,6 @@ html.sin-movimiento .rev-lista li { animation: none; }
 @media (max-width:560px){.tr-fila{grid-template-columns:1fr auto;}.tr-fila .tr-pista{grid-column:1/-1;order:3}}
 /* celulares angostos: un botón segmentado con texto largo («Por ciclo (cada 10 meses, una compra)») parte en dos renglones */
 @media (max-width: 360px) { .segmentos { max-width: 100%; } .segmentos button { white-space: normal; text-align: center; } }
+/* pasos después de «¿Olvidaste tu clave?» */
+.pasos-clave { text-align: left; margin: 8px 0 6px 1.2em; padding: 0; }
+.pasos-clave li { margin: 4px 0; }

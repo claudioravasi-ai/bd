@@ -1,4 +1,5 @@
 <meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>Proyecto B&D</title>
 <meta name="claude:viewport-fit-sides" content="cover">
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;700&family=Manrope:wght@400;600;800&display=swap">
@@ -97,13 +98,47 @@ tr.gh td{font:700 11px var(--hf);letter-spacing:.1em;text-transform:uppercase;co
 .usar div{border-left:5px solid var(--cyan);background:var(--surface2);border-radius:12px;padding:10px 12px;font-size:13.5px}
 .glosa{display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:10px;font-size:13.5px}
 .glosa div{padding:10px 12px;border:1px dashed var(--line);border-radius:12px}
+
+/* ===== Diseño 0.3.8: resultados plegables, tablas cortas y animaciones (los supuestos no cambian) ===== */
+.hero{background-size:220% 220%;animation:heroMueve 14s ease-in-out infinite alternate}
+.hero:after{animation:flota 9s ease-in-out infinite alternate}.hero:before{animation:flota 11s ease-in-out infinite alternate-reverse}
+@keyframes heroMueve{0%{background-position:0% 40%}100%{background-position:100% 60%}}
+@keyframes flota{0%{transform:translate(0,0) scale(1)}100%{transform:translate(-30px,24px) scale(1.12)}}
+.card{animation:entra .55s cubic-bezier(.2,.8,.2,1) both}
+main>.card:nth-child(2){animation-delay:.05s}main>.card:nth-child(3){animation-delay:.1s}main>.card:nth-child(4){animation-delay:.15s}main>.card:nth-child(5){animation-delay:.2s}main>.card:nth-child(n+6){animation-delay:.25s}
+@keyframes entra{from{opacity:0;transform:translateY(14px)}to{opacity:1;transform:none}}
+.kpi{position:relative;overflow:hidden;transition:transform .25s}
+.kpi:hover{transform:translateY(-3px)}
+.kpi:after{content:"";position:absolute;inset:0;background:linear-gradient(110deg,transparent 30%,rgba(255,255,255,.28) 50%,transparent 70%);transform:translateX(-120%);animation:brillo 5s ease-in-out infinite}
+.kpi.k2:after{animation-delay:1.2s}.kpi.k3:after{animation-delay:2.4s}.kpi.k4:after{animation-delay:3.6s}
+@keyframes brillo{0%,70%{transform:translateX(-120%)}100%{transform:translateX(120%)}}
+details.plegable{padding:0 18px;border-top:1px solid var(--line);margin-top:0}
+details.plegable>summary{list-style:none;display:flex;align-items:center;gap:6px 14px;flex-wrap:wrap;margin:0 -18px;padding:16px 52px 16px 18px;position:relative;color:var(--fg);font:inherit;border-radius:20px;transition:background .2s}
+details.plegable>summary::-webkit-details-marker{display:none}
+details.plegable>summary:hover{background:var(--surface2)}
+details.plegable>summary h2{margin:0;font-size:18px}
+details.plegable>summary .pista{font-size:13px;color:var(--muted);font-weight:500}
+details.plegable>summary:after{content:"";position:absolute;right:20px;top:50%;width:22px;height:22px;margin-top:-11px;border-radius:50%;background:var(--grad);transition:transform .35s cubic-bezier(.2,.8,.2,1);
+  -webkit-mask:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Ccircle cx='12' cy='12' r='12'/%3E%3Cpath d='M7 10l5 5 5-5' stroke='white' stroke-width='2.4' fill='none' stroke-linecap='round'/%3E%3C/svg%3E") center/contain no-repeat}
+details.plegable[open]>summary:after{transform:rotate(180deg)}
+details.plegable[open]{padding-bottom:16px}
+details.plegable[open]>*:not(summary){animation:abre .4s cubic-bezier(.2,.8,.2,1) both}
+@keyframes abre{from{opacity:0;transform:translateY(-8px)}to{opacity:1;transform:none}}
+details.guia>summary h2{font-size:20px}
+table.corta tr.extra{display:none}
+.vertodo{margin-top:10px;border:1px solid var(--line);background:var(--surface2);color:var(--violet);border-radius:99px;padding:7px 14px;font:700 12px var(--hf);cursor:pointer;transition:transform .2s,background .2s}
+.vertodo:hover{transform:translateY(-1px);background:var(--surface)}
+.chart path,.chart polyline{transition:d .35s}
+/* «Volver a la app real» abajo a la derecha: a la izquierda tapaba los supuestos */
+#volverApp{left:auto!important;right:12px!important}
+@media (prefers-reduced-motion:reduce){*,*:before,*:after{animation:none!important;transition:none!important}}
 </style>
 <div class="wrap">
 <header class="hero"><button class="theme" id="th">Claro / oscuro</button>
 <span class="tag">Building Dreams</span>
 <h1>Proyecto B&amp;D</h1>
 <p>Diez socios, USD 500 por mes cada uno, pagados del 1 al 10. Cada 10 meses, sin excepción, se compra un departamento de 24 m² o más (Ushuaia a USD 2.000 el m², alquiler de mercado USD 450 por 25 m²), se pone a trabajar y se reinvierte la renta. Elegí el mercado (Ushuaia, Buenos Aires o Europa), alquiler mensual o temporal, y mirá qué pasa en 10 años para el grupo y para cada socio.</p></header>
-<section class="card guia" id="guia"><h2>El proyecto en 8 pasos (léalo primero)</h2>
+<details class="card guia plegable" id="guia"><summary><h2>El proyecto en 8 pasos</h2><span class="pista">Cómo funciona, contra qué se compara y cómo usar el simulador</span></summary>
 <p class="sub">Con los supuestos de base: Ushuaia a USD 2.000 el m², alquiler mensual fijo, escenario base. Si cambiás los controles de la izquierda, los números de abajo de la página se recalculan; estos pasos explican la idea.</p>
 <div class="pasos8">
 <div class="paso"><b class="n">1</b><h3>Aportamos</h3><p>Cada uno de los 10 socios pone USD 500 entre el día 1 y el 10 de cada mes.</p><span class="dato">USD 5.000 por mes el grupo</span></div>
@@ -120,7 +155,7 @@ tr.gh td{font:700 11px var(--hf);letter-spacing:.1em;text-transform:uppercase;co
 <h2 style="margin-top:6px">Cómo usar este simulador</h2>
 <div class="usar"><div><b>1. Supuestos (columna izquierda):</b> mercado, escenario, alquiler fijo o temporario, y los controles: aporte, socios, años, meses entre compras, m², costos e impuestos.</div><div><b>2. Los cuatro números de arriba:</b> valor del grupo si se vendiera todo, lo que le toca a cada socio, la TIR y la renta mensual al final.</div><div><b>3. Brújula de decisión:</b> tres caminos (prudente, equilibrado, ambicioso), mapa de mercados, dónde se va la renta en impuestos, dónde esperar la caja, IPC y pesos, rueda sola y grupos griegos.</div><div><b>4. El gráfico:</b> pasá el dedo o el mouse para ver cualquier mes: aportado, inmuebles, caja, total y la referencia.</div><div><b>5. Las tablas:</b> cada ciclo de 10 meses, año por año, mercados lado a lado, escenarios y cada compra con su precio y sus m².</div></div>
 <div class="glosa"><div><b>Valor de liquidación:</b> lo que habría si se vendiera todo ese día, ya descontado el 5% que cuesta vender.</div><div><b>Gastos de compra (5%):</b> escritura y sellos. Por eso el primer año el valor queda un poco debajo de lo aportado: no es plata perdida si no se vende.</div><div><b>Renta neta:</b> el alquiler que queda después de expensas, gastos e impuestos.</div><div><b>Escenarios:</b> conservador (el m² no sube), base (sube 3%) y optimista (5%). Ninguno es una promesa.</div></div>
-</section>
+</details>
 <div class="grid">
 <aside class="card" id="panel">
 <h2>Supuestos</h2>
@@ -140,34 +175,34 @@ tr.gh td{font:700 11px var(--hf);letter-spacing:.1em;text-transform:uppercase;co
 <section class="card"><h2>Brújula de decisión: IPC, ganancias y dónde invertir</h2><div class="seg tabs" id="labtabs"></div>
 <div id="t_caminos"></div><div id="t_mapa" hidden></div><div id="t_imp" hidden></div><div id="t_caja" hidden></div><div id="t_ipc" hidden></div><div id="t_rueda" hidden></div><div id="t_grupos" hidden></div><div id="t_meta" hidden></div><div id="t_solo" hidden></div><div id="t_reventa" hidden></div></section>
 
-<section class="card"><h2>Patrimonio del grupo mes a mes</h2>
+<details class="card plegable" open><summary><h2>Patrimonio del grupo mes a mes</h2><span class="pista">Gráfico: inmuebles, caja y lo aportado, contra la referencia</span></summary>
 <div class="legend"><span><i style="background:var(--violet)"></i>Inmuebles</span><span><i style="background:var(--cyan)"></i>Caja en espera</span><span><i style="background:var(--orange)"></i>Lo aportado</span><span><i style="background:var(--lime)"></i>Referencia financiera</span></div>
 <svg class="chart" id="chart" viewBox="0 0 800 340" role="img" aria-label="Evolución del patrimonio"></svg>
-<div class="read" id="read">Pasá el cursor o tocá el gráfico para ver un mes.</div></section>
-<section class="card"><h2>Alquiler de 1 a 10 bienes</h2>
+<div class="read" id="read">Pasá el cursor o tocá el gráfico para ver un mes.</div></details>
+<details class="card plegable"><summary><h2>Alquiler de 1 a 10 bienes</h2><span class="pista">Uno o varios departamentos, fijo o temporario</span></summary>
 <p class="sub">Compará un departamento o varios, de la superficie que elijas, con alquiler mensual fijo o temporal por plataformas.</p>
 <div class="inl"><div class="ctl"><label for="un">Cantidad de bienes</label><output id="o_un"></output><input type="range" id="un" min="1" max="10" step="1"></div>
 <div class="ctl"><label for="um">Superficie de cada bien (m²)</label><output id="o_um"></output><input type="range" id="um" min="15" max="40" step="1"></div></div>
-<div class="tw"><table id="unit"></table></div><div id="unote"></div></section>
-<section class="card"><h2>Cada ciclo de calendario: compra y reserva de renta capitalizada</h2>
+<div class="tw"><table id="unit"></table></div><div id="unote"></div></details>
+<details class="card plegable"><summary><h2>Cada ciclo de calendario: compra y reserva de renta capitalizada</h2><span class="pista">Cuánto de cada compra sale de la renta reinvertida</span></summary>
 <p class="sub">Ventanas consecutivas del largo que elijas. Muestra aportes, renta cobrada, intereses, compra y cuánto de la compra salió de la renta reinvertida.</p>
 <div class="seg" id="wl"></div>
-<div class="tw"><table id="win"></table></div></section>
-<section class="card"><h2>Año por año y cada 10 meses, lado a lado</h2><div class="tw"><table id="yr"></table></div></section>
-<section class="card"><h2>Mercados en paralelo (con tus supuestos)</h2><div class="tw"><table id="mk"></table></div></section>
-<section class="card"><h2>Cruce de mercados: un departamento de USD X en cada lugar</h2>
+<div class="tw"><table id="win"></table></div></details>
+<details class="card plegable"><summary><h2>Año por año y cada 10 meses, lado a lado</h2><span class="pista">La tabla completa, año por año</span></summary><div class="tw"><table id="yr"></table></div></details>
+<details class="card plegable"><summary><h2>Mercados en paralelo (con tus supuestos)</h2><span class="pista">Los mismos aportes en cada ciudad</span></summary><div class="tw"><table id="mk"></table></div></details>
+<details class="card plegable"><summary><h2>Cruce de mercados: un departamento de USD X en cada lugar</h2><span class="pista">Cuántos m² y departamentos da cada mercado</span></summary>
 <p class="sub">Elegí cuánto vale cada departamento que compra el grupo apenas la caja alcanza (aportes, renta e intereses). La tabla muestra cuántos metros compra ese valor y cuántos departamentos junta el grupo en cada mercado, con la modalidad y el escenario que tengas cargados.</p>
 <div class="lbl">Criterio de comparación</div><div class="seg" id="cxc"></div>
 <div class="inl"><div class="ctl" id="cxvbox"><label for="cx">Valor de cada departamento (USD)</label><output id="o_cx"></output><input type="range" id="cx" min="20000" max="150000" step="5000"></div><div class="ctl" id="cxsbox"><label for="cs">Superficie de cada departamento (m²)</label><output id="o_cs"></output><input type="range" id="cs" min="15" max="40" step="1"></div>
 <label style="display:flex;gap:8px;align-items:center;font-size:13px;font-weight:600"><input type="checkbox" id="cxadj"> Ajustar el valor por la valorización</label></div>
 <div class="lbl">Modalidad de alquiler</div><div class="seg" id="cxmd"></div>
 <div class="tw"><table id="cross"></table></div>
-<h3 style="margin:18px 0 8px;font-size:16px">Cada 10 meses, mercado por mercado</h3><div class="seg" id="cxm"></div><div class="tw"><table id="crosscyc"></table></div><div class="foot" id="cxnote"></div><div id="crossbars"></div><div id="crossnote"></div></section>
-<section class="card"><h2>Escenarios en paralelo (con tu mercado y modalidad)</h2><div class="tw"><table id="cmp"></table></div><div class="verdict" id="verdict"></div></section>
-<section class="card"><h2>¿Cada cuántos meses compramos? Ciclo fijo contra «apenas alcanza»</h2>
+<h3 style="margin:18px 0 8px;font-size:16px">Cada 10 meses, mercado por mercado</h3><div class="seg" id="cxm"></div><div class="tw"><table id="crosscyc"></table></div><div class="foot" id="cxnote"></div><div id="crossbars"></div><div id="crossnote"></div></details>
+<details class="card plegable"><summary><h2>Escenarios en paralelo (con tu mercado y modalidad)</h2><span class="pista">Pesimista, básico y optimista lado a lado</span></summary><div class="tw"><table id="cmp"></table></div><div class="verdict" id="verdict"></div></details>
+<details class="card plegable"><summary><h2>¿Cada cuántos meses compramos? Ciclo fijo contra «apenas alcanza»</h2><span class="pista">Cada 10 meses o apenas alcanza la plata</span></summary>
 <p class="sub">Si se suman las rentas y los intereses de la caja a lo aportado, el grupo llega a un departamento de valor fijo antes de los 10 meses. Compará cuántos departamentos quedan al final y cada cuántos meses se compró.</p>
-<div class="tw"><table id="cad"></table></div><div id="cadnote"></div></section>
-<section class="card"><h2>Compras del grupo, una por una</h2><div class="tw"><table id="buys"></table></div></section>
+<div class="tw"><table id="cad"></table></div><div id="cadnote"></div></details>
+<details class="card plegable"><summary><h2>Compras del grupo, una por una</h2><span class="pista">Mes, precio, m² y de dónde salió la plata</span></summary><div class="tw"><table id="buys"></table></div></details>
 </main></div>
 <p class="foot">Modelo de simulación en USD con capitalización mensual. Son escenarios, no promesas: precios, rentas, costos de compra e impuestos son supuestos editables que deben verificarse con un tasador, un contador y un abogado matriculados. Los precios y rentas de cada mercado salen de extractos de portales y reportes consultados en octubre de 2026. El múltiplo temporal ×3 es la premisa del proyecto; las fuentes consultadas muestran entre 1,6× y 2,2× sobre promedios de todos los tamaños. El valor de liquidación descuenta los costos de venta. Ver el documento «Marco legal, impositivo y financiero» de B&amp;D.</p>
 </div>
@@ -674,4 +709,43 @@ $('adj').onchange=function(){P.unitAdjust=this.checked;render()};
 $('th').onclick=function(){var d=document.documentElement,cur=d.getAttribute('data-theme');var dark=cur?cur==='dark':matchMedia('(prefers-color-scheme: dark)').matches;d.setAttribute('data-theme',dark?'light':'dark')};
 labTabs();cxSeg();sync();render();
 </script>
-<script src="js/volver-app.js?v=0.3.7"></script>
+<script>
+/* tablas largas: se ven las primeras filas y «Ver todas» las despliega (las filas destacadas se ven siempre) */
+(function () {
+  var MAX = 8, abiertas = {};
+  function clave(t, i) { return t.id || ('t' + i); }
+  function recortar() {
+    document.querySelectorAll('main table').forEach(function (t, i) {
+      var k = clave(t, i), filas = [].slice.call(t.rows).filter(function (r) { return !r.querySelector('th'); });
+      var sig = t.nextElementSibling && t.nextElementSibling.classList && t.nextElementSibling.classList.contains('vertodo') ? t.nextElementSibling : null;
+      var caja = t.parentNode.classList.contains('tw') ? t.parentNode : t, btn = caja.nextElementSibling && caja.nextElementSibling.classList && caja.nextElementSibling.classList.contains('vertodo') ? caja.nextElementSibling : sig;
+      if (filas.length <= MAX + 2) { t.classList.remove('corta'); if (btn) btn.remove(); return; }
+      filas.forEach(function (r, j) { r.classList.toggle('extra', j >= MAX && !r.classList.contains('hl')); });
+      t.classList.toggle('corta', !abiertas[k]);
+      if (!btn) { btn = document.createElement('button'); btn.type = 'button'; btn.className = 'vertodo'; caja.parentNode.insertBefore(btn, caja.nextSibling); }
+      btn.textContent = abiertas[k] ? 'Ver menos ▴' : 'Ver todas las filas (' + filas.length + ') ▾';
+      btn.onclick = function () { abiertas[k] = !abiertas[k]; recortar(); };
+    });
+  }
+  /* números de las tarjetas de arriba: cuentan del valor anterior al nuevo */
+  var antes = {};
+  function leerNum(s) { var m = s.match(/-?[\d.]+(,\d+)?/); if (!m) return null; return { txt: m[0], v: parseFloat(m[0].replace(/\./g, '').replace(',', '.')), dec: m[1] ? m[1].length - 1 : 0 }; }
+  function fmt(v, dec) { return v.toLocaleString('es-AR', { minimumFractionDigits: dec, maximumFractionDigits: dec }); }
+  function contar() {
+    if (window.matchMedia && matchMedia('(prefers-reduced-motion: reduce)').matches) return;
+    document.querySelectorAll('#kpis .kpi b').forEach(function (b, i) {
+      var final = b.textContent, n = leerNum(final); if (!n) return;
+      var desde = antes[i] != null ? antes[i] : 0; antes[i] = n.v; if (desde === n.v) return;
+      var t0 = performance.now(), D = 650;
+      (function paso(t) { var x = Math.min(1, (t - t0) / D), e = 1 - Math.pow(1 - x, 3);
+        if (!b.isConnected) return;
+        b.textContent = x < 1 ? final.replace(n.txt, fmt(desde + (n.v - desde) * e, n.dec)) : final;
+        if (x < 1) requestAnimationFrame(paso); })(t0);
+    });
+  }
+  var pend = 0, obs = new MutationObserver(function (ms) { if (pend || ms.every(function (m) { var e = m.target.nodeType === 1 ? m.target : m.target.parentElement; return e && e.closest('#kpis b'); })) return; pend = requestAnimationFrame(function () { pend = 0; obs.disconnect(); recortar(); contar(); mirar(); }); });
+  function mirar() { var m = document.querySelector('main'); if (m) obs.observe(m, { childList: true, subtree: true }); }
+  recortar(); contar(); mirar();
+})();
+</script>
+<script src="js/volver-app.js?v=0.3.8"></script>

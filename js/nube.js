@@ -265,6 +265,14 @@ function nubeLogin(correo, clave) { return NUBE.auth.signInWithEmailAndPassword(
 function nubeCrearCuenta(correo, clave) { return NUBE.auth.createUserWithEmailAndPassword(correo, clave).then(function (r) { return r.user; }); }
 function nubeSegDe(uid) { return NUBE.db.ref('bd/seg/' + uid).once('value').then(function (s) { return s.val() || {}; }, function () { return {}; }); }
 function nubeInvitacion(codigo) { return NUBE.db.ref('bd/inv/' + claveSegura(codigo)).once('value').then(function (s) { return s.val(); }); }
-function nubeOlvideClave(correo) { return NUBE.auth.sendPasswordResetEmail(correo); }
+/* el enlace del correo, después de elegir la clave nueva, trae de vuelta a la app («Continuar»).
+   Si Firebase no acepta esa dirección (dominio no autorizado), se manda el correo igual, sin el botón de volver */
+function nubeOlvideClave(correo) {
+  var a = NUBE.auth;
+  return a.sendPasswordResetEmail(correo, { url: location.origin + location.pathname }).catch(function (e) {
+    if (/continue-uri|unauthorized-domain/.test((e && e.code) || '')) return a.sendPasswordResetEmail(correo);
+    throw e;
+  });
+}
 /* escribe de una vez varias cosas (alta del fundador o de un invitado): o entra todo o nada */
 function nubeEscribir(cambios) { var o = {}; Object.keys(cambios).forEach(function (k) { o['bd/' + k] = cambios[k]; }); return NUBE.db.ref().update(o); }

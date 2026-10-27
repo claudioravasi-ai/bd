@@ -1077,7 +1077,20 @@ var GANCHOS = {
     };
     if ($('eOlvide')) $('eOlvide').onclick = function () {
       var c = $('eCorreo').value.trim().toLowerCase(); if (!correoValido(c)) { $('eError').textContent = 'Escribí tu correo arriba y tocá de nuevo.'; $('eCorreo').focus(); return; }
-      nubeOlvideClave(c).then(function () { tostada('Si ese correo tiene cuenta, te llegó un mensaje para elegir una clave nueva.'); }, function () { tostada('Si ese correo tiene cuenta, te llegó un mensaje para elegir una clave nueva.'); });
+      /* la clave no se saltea (es lo que protege la cuenta): se manda el correo y la pantalla explica qué hacer después.
+         Mismo mensaje haya o no cuenta con ese correo, para no revelar quién es socio */
+      var listo = function () {
+        $('eError').textContent = '';
+        $('eExplica').innerHTML = '<b>Te mandamos un correo a ' + esc(c) + ' para elegir una clave nueva</b> (si ese correo tiene cuenta).' +
+          '<ol class="pasos-clave"><li>Abrí el correo «Restablecer la contraseña». Si no está, mirá en Spam o Promociones.</li>' +
+          '<li>Tocá el enlace y escribí tu <b>clave nueva</b>. Después tocá «Continuar»: te trae de vuelta acá.</li>' +
+          '<li>Entrá con tu correo y la <b>clave nueva</b>. Después te pide el código de 6 números (o la huella), como siempre.</li></ol>' +
+          '<span class="chico">Sin clave no se puede entrar: es lo que cuida tu cuenta y la plata del grupo.</span>';
+        $('eClave').value = ''; $('eClave').placeholder = 'Tu clave nueva';
+        $('eOlvide').textContent = '¿No te llegó el correo? Mandarlo de nuevo';
+        tostada('Listo: revisá tu correo.');
+      };
+      nubeOlvideClave(c).then(listo, listo);
     };
     document.querySelectorAll('[data-demo]').forEach(function (b) {
       b.onclick = function () {
@@ -1297,6 +1310,19 @@ function arrancar() {
   } else render();
   if (MARCO_DEMO === 'invitacion') setTimeout(function () { var i = D.invitaciones.filter(function (x) { return !x.usada; })[0]; if (i && $('eCorreo')) { document.querySelector('[data-modo="inv"]').click(); $('eCorreo').value = i.email; $('eCodigo').value = i.codigo; } }, 300);
   window.addEventListener('hashchange', render);
+  /* demo de cuatro celulares: lo que guarda un celular aparece en los otros al instante (comparten los datos de prueba).
+     No se redibuja mientras hay una ventana abierta o se está escribiendo: se espera a que termine */
+  if (MARCO_DEMO) {
+    var syncPend = false, aplicarSync = function () {
+      var a = document.activeElement;
+      if (!$('velo').hidden || (a && /INPUT|TEXTAREA|SELECT/.test(a.tagName))) { syncPend = true; return; }
+      syncPend = false; cargarDatos(); render();
+      try { parent.postMessage({ bdDemo: 'actualizado' }, location.origin); } catch (x) {}
+    };
+    window.addEventListener('storage', function (e) { if (e.key === CLAVE_DATOS && String(leer('bd.demo.enVivo', 1)) !== '0') aplicarSync(); });
+    document.addEventListener('focusout', function () { if (syncPend) setTimeout(aplicarSync, 300); });
+    document.addEventListener('click', function () { if (syncPend) setTimeout(aplicarSync, 300); });
+  }
   document.addEventListener('click', function (e) { var b = e.target.closest('[data-recibo]'); if (b && !GANCHOS._rec) verRecibo(b.dataset.recibo); });
   Promise.all([cargarCotizaciones(), cargarRadar()]).then(function () { pintarCinta(); var r = ruta(); if (yo() && (r.partes[0] === 'mercado' || r.partes[0] === 'pagar')) render(); var u = yo(); if (u) avisarEnTelefono(u); });
   setInterval(function () { cargarCotizaciones().then(pintarCinta); }, 30 * 60 * 1000);
