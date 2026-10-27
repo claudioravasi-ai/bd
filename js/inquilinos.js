@@ -131,6 +131,12 @@ document.addEventListener('click', function (e) {
 function avisosInquilinos(u) {
   if (u.rol !== 'fundador') return [];
   var out = [];
-  gruposDe(u.id).forEach(function (g) { propiedadesActivas(g.id).forEach(function (p) { var r = resumenAlquiler(p.id); if (r.estado === 'atrasado') out.push({ nivel: 'mal', titulo: r.txt + ': ' + p.nombre, texto: 'Registrá el cobro o mandale un recordatorio desde la ficha del inquilino.', ir: '#/inicio' }); }); });
+  gruposDe(u.id).forEach(function (g) { propiedadesActivas(g.id).forEach(function (p) { var r = resumenAlquiler(p.id); if (r.estado === 'atrasado') out.push({ nivel: 'mal', titulo: r.txt + ': ' + p.nombre, texto: 'Registrá el cobro o mandale un recordatorio desde la ficha del inquilino.', ir: '#/inicio' });
+    /* idea de MicroRealEstate: aviso del fin del contrato (60 días antes) y del ajuste anual pactado */
+    var q = inquilinoDe(p.id), c = q && q.contrato; if (!c) return;
+    var faltan = c.fin ? diasEntre(hoyISO(), c.fin) : null;
+    if (faltan != null && faltan >= 0 && faltan <= 60) out.push({ nivel: 'oro', titulo: 'El contrato de ' + p.nombre + ' vence en ' + faltan + ' días', texto: 'Termina el ' + fechaCorta(c.fin) + '. Conviene hablar con ' + q.nombre.split(' ')[0] + ' para renovar o buscar inquilino, así no queda vacío.', ir: '#/inicio' });
+    if (c.ajuste && !/^fijo/i.test(c.ajuste) && c.inicio) { var an = +c.inicio.slice(0, 4) + 1; while ((an + c.inicio.slice(4)) < hoyISO()) an++; var dA = diasEntre(hoyISO(), an + c.inicio.slice(4)); if (dA >= 0 && dA <= 15) out.push({ nivel: 'azul', titulo: 'Ajuste del alquiler de ' + p.nombre + ' en ' + dA + ' días', texto: 'Pactado: ' + c.ajuste + '. Actualizá el monto en la ficha del inquilino.', ir: '#/inicio' }); }
+  }); });
   return out;
 }

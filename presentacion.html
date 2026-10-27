@@ -1,0 +1,57 @@
+<!doctype html>
+<html lang="es-AR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>B&amp;D · Presentación</title>
+<meta name="robots" content="noindex, nofollow">
+<meta name="theme-color" content="#0D1824">
+<link rel="icon" href="icono-192.png" type="image/png">
+<link href="https://fonts.googleapis.com/css2?family=EB+Garamond:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans:wght@400;500;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="estilo.css?v=0.3.6">
+<style>
+body { padding: 14px 16px 70px; }
+.visor:fullscreen { background: #070d14; padding: 10px; justify-content: center; }
+.visor:fullscreen .visor-lamina { max-height: calc(100vh - 80px); width: auto; }
+</style>
+</head>
+<body>
+<h1 style="margin:0 0 10px">Presentación B&amp;D</h1>
+<div class="visor" id="visor" tabindex="0" aria-label="Presentación. Usá las flechas del teclado para pasar las láminas.">
+  <div class="visor-barra"><div class="fila"><button class="btn btn-chico" id="visorAnt" aria-label="Lámina anterior">◀</button><b id="visorNum" class="num">…</b><button class="btn btn-chico" id="visorSig" aria-label="Lámina siguiente">▶</button></div>
+  <div class="fila"><select id="visorSel" aria-label="Ir a una lámina"></select><button class="btn btn-chico" id="visorNotas" aria-pressed="false">Notas</button><button class="btn btn-chico btn-oro" id="visorPantalla">Pantalla completa</button></div></div>
+  <div class="visor-lamina" id="visorLamina"><div id="visorLienzo"><p style="padding:60px;font-size:40px;color:#9FB0C4">Cargando la presentación…</p></div></div>
+  <div class="visor-notas" id="visorTextoNotas" hidden></div>
+</div>
+<p class="chico gris">Se pasa con las flechas o tocando los costados de la lámina. En pantalla completa, «Salir» o la tecla Esc vuelven acá.</p>
+<script>
+/* presentación suelta (duda 14: se abre en otra ventana, no reemplaza a la app) */
+var $ = function (id) { return document.getElementById(id); }, D = null, I = 0, C = {};
+function lam(id) { return C[id] ? Promise.resolve(C[id]) : fetch('presentacion/slides/' + id + '.html').then(function (r) { return r.text(); }).then(function (t) { C[id] = t; return t; }); }
+function escalar() { $('visorLienzo').style.transform = 'scale(' + ($('visorLamina').clientWidth / 1920) + ')'; }
+function ver(i) {
+  I = Math.max(0, Math.min(D.order.length - 1, i));
+  lam(D.order[I]).then(function (h) {
+    $('visorLienzo').innerHTML = h; escalar();
+    var a = $('visorLienzo').querySelector('aside'); $('visorTextoNotas').textContent = a ? a.textContent : 'Esta lámina no tiene notas.';
+    $('visorNum').textContent = (I + 1) + ' / ' + D.order.length; $('visorSel').value = String(I);
+    if (D.order[I + 1]) lam(D.order[I + 1]);
+  });
+}
+fetch('presentacion/deck.json').then(function (r) { return r.json(); }).then(function (d) {
+  D = d; $('visorSel').innerHTML = d.order.map(function (id, k) { return '<option value="' + k + '">' + (k + 1) + '. ' + id.replace(/-/g, ' ') + '</option>'; }).join('');
+  ver(+(location.hash.slice(1)) || 0);
+}).catch(function () { $('visorLienzo').innerHTML = '<p style="padding:60px;font-size:40px;color:#FF9284">No se pudo cargar la presentación. Abrila desde la dirección web de la app.</p>'; });
+$('visorAnt').onclick = function () { ver(I - 1); };
+$('visorSig').onclick = function () { ver(I + 1); };
+$('visorSel').onchange = function () { ver(+this.value); };
+$('visorNotas').onclick = function () { var n = $('visorTextoNotas'); n.hidden = !n.hidden; this.setAttribute('aria-pressed', !n.hidden); };
+$('visorPantalla').onclick = function () { var v = $('visor'); if (document.fullscreenElement) document.exitFullscreen(); else if (v.requestFullscreen) v.requestFullscreen(); else if (v.webkitRequestFullscreen) v.webkitRequestFullscreen(); };
+$('visorLamina').onclick = function (e) { var r = this.getBoundingClientRect(); ver(I + (e.clientX - r.left < r.width / 3 ? -1 : 1)); };
+document.onkeydown = function (e) { if (!D) return; if (e.key === 'ArrowRight' || e.key === 'PageDown' || e.key === ' ') { e.preventDefault(); ver(I + 1); } if (e.key === 'ArrowLeft' || e.key === 'PageUp') { e.preventDefault(); ver(I - 1); } };
+window.addEventListener('resize', escalar);
+document.addEventListener('fullscreenchange', function () { $('visorPantalla').textContent = document.fullscreenElement ? '✕ Salir de pantalla completa' : 'Pantalla completa'; setTimeout(escalar, 60); });
+</script>
+<script src="js/volver-app.js?v=0.3.6"></script>
+</body>
+</html>

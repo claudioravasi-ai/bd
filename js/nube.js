@@ -37,10 +37,10 @@ var MODO_REAL = (function () {
 
 var NUBE = { auth: null, db: null, uid: null, admin: false, instalado: null, srv: null, refs: [], enviado: {}, pendiente: false, listo: false };
 /* colecciones del fideicomiso que viven en bd/datos (cada elemento con su clave) */
-var COLECCIONES = ['grupos', 'movimientos', 'propiedades', 'votaciones', 'documentos', 'firmas', 'inquilinos', 'oportunidades', 'conciliaciones', 'lineasBanco', 'deudas', 'pdfsFirmados', 'pagosPendientes', 'mensajes', 'bitacora'];
+var COLECCIONES = ['grupos', 'movimientos', 'propiedades', 'votaciones', 'documentos', 'firmas', 'inquilinos', 'oportunidades', 'conciliaciones', 'lineasBanco', 'deudas', 'pdfsFirmados', 'pagosPendientes', 'mensajes', 'bitacora', 'recurrentes'];
 
 function datosVacios() {
-  var d = { v: 8, creado: hoyISO(), usuarios: [], invitaciones: [], leidos: {}, oportVistas: {}, copias: {}, radarConfig: null, radarUltima: '' };
+  var d = { v: 8, creado: hoyISO(), usuarios: [], invitaciones: [], leidos: {}, oportVistas: {}, filtrosOp: {}, copias: {}, radarConfig: null, radarUltima: '' };
   COLECCIONES.forEach(function (c) { d[c] = []; });
   return d;
 }
@@ -145,7 +145,7 @@ function construirDesdeNube() {
   d.mensajes = d.mensajes.concat(valores((s.buzon || {})[uid])).sort(function (a, b) { return a.f < b.f ? -1 : 1; });
   d.invitaciones = valores(s.inv).map(function (i) { var x = Object.assign({}, i); delete x.venceMs; return x; });
   var yoN = (s.yo || {})[uid] || {};
-  d.leidos[uid] = yoN.leidos || {}; d.oportVistas[uid] = yoN.oportVistas || {}; if (yoN.copia) d.copias[uid] = yoN.copia;
+  d.leidos[uid] = yoN.leidos || {}; d.oportVistas[uid] = yoN.oportVistas || {}; d.filtrosOp[uid] = valores(yoN.filtrosOp); if (yoN.copia) d.copias[uid] = yoN.copia;
   d.radarConfig = dd.radarConfig || null; d.radarUltima = dd.radarUltima || ''; d.mercado = dd.mercado || null;
   if (!d.radarConfig) delete d.radarConfig;
   D = d;
@@ -200,7 +200,7 @@ function serializar(d) {
   if (d.mercado) arbol.datos.mercado = limpio(d.mercado);
   if (NUBE.admin) (d.invitaciones || []).forEach(function (i) { var x = Object.assign({}, i); x.venceMs = Date.parse(i.vence + 'T23:59:59-03:00'); arbol.inv[claveSegura(i.codigo)] = limpio(x); });
   else (d.invitaciones || []).forEach(function (i) { if (i.por === uid) afuera['inv/' + claveSegura(i.codigo)] = limpio(Object.assign({ venceMs: Date.parse(i.vence + 'T23:59:59-03:00') }, i)); });
-  var yoN = limpio({ leidos: (d.leidos || {})[uid], oportVistas: (d.oportVistas || {})[uid], copia: (d.copias || {})[uid] });
+  var yoN = limpio({ leidos: (d.leidos || {})[uid], oportVistas: (d.oportVistas || {})[uid], filtrosOp: ((d.filtrosOp || {})[uid] || []).reduce(function (o, f) { o[claveSegura(f.id)] = f; return o; }, {}), copia: (d.copias || {})[uid] });
   if (yoN) arbol.yo[uid] = yoN;
   return { arbol: arbol, afuera: afuera };
 }

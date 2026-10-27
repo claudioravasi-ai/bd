@@ -264,9 +264,9 @@ function ventanaM2() {
 /* =================== «CONVENCEME»: por qué comprar y cómo ganar más =================== */
 var PALANCAS = [
   { id: 'temporario', n: 'Alquiler temporario amoblado', d: 'Por plataformas, a turistas: en Ushuaia cobra unas ' + num(MARKETS.ushuaia.mult, 1) + ' veces el alquiler fijo, con más trabajo, amoblamiento (4%), 40% de gastos y meses vacíos.', min: 0, max: 100, paso: 25, def: 0, fmt: function (v) { return v + '% de los deptos'; } },
-  { id: 'reval', n: 'Suba del m² en dólares', d: 'Los inmuebles en dólares suelen acompañar la inflación de EE. UU. y algo más. 0% es no ganar nada por el ladrillo.', min: 0, max: 6, paso: 0.5, def: 3, fmt: function (v) { return num(v, 1) + '% por año'; } },
+  { id: 'reval', n: 'Suba del m² en dólares', d: 'Los inmuebles en dólares suelen acompañar la inflación de EE. UU. (~3% por año); no está garantizado. 0% es no ganar nada por el ladrillo.', min: 0, max: 6, paso: 0.5, def: 3, fmt: function (v) { return num(v, 1) + '% por año'; } },
   { id: 'descuento', n: 'Comprar por debajo del valor (arreglar y revalorizar)', d: 'Un depto para refaccionar, una venta apurada o pago contado: el descuento neto (después de pagar el arreglo) queda como ganancia desde el día 1.', min: 0, max: 20, paso: 1, def: 0, fmt: function (v) { return v + '% neto'; } },
-  { id: 'aporte', n: 'Subir el aporte con la inflación en dólares', d: 'Si cada año el aporte sube un poco, las compras son más grandes y antes. Requiere unanimidad.', min: 0, max: 6, paso: 1, def: 0, fmt: function (v) { return v + '% por año'; } }
+  { id: 'aporte', n: 'Subir el aporte con la inflación en dólares', d: 'Sugerido: 3% por año, la inflación del dólar de los últimos 10 años (~3,2%; los últimos 3, ~3,0%). Así lo que se aporta cada año compra lo mismo y cada compra es más o menos del mismo tamaño. Requiere unanimidad.', min: 0, max: 6, paso: 1, def: typeof AJUSTE_APORTE_SUGERIDO === 'number' ? AJUSTE_APORTE_SUGERIDO : 3, fmt: function (v) { return v + '% por año'; } }
 ];
 function paramsPalancas(g, v) {
   return paramsEsc(g, 'basico', { mix: v.temporario / 100, appreciation: v.reval, setup: MARKETS[g.mercado].setup - v.descuento, contribGrowth: v.aporte });
@@ -507,5 +507,5 @@ function ganchoProyeccion() {
   if ($('btnTirInicio')) $('btnTirInicio').onclick = function () { abrirGanancia('tir'); };
   observarAnimables($('proyeccion'));
   /* «Ver la proyección a 10 años» desde Tu ganancia: baja directo a la proyección */
-  if (SES.irProy && $('proyeccion')) { SES.irProy = false; setTimeout(function () { $('proyeccion').scrollIntoView({ behavior: sinMovimiento() ? 'auto' : 'smooth', block: 'start' }); }, 80); }
+  if (SES.irProy && $('proyeccion')) { SES.irProy = false; setTimeout(function () { var x = $('proyeccion'); if (x) x.scrollIntoView({ behavior: sinMovimiento() ? 'auto' : 'smooth', block: 'start' }); }, 80); }
 }

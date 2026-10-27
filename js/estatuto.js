@@ -23,7 +23,9 @@ function capitulosEstatuto(g) {
       ['Información permanente', 'A ver en la app, en todo momento, los aportes de todos, la mora, la caja, las inversiones, los inmuebles, los contratos y la carpeta contable; a recibir la rendición de cuentas del fiduciario, como mínimo una vez por año (art. 1675 CCyCN), y el resumen semanal.'],
       ['Control', 'A pedir explicaciones al fiduciario, revisar la documentación con aviso previo de 5 días hábiles y proponer una auditoría externa por decisión ordinaria.'],
       ['Proponer', 'A proponer compras, cambios de la inversión de espera y cualquier tema a votación, con el respaldo de un segundo socio.'],
-      ['Salir', 'A retirarse con aviso de 90 días. Se le reembolsa el valor de liquidación de sus UP en hasta 12 cuotas mensuales, sin obligar a vender un inmueble. Los demás socios tienen derecho de preferencia para comprar sus UP.'],
+      ['Salir', 'A retirarse con aviso de 90 días. Se le reembolsa el valor de liquidación de sus UP en hasta 12 cuotas mensuales, sin obligar a vender un inmueble. Los demás socios tienen derecho de preferencia para comprar sus UP. El valor de liquidación es la UP a costo más una parte de la suba estimada de los inmuebles que crece con su constancia: ' + textoEscalaConstancia() + ' de la suba, según los ciclos completos de ' + ci + ' meses que pagó sin atrasos. Lo que no se le reconoce queda en el fideicomiso para los que siguen. (Propuesta a validar con abogado y contador.)'],
+      ['Entrar o recibir UP', 'Un socio nuevo o quien recibe UP por cesión las paga al valor estimado (UP a costo más la suba estimada de los inmuebles), nunca menos que la UP a costo: así no se lleva la suba que construyeron los que ya estaban. (Propuesta a validar con abogado y contador.)'],
+      ['Valor estimado, no promesa', 'La suba estimada nunca se paga en efectivo si la tasación o la venta la desmienten: al tasar o vender se corrige y la diferencia se ajusta contra las cuotas de reembolso pendientes. La app muestra siempre los dos valores (a costo y estimado).'],
       ['Quedarse con un inmueble', 'A pedir quedarse con un inmueble del fideicomiso por su tasación, con la mayoría y las reglas del capítulo VI.'],
       ['Ceder', 'A ceder sus UP a otra persona solo con la conformidad unánime de los demás, que antes pueden ejercer su preferencia en las mismas condiciones.'],
       ['Sucesión', 'A designar un beneficiario sustituto. Si fallece, sus UP pasan a sus herederos con respeto de la legítima; los herederos se unifican en un solo representante con un voto.'],
@@ -47,7 +49,7 @@ function capitulosEstatuto(g) {
       ['Mora automática', 'Desde el día ' + (dv + 1) + ' a las 0 h el aporte impago devenga un interés de ' + pct(TASA_MORA, 0) + ' anual en dólares, que corre hasta el pago y fija la Asamblea una vez por año.'],
       ['Compensación', 'Lo adeudado (aporte e interés) se descuenta de la parte del socio en las ganancias. Al pagar tarde, el aporte compra UP al valor de ese día.'],
       ['Suspensión', 'Con un aporte vencido hace más de 30 días se suspenden su voto y su parte en los alquileres e intereses hasta que pague todo.'],
-      ['Exclusión', 'Con más de 90 días de mora, atrasos reiterados o falta grave, la Asamblea puede excluirlo por mayoría calificada (sin su voto), con aviso previo y derecho a defenderse. Se le reembolsa su parte neta en cuotas, como en la salida voluntaria.'],
+      ['Exclusión', 'Con más de 90 días de mora, atrasos reiterados o falta grave, la Asamblea puede excluirlo por mayoría calificada (sin su voto), con aviso previo y derecho a defenderse. Se le reembolsa su parte neta a valor de UP a costo, sin suba estimada, en cuotas como en la salida voluntaria; lo no reconocido queda para el grupo.'],
       ['Planes de pago', 'La Asamblea puede aprobar un plan de pagos especial por decisión ordinaria, una sola vez por socio por año.']
     ]],
     ['V. Asamblea y mayorías', [

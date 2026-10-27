@@ -47,6 +47,7 @@ function vistaInversiones(u) {
     '<p class="chico gris" style="margin:0"><b>Meta 6%</b>: lo que ganarían tus mismos aportes, en las mismas fechas, a 6% por año. <b>Adelante o atrás</b>: la diferencia en dólares desde tu primer aporte. Al principio va atrás porque la caja espera la compra en inversiones seguras (rinden menos que 6%), una reserva casi no rinde y el primer alquiler llega después de la compra; los departamentos se cuentan por lo que costaron (escritura incluida) y la suba del m² aparece recién al tasar o vender. Con los alquileres se va acercando.</p>' +
     '<div class="fila entre" style="margin-top:10px"><div class="segmentos" role="group" aria-label="Ver por ciclo o mes a mes">' + [['ciclo', 'Por ciclo (cada ' + g.ciclo + ' meses, una compra)'], ['mes', 'Mes a mes']].map(function (x) { return '<button type="button" data-tabla-cap="' + x[0] + '" aria-pressed="' + (x[0] === tabla) + '">' + x[1] + '</button>'; }).join('') + '</div></div>' +
     '<div style="margin-top:12px">' + (tabla === 'mes' ? htmlMesAMes(g, cmp) : htmlCiclos(g, u, cmp)) + '</div>' +
+    htmlInflacionFacil() +
     '<details class="ct-numeros"><summary class="chico">Ver todos los números en una tabla</summary>' +
     '<div class="tabla-scroll" style="margin-top:10px"><table><tr><th>' + (tabla === 'mes' ? 'Mes' : 'Ciclo') + '</th><th class="n">Aportado</th><th class="n">Mi capital</th><th class="n">Al 6%</th><th class="n">Contra el 6% <br><span class="chico">(dólares)</span></th>' + (tabla === 'ciclo' ? '<th class="n">Ganado en ese ciclo: <br><span class="chico">vos · al 6%</span></th>' : '') + '<th class="n">Rinde por año <br><span class="chico">(TIR)</span></th></tr>' + filasTabla + '</table></div>' +
     '</details>' +
@@ -76,6 +77,7 @@ function seccionDosMedidas(g, u, tir) {
     svgCurvas(S.length, [{ nombre: 'Valor de la UP (USD)', color: '#FBBF24', vals: S.map(function (x) { return x.vup; }), grueso: 3, area: true }], { alto: 200, meses: S.map(function (x) { return nombreMesCorto(x.mes); }), desc: 'Valor de la UP mes a mes', lectura: function (t) { var x = S[t - 1]; return nombreMes(x.mes) + ': UP a <b class="oro">' + usd(x.vup, 2) + '</b> (' + (x.vup >= 100 ? '+' : '') + pct(x.vup / 100 - 1, 2) + ' desde el inicio)'; } }) + '</div>' +
     '<div class="tarjeta entrar"><h3>Cómo le va a mi plata</h3><p class="gris chico">Medido por tu TIR: el interés anual de tus aportes con sus fechas exactas. Puede ser distinto del de la UP: si pagaste tarde, compraste UP más caras; si pagaste siempre el día 1, tu plata trabajó más días.</p>' +
     '<div class="fila" style="gap:24px"><div><small class="gris chico">Mi TIR real</small><div class="num" style="font-size:1.6rem;color:var(--oro-claro)">' + (isFinite(tir) ? pct(tir) : '—') + '</div></div><div><small class="gris chico">El fideicomiso por año</small><div class="num" style="font-size:1.6rem">' + (isFinite(R.anual) ? pct(R.anual, 2) : '—') + '</div></div></div>' +
+    curvaTirSocio(g, u) +
     '<p class="chico gris" style="margin-top:10px">' + (isFinite(tir) && isFinite(R.anual) ? (tir >= R.anual - 0.002 ? 'Tu plata rinde igual o mejor que el fideicomiso: tus aportes entraron a tiempo.' : 'Tu plata rinde un poco menos que el fideicomiso: algún aporte entró más tarde que el de los demás.') : 'Con más meses de historia se comparan mejor.') + ' Las dos se calculan en dólares y con alquiler fijo, que es como está alquilado hoy.</p></div></section>';
 }
 function ganchoInversiones() {
@@ -278,4 +280,20 @@ function ganchoContratos() {
     };
     lector.readAsArrayBuffer(f);
   };
+}
+
+/* Duda 28 (idea de Ghostfolio y Maybe): mi TIR mes a mes contra la meta del 6%, el plazo fijo en dólares y la inflación
+   del dólar; y mi parte hoy a costo y estimada. */
+function curvaTirSocio(g, u) {
+  var F = capitalComparado(g.id, u.id).filter(function (f) { return isFinite(f.tir); });
+  if (F.length < 2) return '<p class="chico gris">Con dos meses de aportes aparece tu TIR mes a mes.</p>';
+  var x = estimadoGrupo(g.id), e = x.e, misUp = e.upSocio[u.id] || 0, te = tirSocio(g.id, u.id, null, x.vup); estadoGrupo(g.id);
+  var c = function (v) { return Math.max(-0.2, Math.min(0.3, v)) * 100; };
+  return '<h4 style="margin:14px 0 4px">Mi TIR mes a mes</h4>' + svgCurvas(F.length, [
+      { nombre: 'Meta 6%', color: '#94A3B8', vals: F.map(function () { return REFERENCIA_ANUAL * 100; }), guiones: true },
+      { nombre: 'Plazo fijo en dólares', color: '#60A5FA', vals: F.map(function () { return tasaPlazoFijoUsd() * 100; }), guiones: true },
+      { nombre: 'Inflación del dólar', color: '#F87171', vals: F.map(function () { return INFLACION_USD * 100; }), guiones: true },
+      { nombre: 'Mi TIR', color: '#FBBF24', vals: F.map(function (f) { return c(f.tir); }), grueso: 3.2 }
+    ], { alto: 190, meses: F.map(function (f) { return nombreMesCorto(f.mes); }), desc: 'Tu TIR mes a mes contra la meta, el plazo fijo y la inflación', lectura: function (t) { var f = F[t - 1]; return nombreMes(f.mes) + ': tu TIR <b class="oro">' + pct(f.tir, 1) + '</b> · tu parte ' + usd(f.capital) + ' (aportaste ' + usd(f.aportado) + ')'; } }) +
+    '<p class="chico gris" style="margin:4px 0 0">Los primeros meses la TIR salta mucho (poca plata, poco tiempo). Por encima de la línea roja ganás poder de compra; por encima de la gris, le ganás a la meta. Hoy tu parte vale ' + usd(misUp * e.vup) + ' ' + chipRotulo('real') + ' a costo y ' + usd(misUp * x.vup) + ' ' + chipRotulo('estimado') + ' con la suba del m² y los gastos de compra restados (TIR estimada ' + (isFinite(te) ? pct(te, 1) : '—') + ').</p>';
 }

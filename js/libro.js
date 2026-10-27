@@ -431,11 +431,12 @@ var CALENDARIO_FISCAL = [
 ];
 
 /* TIR real de un socio: sus aportes con fecha exacta contra lo que valen hoy sus UP (XIRR anual) */
-function tirSocio(gid, sid, fecha) {
+/* vupOtra: para la TIR estimada (duda 15), con la UP estimada en lugar de la UP a costo */
+function tirSocio(gid, sid, fecha, vupOtra) {
   var hoy = fecha || hoyISO(), e = estadoGrupo(gid, hoy), flujos = [];
   movsDe(gid).forEach(function (m) { if (m.socio === sid && m.fecha <= hoy) { if (m.tipo === 'aporte') flujos.push([m.fecha, -m.usd]); if (m.tipo === 'ventaSocio') flujos.push([m.fecha, m.parte]); } });
   if (flujos.length < 2) return NaN;
-  flujos.push([hoy, (e.upSocio[sid] || 0) * e.vup]);
+  flujos.push([hoy, (e.upSocio[sid] || 0) * (vupOtra || e.vup)]);
   var t0 = flujos[0][0];
   function vpn(r) { return flujos.reduce(function (s, f) { return s + f[1] / Math.pow(1 + r, diasEntre(t0, f[0]) / 365); }, 0); }
   var lo = -0.5, hi = 1, i, mid;

@@ -6,11 +6,47 @@
    No se guarda nada: se calcula en el teléfono. */
 
 var META = null;
-var META_DEF = { renta: 1000, anios: 10, aporte: 500, modo: 'mensual', esc: 'base', mercado: 'ushuaia', desc: 15, reno: 10, obra: 2, crece: 5 };
+var META_DEF = { renta: 1000, anios: 10, aporte: 500, modo: 'mensual', esc: 'base', mercado: 'ushuaia', desc: 15, reno: 10, obra: 2, crece: typeof AJUSTE_APORTE_SUGERIDO === 'number' ? AJUSTE_APORTE_SUGERIDO : 3 };
 function metaInicial() {
   var g = grupoActual();
   if (!META) META = Object.assign({}, META_DEF, g ? { aporte: g.aporte, modo: g.modo === 'temporario' ? 'temporario' : g.modo === 'mixto' ? 'mixto' : 'mensual', mercado: MARKETS[g.mercado] ? g.mercado : 'ushuaia' } : {});
   return META;
+}
+/* duda 25: los 22 mercados y combinaciones de ciudades. Cada parte de la combinación recibe su porcentaje
+   del aporte y compra en su ciudad; la renta, el patrimonio y la TIR son la suma de las partes. */
+var COMBOS_META = {
+  'combo:ar': ['Argentina: Ushuaia + Córdoba + Buenos Aires', [['ushuaia', 50], ['cordoba', 25], ['buenosaires', 25]]],
+  'combo:ar-es': ['Argentina + España interior', [['ushuaia', 50], ['zamora', 25], ['jaen', 25]]],
+  'combo:ar-este': ['Argentina + Europa del este', [['ushuaia', 40], ['osijek', 20], ['pecs', 20], ['maribor', 20]]],
+  'combo:europa': ['Todo Europa (España, Portugal, Croacia, Grecia)', [['zamora', 25], ['guarda', 25], ['osijek', 25], ['patras', 25]]],
+  'combo:diversa': ['Diversificada: Argentina + Europa + Turquía', [['ushuaia', 40], ['zamora', 20], ['guarda', 15], ['patras', 15], ['konya', 10]]],
+  'combo:propia': ['Armar mi combinación', null]
+};
+/* datos de mercado que son estimaciones propias, sin dato 2026 confirmado */
+var SIN_CONFIRMAR_META = ['Eslovenia', 'Croacia', 'Grecia', 'Hungría', 'Turquía'];
+function partesMeta(m) {
+  if (MARKETS[m.mercado]) return [[m.mercado, 1]];
+  var c = COMBOS_META[m.mercado], l = c && c[1] ? c[1] : (m.propia || (m.propia = [['ushuaia', 50], ['cordoba', 30], ['zamora', 20]]));
+  l = l.filter(function (x) { return MARKETS[x[0]] && x[1] > 0; });
+  var tot = l.reduce(function (a, x) { return a + x[1]; }, 0) || 1;
+  return l.map(function (x) { return [x[0], x[1] / tot]; });
+}
+/* suma de simulaciones: misma cantidad de socios, cada una con su parte del aporte */
+function sumarSims(rs, members) {
+  var T = rs[0].T, series = [], flows = [0], t, prev = 0;
+  for (t = 0; t < T; t++) {
+    var s = { t: t + 1, rent: 0, liq: 0, pv: 0, cash: 0, contributed: 0, total: 0, nProps: 0 };
+    rs.forEach(function (r) { var x = r.series[t]; s.rent += x.rent; s.liq += x.liq; s.pv += x.pv; s.cash += x.cash; s.contributed += x.contributed; s.total += x.total; s.nProps += x.nProps; });
+    series.push(s); flows.push(-(s.contributed - prev) / members); prev = s.contributed;
+  }
+  flows[T] += series[T - 1].liq / members;
+  return { T: T, series: series, last: series[T - 1], irr: irrFlows(flows, T) };
+}
+function simMeta(m, extraDe) {
+  var partes = partesMeta(m);
+  var sims = partes.map(function (pa) { var mm = Object.assign({}, m, { mercado: pa[0], aporte: m.aporte * pa[1] }); return simulate(paramsMeta(mm, extraDe(mm))); });
+  var p = paramsMeta(Object.assign({}, m, { mercado: partes[0][0] }), extraDe(Object.assign({}, m, { mercado: partes[0][0] })));
+  return { p: p, r: partes.length === 1 ? sims[0] : sumarSims(sims, p.members), partes: partes, sims: sims };
 }
 function sociosMeta() { var g = grupoActual(); return g ? g.N : 10; }
 /* parámetros del motor para un camino */
@@ -24,7 +60,7 @@ function extraRefaccion(m, mk) { var M = MARKETS[mk || m.mercado], factor = (1 -
 /* renta neta por mes de un socio en el mes t, en dólares de ese momento y en dólares de hoy */
 function rentaSocio(r, p, t) { var s = r.series[Math.min(t, r.series.length) - 1]; var nom = s.rent / p.members; return { nom: nom, hoy: nom / Math.pow(1 + p.usInfl / 100, t / 12), pat: s.liq / p.members }; }
 function caminosMeta(m) {
-  var ref = extraRefaccion(m);
+  var ref = extraRefaccion(Object.assign({}, m, { mercado: partesMeta(m)[0][0] }));
   var C = [
     ['plan', 'Tu plan: ' + { mensual: 'alquiler fijo', mixto: 'mitad fijo y mitad temporario', temporario: 'alquiler temporario' }[m.modo], {}, 'el del contrato', 'bajo'],
     ['fijo', 'Alquiler fijo', { mix: 0 }, 'contrato a 2 años, poco trabajo', 'bajo'],
@@ -33,20 +69,22 @@ function caminosMeta(m) {
     ['crece', 'Subir el aporte ' + m.crece + '% por año', { contribGrowth: m.crece }, 'más plata de tu bolsillo, sin más riesgo', 'bajo'],
     ['todo', 'Combinado: temporario + refacción + aporte que crece', Object.assign({ mix: 1, contribGrowth: m.crece }, ref), 'el más alto, con más trabajo', 'medio-alto']
   ];
-  return C.map(function (c) { var p = paramsMeta(m, c[2]), r = simulate(p), x = rentaSocio(r, p, p.years * 12); return { id: c[0], n: c[1], p: p, r: r, renta: x, nota: c[3], riesgo: c[4] }; });
+  /* la refacción toma los gastos y la demora de cada ciudad */
+  var extraDe = function (c) { return function (mm) { return c[0] === 'refaccion' ? extraRefaccion(mm) : c[0] === 'todo' ? Object.assign({ mix: 1, contribGrowth: m.crece }, extraRefaccion(mm)) : c[2]; }; };
+  return C.map(function (c) { var sm = simMeta(m, extraDe(c)), x = rentaSocio(sm.r, sm.p, sm.p.years * 12); return { id: c[0], n: c[1], p: sm.p, r: sm.r, renta: x, nota: c[3], riesgo: c[4], partes: sm.partes, sims: sm.sims }; });
 }
 /* aporte por mes que hace falta para llegar a la meta en el plazo, con el camino elegido */
 function aporteNecesario(m, extra) {
   var lo = 0, hi = 50000, i;
-  var f = function (a) { var p = paramsMeta(Object.assign({}, m, { aporte: a }), extra); return rentaSocio(simulate(p), p, p.years * 12).hoy; };
+  var f = function (a) { var sm = simMeta(Object.assign({}, m, { aporte: a }), function () { return extra; }); return rentaSocio(sm.r, sm.p, sm.p.years * 12).hoy; };
   if (f(hi) < m.renta) return null;
   for (i = 0; i < 40; i++) { var mid = (lo + hi) / 2; if (f(mid) >= m.renta) hi = mid; else lo = mid; }
   return Math.ceil(hi / 10) * 10;
 }
 /* año en que se llega a la meta con el aporte de hoy */
 function mesLlegada(m, extra) {
-  var p = paramsMeta(Object.assign({}, m, { anios: 35 }), extra), r = simulate(p), t;
-  for (t = 1; t <= r.series.length; t++) if (rentaSocio(r, p, t).hoy >= m.renta) return t;
+  var sm = simMeta(Object.assign({}, m, { anios: 35 }), function () { return extra; }), t;
+  for (t = 1; t <= sm.r.series.length; t++) if (rentaSocio(sm.r, sm.p, t).hoy >= m.renta) return t;
   return null;
 }
 
@@ -54,7 +92,10 @@ function vistaMeta() {
   var m = metaInicial(), g = grupoActual();
   var rango = function (id, rot, min, max, paso, val, ayuda) { return '<div class="campo"><label for="mt_' + id + '">' + rot + ': <b class="oro num" id="mv_' + id + '"></b></label><input type="range" id="mt_' + id + '" data-meta="' + id + '" min="' + min + '" max="' + max + '" step="' + paso + '" value="' + val + '">' + (ayuda ? '<span class="ayuda">' + ayuda + '</span>' : '') + '</div>'; };
   var seg = function (id, ops, val) { return '<div class="segmentos" role="group" aria-label="' + id + '">' + ops.map(function (o) { return '<button type="button" data-meta-seg="' + id + '" data-val="' + o[0] + '" aria-pressed="' + (o[0] === val) + '">' + o[1] + '</button>'; }).join('') + '</div>'; };
-  var mercados = Object.keys(MARKETS).filter(function (k) { return MARKETS[k].grp === 'Argentina'; });
+  var grupos = []; Object.keys(MARKETS).forEach(function (k) { var gr = MARKETS[k].grp; if (grupos.indexOf(gr) < 0) grupos.push(gr); });
+  var opc = function (k, rot) { return '<option value="' + k + '"' + (k === m.mercado ? ' selected' : '') + '>' + esc(rot) + '</option>'; };
+  var selector = '<optgroup label="Combinar ciudades">' + Object.keys(COMBOS_META).map(function (k) { return opc(k, COMBOS_META[k][0]); }).join('') + '</optgroup>' +
+    grupos.map(function (gr) { return '<optgroup label="' + esc(gr) + (SIN_CONFIRMAR_META.indexOf(gr) >= 0 ? ' (precios estimados)' : '') + '">' + Object.keys(MARKETS).filter(function (k) { return MARKETS[k].grp === gr; }).map(function (k) { return opc(k, MARKETS[k].label); }).join('') + '</optgroup>'; }).join('');
   return '<h1>Mi meta de ingresos</h1><p class="gris">¿Cuánto querés cobrar por mes de renta dentro de unos años? Mové las barras: la app calcula con el mismo motor del simulador cuánto cobrarías con el plan de ' + (g ? esc(g.letra) : 'un grupo de 10') + ', cuánto aportar para llegar y qué caminos te acercan más. No se guarda nada.</p>' +
     '<section class="rejilla r2 seccion meta-panel"><div class="tarjeta dorada">' +
     rango('renta', 'Renta que quiero cobrar por mes (dólares de hoy)', 100, 5000, 50, m.renta) +
@@ -62,7 +103,7 @@ function vistaMeta() {
     rango('aporte', 'Lo que aporto por mes', 100, 3000, 50, m.aporte, g ? 'Hoy en ' + esc(g.letra) + ': ' + usd(g.aporte) + '. Cambiar el aporte del grupo necesita unanimidad.' : '') +
     '<div class="campo"><span class="etiqueta">Cómo se alquila</span>' + seg('modo', [['mensual', 'Fijo'], ['mixto', 'Mitad y mitad'], ['temporario', 'Temporario']], m.modo) + '</div>' +
     '<div class="campo"><span class="etiqueta">Escenario</span>' + seg('esc', [['conservador', 'Pesimista'], ['base', 'Básico'], ['optimista', 'Optimista']], m.esc) + '</div>' +
-    '<div class="campo"><label for="mt_mercado">Dónde se compra</label><select id="mt_mercado">' + mercados.map(function (k) { return '<option value="' + k + '"' + (k === m.mercado ? ' selected' : '') + '>' + esc(MARKETS[k].label) + '</option>'; }).join('') + '</select></div>' +
+    '<div class="campo"><label for="mt_mercado">Dónde se compra (22 ciudades o una combinación)</label><select id="mt_mercado">' + selector + '</select><div id="metaPropia"></div><div id="metaPartes" class="chico gris"></div></div>' +
     '<details style="margin-top:6px"><summary class="chico" style="cursor:pointer">Supuestos de refacción y aporte creciente</summary>' +
     rango('desc', 'Comprar por debajo del valor de la zona', 0, 30, 1, m.desc) + rango('reno', 'Costo de la refacción (sobre el precio)', 0, 25, 1, m.reno) + rango('obra', 'Meses de obra sin alquilar', 0, 6, 1, m.obra) + rango('crece', 'Suba del aporte por año', 0, 10, 1, m.crece) + '</details>' +
     '</div><div id="metaResultado" aria-live="polite"></div></section>' +
@@ -75,6 +116,7 @@ function pintarMeta() {
   var fm = { renta: function (v) { return usd(v) + ' por mes'; }, anios: function (v) { return v + ' años'; }, aporte: function (v) { return usd(v); }, desc: function (v) { return v + '%'; }, reno: function (v) { return v + '%'; }, obra: function (v) { return v + ' meses'; }, crece: function (v) { return v + '%'; } };
   Object.keys(fm).forEach(function (k) { if ($('mv_' + k)) $('mv_' + k).textContent = fm[k](m[k]); });
   var C = caminosMeta(m), plan = C[0], llega = plan.renta.hoy >= m.renta, avance = Math.min(1, plan.renta.hoy / m.renta);
+  pintarPartesMeta(m, plan);
   var nec = aporteNecesario(m, {}), mes = mesLlegada(m, {}), capital4 = m.renta * 12 / 0.04;
   var anio = function (t) { return t ? 'año ' + Math.ceil(t / 12) + ' (' + nombreMes(mesDe(sumarMeses(hoyISO(), t))) + ')' : 'más de 35 años'; };
   el.innerHTML = '<div class="tarjeta meta-resumen"><p class="etiqueta">Con tu plan, en ' + m.anios + ' años</p>' +
@@ -115,6 +157,31 @@ function pintarMeta() {
       ['¿Cuánto tendría que aportar?', nec ? 'Para llegar a ' + usd(m.renta) + ' por mes en ' + m.anios + ' años con tu modalidad, ' + usd(nec) + ' por mes.' : 'Con estos supuestos no se llega ni con USD 50.000 por mes: subí los años o bajá la meta.', 'aportar cuanto aporte necesito'],
       ['¿En qué año llego con lo que aporto hoy?', 'Con ' + usd(m.aporte) + ' por mes llegás en el ' + anio(mes) + '.', 'ano llego cuando fecha']] }) +
     '<ul class="chico gris" style="padding-left:1.1em;margin:10px 0 0">' + s.slice(2).map(function (x) { return '<li>' + x + '</li>'; }).join('') + '</ul>';
+}
+/* detalle de cada ciudad de la combinación (con tu plan) y el editor de «Armar mi combinación» */
+function m2Sim(r) { return r.purchases.reduce(function (a, c) { return a + c.m2; }, 0); }
+function pintarPartesMeta(m, plan) {
+  var el = $('metaPartes'), ed = $('metaPropia'); if (!el) return;
+  var partes = partesMeta(m);
+  if (m.mercado === 'combo:propia') {
+    var l = m.propia;
+    while (l.length < 4) l.push(['', 0]);
+    if (!ed.dataset.listo) {
+      ed.dataset.listo = '1';
+      ed.innerHTML = l.map(function (x, i) { return '<div class="fila" style="margin-top:6px"><select data-propia-k="' + i + '" aria-label="Ciudad ' + (i + 1) + '"><option value="">— ninguna —</option>' + Object.keys(MARKETS).map(function (k) { return '<option value="' + k + '"' + (k === x[0] ? ' selected' : '') + '>' + esc(MARKETS[k].label) + '</option>'; }).join('') + '</select><input type="number" min="0" max="100" step="5" value="' + x[1] + '" data-propia-p="' + i + '" aria-label="Porcentaje de la ciudad ' + (i + 1) + '" style="width:80px"> %</div>'; }).join('');
+      ed.querySelectorAll('[data-propia-k]').forEach(function (x) { x.onchange = function () { m.propia[+x.dataset.propiaK][0] = x.value; pintarMeta(); }; });
+      ed.querySelectorAll('[data-propia-p]').forEach(function (x) { x.oninput = function () { m.propia[+x.dataset.propiaP][1] = Math.max(0, +x.value || 0); pintarMeta(); }; });
+    }
+  } else { ed.innerHTML = ''; delete ed.dataset.listo; }
+  if (partes.length < 2) { var M = MARKETS[partes[0][0]]; el.innerHTML = SIN_CONFIRMAR_META.indexOf(M.grp) >= 0 ? '<p class="aviso" style="margin:6px 0 0">Los precios de ' + esc(M.grp) + ' son estimaciones propias, sin dato 2026 confirmado. Comprar afuera implica leyes, impuestos, moneda y cuenta en ese país: validarlo con abogado y contador antes (acceso para extranjeros: ' + esc(M.acc) + ').</p>' : ''; return; }
+  var N = sociosMeta(), T = plan.p.years * 12, def = Math.pow(1 + plan.p.usInfl / 100, T / 12);
+  var dudosas = partes.filter(function (pa) { return SIN_CONFIRMAR_META.indexOf(MARKETS[pa[0]].grp) >= 0; }).map(function (pa) { return MARKETS[pa[0]].label; });
+  var riesgo = partes.reduce(function (a, pa) { return a + MARKETS[pa[0]].risk * pa[1]; }, 0);
+  el.innerHTML = '<table style="margin-top:8px"><tr><th>Ciudad</th><th>Parte</th><th>Renta por mes (tu parte, dólares de hoy)</th><th>m² del grupo</th></tr>' + partes.map(function (pa, i) {
+    var x = plan.sims[i].series[T - 1]; return '<tr><td>' + esc(MARKETS[pa[0]].label) + '</td><td class="num">' + Math.round(pa[1] * 100) + '%</td><td class="num">' + usd(x.rent / N / def) + '</td><td class="num">' + Math.round(m2Sim(plan.sims[i])) + '</td></tr>';
+  }).join('') + '<tr><td><b>Total</b></td><td class="num">100%</td><td class="num"><b>' + usd(plan.renta.hoy) + '</b></td><td class="num">' + Math.round(plan.sims.reduce(function (a, r) { return a + m2Sim(r); }, 0)) + '</td></tr></table>' +
+    '<p style="margin:6px 0 0">Riesgo promedio ' + riesgo.toFixed(1) + ' de 5. Cada ciudad recibe su parte del aporte y compra cada ' + plan.p.cycle + ' meses con lo suyo (en la vida real conviene alternar compras enteras entre ciudades: da parecido y cada departamento queda más grande).</p>' +
+    '<p class="aviso" style="margin:6px 0 0">Comprar afuera implica leyes, impuestos, moneda, cuenta bancaria y trámites de cada país: validarlo con abogado y contador antes de votar.' + (dudosas.length ? ' Precios estimados, sin dato 2026 confirmado: ' + esc(dudosas.join(', ')) + '.' : '') + '</p>';
 }
 function ganchoMeta() {
   metaInicial();

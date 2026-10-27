@@ -8,6 +8,7 @@ function abrirGanancia(solapa) {
   if (!r) { tostada('Tu ganancia aparece desde tu primer aporte confirmado.'); return; }
   var g = grupoActual(), e = estadoGrupo(g.id), part = e.up ? (e.upSocio[u.id] || 0) / e.up : 0, filas = capitalComparado(g.id, u.id);
   var gan = r.valor - r.aportado, signo = gan >= 0 ? '+' : '−', misUp = e.upSocio[u.id] || 0, sol = solapa || 'porc';
+  var tirEst = tirEstimadaSocio(g.id, u.id);
   var otros = g.socios.map(function (sid) { return { u: usuario(sid), up: e.upSocio[sid] || 0, ap: e.aportadoSocio[sid] || 0 }; }).sort(function (a, b) { return b.up - a.up; });
   /* de dónde sale la ganancia del fideicomiso (tu parte, según tu participación de hoy) */
   var comp = [
@@ -57,18 +58,19 @@ function abrirGanancia(solapa) {
       return '<button class="gan-barra ' + c[2] + '" data-gexp="' + i + '" style="--w:' + (Math.abs(v) / maxC * 100).toFixed(1) + '%;--d:' + (i * 90) + 'ms"><span class="gb-n">' + c[0] + '</span><span class="gb-v">' + (v >= 0 ? '+' : '−') + usd(Math.abs(v), 2) + '</span><i></i></button>' +
         '<p class="gan-exp" id="gexp' + i + '" hidden>' + c[3] + ' Total del fideicomiso: ' + usd(Math.abs(c[1]), 2) + '.</p>';
     }).join('') : '<p class="gris">Todavía no hubo alquileres ni intereses: la ganancia empieza con la primera renta.</p>') +
-    '<p class="chico gris">Los departamentos se cuentan a lo que costaron: si suben de precio, esa ganancia aparece cuando se tasan o se venden.</p></section>' +
+    '<h3 style="margin-top:16px">Lo que pagaron los departamentos y lo que valen hoy</h3><p class="chico gris">En la contabilidad van a lo que costaron (oficial). Además, la app estima cuánto valen hoy: el precio sin gastos más la suba del m², y al final resta los gastos de compra.</p>' +
+    htmlEstimado(g, u) + htmlSalidaConstancia(g, u) + htmlInflacionFacil() + '</section>' +
 
     '<section class="gan-panel" data-gpanel="tir"' + (sol === 'tir' ? '' : ' hidden') + '><h3>Qué es la TIR</h3>' +
     '<p>La <b>TIR</b> (tasa interna de retorno) es tu ganancia <b>pasada a tasa anual</b> y teniendo en cuenta <b>la fecha de cada aporte</b>. Un dólar que pusiste hace un año trabajó doce meses; el del mes pasado, uno. La TIR es la tasa de un plazo fijo imaginario que, con tus mismos depósitos en las mismas fechas, hoy te daría exactamente lo que valen tus UP.</p>' +
-    '<div class="gan-tir"><div class="gt-caja g-celeste"><small>Tu TIR anual</small><b>' + pct(r.tir, 1) + '</b></div><div class="gt-caja g-oro"><small>Meta del contrato</small><b>' + pct(REFERENCIA_ANUAL, 1) + '</b></div><div class="gt-caja g-violeta"><small>Plazo fijo en dólares</small><b>' + pct(tasaPlazoFijoUsd(), 1) + '</b></div></div>' +
+    '<div class="gan-tir"><div class="gt-caja g-celeste"><small>Tu TIR anual</small><b>' + pct(r.tir, 1) + '</b></div><div class="gt-caja g-verde"><small>Tu TIR estimada</small><b>' + (isFinite(tirEst) ? pct(tirEst, 1) : '—') + '</b></div><div class="gt-caja g-oro"><small>Meta del contrato</small><b>' + pct(REFERENCIA_ANUAL, 1) + '</b></div><div class="gt-caja g-violeta"><small>Plazo fijo en dólares</small><b>' + pct(tasaPlazoFijoUsd(), 1) + '</b></div></div>' +
     '<p class="chico">Con la meta del 6% anual, tus mismos aportes valdrían hoy ' + usd(r.aportado + ref, 2) + ': ' + (r.valor >= r.aportado + ref ? '<b class="verde">vas ' + usd(r.valor - r.aportado - ref, 2) + ' adelante</b>.' : '<b class="oro">te faltan ' + usd(r.aportado + ref - r.valor, 2) + ' para alcanzarla</b>.') + '</p>' +
     '<p class="chico">Tu TIR cuenta <b>todo lo que pasó de verdad, cada cosa en su fecha</b>: el interés que ganó cada aporte mientras esperaba la compra y cada alquiler cobrado, que vuelve a la caja y también rinde.</p>' +
     '<p class="chico gris" style="margin-bottom:4px">Por qué al principio da menos que 6%:</p><ul class="chico gris" style="margin-top:0">' +
     '<li>Mientras se junta la plata para la compra, la caja rinde lo de la inversión de espera: hoy ' + pct(rendimientoDe(g.reparto || REPARTO_VIGENTE), 2) + ' por año, menos que 6%.</li>' +
     '<li>Una reserva queda en la cuenta para gastos y casi no rinde.</li>' +
     '<li>El primer alquiler llega después de la primera compra (mes ' + g.ciclo + ').</li>' +
-    '<li>Los departamentos se cuentan por lo que costaron, con la escritura incluida: la escritura no te baja la TIR, pero la suba del m² recién aparece cuando se tasan o se venden.</li></ul>' +
+    '<li>Tu TIR (la primera cifra) cuenta los departamentos por lo que costaron, con la escritura incluida. La <b>TIR estimada</b> los cuenta por lo que valen hoy estimado: precio sin gastos + ' + pct(SUBA_ESTIMADA, 0) + ' por año de suba, y resta los gastos de compra. Por eso, el primer año y medio la estimada puede dar menos: la suba todavía no cubrió la escritura (a ' + pct(SUBA_ESTIMADA, 0) + ' por año tarda unos ' + Math.ceil(Math.log(1 + MARKETS.ushuaia.setup / 100) / Math.log(1 + SUBA_ESTIMADA) * 12) + ' meses). Ejemplo: ' + usd(50000) + ' de precio → ' + usd(50000 * (1 + SUBA_ESTIMADA)) + ' al año, menos ' + usd(50000 * MARKETS.ushuaia.setup / 100) + ' de gastos = ' + usd(50000 * (1 + SUBA_ESTIMADA) - 50000 * MARKETS.ushuaia.setup / 100) + '.</li></ul>' + htmlInflacionFacil() +
     '<p class="chico gris">Con los alquileres de cada mes la TIR va subiendo; en los primeros meses salta mucho y con los años se estabiliza. Lo que puede pasar en 10 años está en la proyección.</p>' +
     '<div class="fila" style="margin-top:8px"><button type="button" class="btn btn-oro btn-chico" id="ganConvenceme">¿Por qué comprar y no dejarlo en plazo fijo?</button><button type="button" class="btn btn-chico" data-abrir-sg>¿Solo o en grupo?</button><a class="btn btn-chico" href="#/inicio" data-cerrar data-ir-proy>Ver la proyección a 10 años</a></div></section>' +
 

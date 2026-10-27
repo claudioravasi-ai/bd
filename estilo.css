@@ -1304,3 +1304,17 @@ html.sin-movimiento .rev-lista li { animation: none; }
 .est-mes.neg i { background: rgba(255, 146, 132, .75); }
 .est-mes small { font-size: .6rem; color: var(--gris); margin-top: 3px; }
 @keyframes estSube { to { height: calc(var(--h) * .82); } }
+
+/* duda 12: botón flotante para volver a la lista de avisos */
+.volver-avisos{position:fixed;left:50%;transform:translateX(-50%);bottom:calc(84px + env(safe-area-inset-bottom));z-index:40;box-shadow:0 6px 20px rgba(0,0,0,.35)}
+/* duda 26: historia de la UP */
+.up-meses{display:flex;flex-wrap:wrap;gap:6px;margin-top:10px}
+.up-punto{cursor:pointer}.up-punto:focus-visible circle:last-child,.up-punto:hover circle:last-child{r:8}
+/* duda 16: recuadro «No se suman dos 3%» */
+.recuadro-clave{margin:10px 0;padding:12px 14px;border:2px solid var(--oro);border-radius:12px;background:color-mix(in srgb,var(--oro) 12%,transparent)}
+/* duda 29: transparencia */
+.tr-fila{display:grid;grid-template-columns:minmax(120px,1.4fr) 2fr auto auto;gap:8px;align-items:center;margin:6px 0}
+.tr-pista{height:10px;border-radius:999px;background:rgba(148,163,184,.15);overflow:hidden}.tr-pista i{display:block;height:100%;border-radius:999px}
+@media (max-width:560px){.tr-fila{grid-template-columns:1fr auto;}.tr-fila .tr-pista{grid-column:1/-1;order:3}}
+/* celulares angostos: un botón segmentado con texto largo («Por ciclo (cada 10 meses, una compra)») parte en dos renglones */
+@media (max-width: 360px) { .segmentos { max-width: 100%; } .segmentos button { white-space: normal; text-align: center; } }

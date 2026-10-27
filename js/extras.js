@@ -30,12 +30,19 @@ function sonarSiHayNuevos(nuevos) {
     try { new Notification('B&D · ' + nuevos[0].titulo, { body: nuevos.length > 1 ? 'Y ' + (nuevos.length - 1) + ' aviso(s) más.' : 'Abrí la app para ver el detalle.', icon: 'icono-192.png', tag: 'bd-aviso', silent: false }); } catch (e) {}
   }
 }
+/* «Ir» / «Pagar ahora»: lleva a la pantalla y deja un botón flotante «← Volver a avisos»
+   que reabre la lista de esa vez, sin el aviso que ya se abrió */
+var AVISOS_VEZ = null;
+function quitarVolverAvisos() { var b = $('volverAvisos'); if (b) b.remove(); }
 function abrirAvisos() {
-  var u = yo(), a = avisosNuevos(u), total = avisosDe(u).length;
-  modal('Avisos', (a.length ? '<p class="chico gris">Al cerrar esta ventana se borran de la campanita. Los pagos pendientes vuelven a avisar mañana.</p>' + a.map(function (x) {
+  var u = yo(), volver = AVISOS_VEZ && AVISOS_VEZ.volver, total = avisosDe(u).length, a;
+  quitarVolverAvisos();
+  if (volver) { a = AVISOS_VEZ.lista.filter(function (x) { return AVISOS_VEZ.abiertos.indexOf(claveAviso(x)) < 0; }); AVISOS_VEZ.volver = false; }
+  else { a = avisosNuevos(u); AVISOS_VEZ = { lista: a, abiertos: [], volver: false }; }
+  modal('Avisos', (a.length ? '<p class="chico gris">' + (volver ? 'Estos son los avisos que te quedaban por mirar. ' : '') + 'Al cerrar esta ventana se borran de la campanita. Los pagos pendientes vuelven a avisar mañana.</p>' + a.map(function (x) {
     return '<div class="tarjeta aviso-item" style="margin-bottom:10px"><div class="fila entre"><b>' + esc(x.titulo) + '</b><span class="chip ' + (x.nivel === 'mal' ? 'mal' : x.nivel === 'oro' ? 'oro' : 'azul') + '">' + (x.nivel === 'mal' ? 'Vencido' : x.nivel === 'oro' ? 'Por vencer' : 'Aviso') + '</span></div><p class="gris chico" style="margin:6px 0 10px">' + esc(x.texto) + '</p>' +
-      (x.periodo ? '<a class="btn btn-oro btn-chico" href="#/pagar?periodo=' + x.periodo + '" data-cerrar>Pagar ahora</a>' : x.ir ? '<a class="btn btn-chico" href="' + x.ir + '" data-cerrar>Ir</a>' : '') + '</div>';
-  }).join('') : '<p class="gris">No tenés avisos nuevos.' + (total ? ' Ya leíste ' + total + ' hoy.' : ' Todo al día.') + '</p>') +
+      (x.periodo ? '<a class="btn btn-oro btn-chico" href="#/pagar?periodo=' + x.periodo + '" data-aviso-ir="' + esc(claveAviso(x)) + '">Pagar ahora</a>' : x.ir ? '<a class="btn btn-chico" href="' + x.ir + '" data-aviso-ir="' + esc(claveAviso(x)) + '">Ir</a>' : '') + '</div>';
+  }).join('') : '<p class="gris">' + (volver ? 'Ya miraste todos los avisos de esta vez.' : 'No tenés avisos nuevos.') + (total ? ' Ya leíste ' + total + ' hoy.' : ' Todo al día.') + '</p>') +
     '<div class="seccion apilar"><h3>Que la app te avise</h3>' +
     '<button class="btn" id="btnPermiso">' + (PREF.avisos && window.Notification && Notification.permission === 'granted' ? 'Avisos de este teléfono activados ✓' : 'Activar avisos en este teléfono') + '</button>' +
     '<label class="casilla"><input type="checkbox" id="chkSonido"' + (PREF.sinSonido ? '' : ' checked') + '><span>Sonido de campanita cuando llega un aviso</span></label>' +
@@ -54,6 +61,15 @@ function abrirAvisos() {
   $('chkSonido').onchange = function () { PREF.sinSonido = !this.checked; guardar('bd.preferencias', PREF); };
   $('btnProbarSonido').onclick = function () { var x = PREF.sinSonido; PREF.sinSonido = false; sonarCampanita(); PREF.sinSonido = x; };
   $('btnIcs').onclick = function () { var g = grupoActual(); if (g) { calendarioAportes(g); tostada('Abrí el archivo para sumarlo a tu calendario.'); } };
+  document.querySelectorAll('[data-aviso-ir]').forEach(function (b) {
+    b.onclick = function (e) {
+      e.preventDefault(); AVISOS_VEZ.abiertos.push(b.dataset.avisoIr);
+      var destino = b.getAttribute('href'); cerrarModal(); location.hash = destino.replace(/^#/, '');
+      var v = document.createElement('button'); v.id = 'volverAvisos'; v.className = 'btn btn-oro volver-avisos'; v.textContent = '← Volver a avisos';
+      v.onclick = function () { AVISOS_VEZ.volver = true; abrirAvisos(); };
+      document.body.appendChild(v);
+    };
+  });
   /* al cerrar, la campanita queda sin el número */
   var b = $('btnAvisos'); if (b) { b.classList.remove('campana-viva'); var c = b.querySelector('.chip'); if (c) c.remove(); }
 }

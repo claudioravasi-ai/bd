@@ -107,10 +107,12 @@ function avisosDe(u) {
   avisosGrupos(u).forEach(function (a) { out.push(a); });
   avisosDeudas(u).forEach(function (a) { out.push(a); });
   avisosInquilinos(u).forEach(function (a) { out.push(a); });
+  if (typeof avisosFiltros === 'function') avisosFiltros(u).forEach(function (a) { out.push(a); });
   avisosSeguridad(u).forEach(function (a) { out.push(a); });
   gruposDe(u.id).forEach(function (g) {
     if (g.estado !== 'activo' || !D.oportunidades) return;
     excelentesNuevas(u, g).forEach(function (x) { out.push({ nivel: 'oro', titulo: '🚨 ¡Excelente oportunidad! ' + x.o.titulo, texto: num(x.o.m2) + ' m² en ' + x.o.ciudad + ' por ' + usd(x.ev.precio) + ': ' + pct(Math.max(0, x.ev.desc), 0) + ' debajo del valor de la zona, TIR estimada ' + pct(x.ev.tir) + '.', ir: '#/oportunidades?ver=' + x.o.id }); });
+    if (u.rol === 'fundador' && typeof recurrentesPendientes === 'function') { var rp = recurrentesPendientes(g); if (rp.length) out.push({ nivel: 'azul', titulo: rp.length + ' gasto(s) fijo(s) para anotar en ' + g.letra, texto: rp.map(function (r) { return r.nombre; }).join(', ') + '. Se anotan con un toque.', ir: '#/recurrentes' }); }
   });
   D.votaciones.forEach(function (v) {
     var g = grupo(v.g); if (!g || g.socios.indexOf(u.id) < 0) return;
@@ -137,27 +139,7 @@ function calendarioAportes(g) {
     'END:VEVENT', 'END:VCALENDAR'].join('\r\n');
   descargar('aportes-bd-' + g.id + '.ics', ics, 'text/calendar;charset=utf-8');
 }
-function abrirAvisos() {
-  var u = yo(), a = avisosDe(u);
-  modal('Avisos', (a.length ? a.map(function (x) {
-    return '<div class="tarjeta" style="margin-bottom:10px"><div class="fila entre"><b>' + esc(x.titulo) + '</b><span class="chip ' + (x.nivel === 'mal' ? 'mal' : x.nivel === 'oro' ? 'oro' : 'azul') + '">' + (x.nivel === 'mal' ? 'Vencido' : x.nivel === 'oro' ? 'Por vencer' : 'Aviso') + '</span></div><p class="gris chico" style="margin:6px 0 10px">' + esc(x.texto) + '</p>' +
-      (x.periodo ? '<a class="btn btn-oro btn-chico" href="#/pagar?periodo=' + x.periodo + '" data-cerrar>Pagar ahora</a>' : '<a class="btn btn-chico" href="' + x.ir + '" data-cerrar>Ir</a>') + '</div>';
-  }).join('') : '<p class="gris">No tenés avisos pendientes. Todo al día.</p>') +
-    '<div class="seccion apilar"><h3>Que la app te avise</h3>' +
-    '<button class="btn" id="btnPermiso">' + (PREF.avisos && window.Notification && Notification.permission === 'granted' ? 'Avisos de este teléfono activados ✓' : 'Activar avisos en este teléfono') + '</button>' +
-    '<button class="btn" id="btnIcs">Agregar el recordatorio mensual a mi calendario</button>' +
-    '<p class="chico gris">En esta versión el aviso del teléfono aparece al abrir la app. Con el servidor de la fase 2 llega aunque la app esté cerrada (y también por correo).</p></div>');
-  $('btnPermiso').onclick = function () {
-    if (!('Notification' in window)) { tostada('Este navegador no permite avisos. Usá el recordatorio del calendario.'); return; }
-    Notification.requestPermission().then(function (p) {
-      PREF.avisos = p === 'granted'; guardar('bd.preferencias', PREF);
-      tostada(p === 'granted' ? 'Listo: la app te avisa del aporte en este teléfono.' : 'No se dio permiso. Podés usar el recordatorio del calendario.');
-      if (p === 'granted') { borrar('bd.ultimoAviso'); avisarEnTelefono(u); }
-      cerrarModal(); abrirAvisos();
-    });
-  };
-  $('btnIcs').onclick = function () { var g = grupoActual(); if (g) { calendarioAportes(g); tostada('Abrí el archivo para sumarlo a tu calendario.'); } };
-}
+/* abrirAvisos() está en extras.js (se borran al leerlos y se vuelve a la lista con «← Volver a avisos») */
 
 /* ---------- mora en tiempo real ----------
    <span data-mora="aaaa-mm" data-monto="500" data-base="0" data-dec="2" data-moneda="USD">: se actualiza cada segundo */
@@ -322,7 +304,7 @@ document.addEventListener('click', function (e) {
   if (e.target.closest('.menu-lateral.abierto a')) setTimeout(function () { alternarMenu(false); }, 0);
 });
 function menuAbajo(v) {
-  var enMas = ['meta', 'estadisticas', 'mercado', 'oportunidades', 'impuestos', 'resumen', 'carpeta', 'contratos', 'grupos', 'vitrina', 'votos', 'socios', 'perfil', 'ayuda', 'mas'].indexOf(v) >= 0;
+  var enMas = ['meta', 'estadisticas', 'transparencia', 'real', 'recurrentes', 'mercado', 'oportunidades', 'impuestos', 'resumen', 'carpeta', 'contratos', 'grupos', 'vitrina', 'votos', 'socios', 'perfil', 'ayuda', 'mas'].indexOf(v) >= 0;
   if (yo().rol === 'observador') return '';
   return '<nav class="menu-abajo" aria-label="Menú">' + MENU_ABAJO.map(function (m) {
     var act = m[0] === v || (m[0] === 'mas' && enMas);
@@ -417,7 +399,7 @@ function vistaEntrada() {
     (modoPrueba() ? '<div class="aviso prueba" style="text-align:left;margin-top:16px"><b>Modo prueba.</b> Los datos son inventados y quedan solo en este equipo.<div class="fila" style="margin-top:10px">' +
     '<button class="btn btn-chico" data-demo="u2">Probar como socia de ejemplo</button>' +
     '<button class="btn btn-chico" data-demo="inv">Probar una invitación</button><button class="btn btn-chico" data-demo="obs">Probar como invitado que solo mira</button></div></div>' : '') +
-    (MODO_REAL ? '<p class="chico" style="margin-top:14px"><a class="enlace" href="?prueba">Ver la demostración con datos inventados</a> · <a class="enlace" href="sala.html">Sala en vivo</a></p>' : '') +
+    (MODO_REAL ? '<p class="chico" style="margin-top:14px"><a class="enlace" href="?prueba">Ver la demostración con datos inventados</a> · <a class="enlace" href="sala.html" target="_blank" rel="noopener">Sala en vivo (se abre en otra ventana)</a></p>' : '') +
     '<p class="chico gris" style="margin-top:14px">Acceso exclusivo por invitación. Nada de lo que ves es una oferta al público ni una promesa de rentabilidad.</p></div>' + piePagina() + '</div>';
 }
 

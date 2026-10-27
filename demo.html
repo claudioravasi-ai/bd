@@ -38,15 +38,15 @@ h1 { font-size: clamp(2rem, 5vw, 3rem); }
 <div class="cabeza"><span class="logo-demo"><img src="logo-bd.png" alt=""><b>Building Dreams</b></span><h1>B&amp;D · Así entra cada uno</h1></div>
 <p class="sub">Cuatro celulares con la app de verdad, en modo prueba. Cada uno se maneja con el dedo o el mouse, como un teléfono. El orden es el de la vida real: primero el socio fundador, después los socios de Alfa, después quien se suma a otro fideicomiso y, por último, quien solo quiere mirar.</p>
 <div class="pasos"><span><b>1.</b> El fundador crea su cuenta</span><span><b>2.</b> Invita a los socios por correo</span><span><b>3.</b> Cada socio se da de alta con el código</span><span><b>4.</b> Para otro grupo, invita a esa gente a ese grupo</span><span><b>5.</b> A quien solo quiere conocer, le da un pase para mirar</span></div>
-<div class="probar"><b>Para probar lo nuevo (versión 0.2.4):</b>
-<span>🗣️ Votaciones: debate a favor y en contra, apoyos y voto con motivo</span>
-<span>🏠 Fundador: tocar el Departamento 1 → ficha del inquilino (alquiler atrasado, recibo, recordatorio)</span>
-<span>📣 Mis datos: avisos por correo, ntfy, Telegram y WhatsApp</span>
-<span>💡 cada cálculo termina con una sugerencia, pros, contras y preguntas</span>
-<span>🎯 Mi meta de ingresos con barras</span><span>📊 Estadísticas cruzadas</span>
-<span>🏠 tocar un departamento → «Quiero quedarme con este departamento»</span>
-<span>🚨 Oportunidades: mejor uso, m² contra la zona, votación exprés de 24 h, saldo en cuotas y préstamo</span>
-<span>📚 Cómo se usa: preguntas frecuentes, paso a paso de cero, derechos y deberes, presentación y simulador</span></div>
+<div class="probar"><b>Para probar lo nuevo (versión 0.3.6):</b>
+<span>🔔 Avisos: se borran al leerlos y «← Volver a avisos» después de «Ir»</span>
+<span>📈 Estadísticas: tocar la UP → cómo creció mes a mes y por qué</span>
+<span>🏠 Tu ganancia → De dónde sale: lo que vale hoy cada departamento (estimado), la inflación explicada fácil y «si salieras hoy»</span>
+<span>🎯 Mi meta: 22 ciudades y combinaciones (Argentina + España, Europa del este…)</span>
+<span>✅ Para que sea real: proyección contra real, paquete para abogado y contador, tasación, piloto y conflictos</span>
+<span>🔍 Transparencia: adónde fue cada dólar · 🔁 Se repite cada mes (fundador)</span>
+<span>🚨 Oportunidades → «Mis alertas» guardadas · 📊 Mis inversiones: mi TIR mes a mes</span>
+<span>🖥️ Cómo se usa → Presentación: se abre en otra ventana, con «Volver a la app real»</span></div>
 <div class="moviles">
   <section class="movil">
     <h2><i>1</i>Vos, el socio fundador</h2>
@@ -86,5 +86,6 @@ marcos.forEach(function (f, i) { setTimeout(function () { f.src = f.dataset.src;
 document.querySelectorAll('.recargar').forEach(function (b) { b.onclick = function () { var f = marcos[+b.dataset.k]; f.src = 'about:blank'; setTimeout(function () { f.src = f.dataset.src; }, 50); }; });
 window.addEventListener('resize', ajustar); ajustar();
 </script>
+<script src="js/volver-app.js?v=0.3.6"></script>
 </body>
 </html>

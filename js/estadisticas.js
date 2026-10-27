@@ -39,9 +39,9 @@ function vistaEstadisticas(u) {
   return '<div class="fila entre"><div><h1>Estadísticas</h1><p class="gris" style="margin:0">Todo sale del libro: nada se carga a mano. Filtrá, cruzá y tocá una fila o una barra para ver solo eso. Abajo está cada movimiento y quién hizo cada acción.</p></div>' +
     '<div class="fila"><button class="btn btn-chico" id="estCsv">Bajar en planilla</button><button class="btn btn-chico" id="estLimpiar">Limpiar filtros</button></div></div>' +
     '<section class="rejilla r4 seccion">' +
-    kpi('UP (unidad de participación)', e.vup, 'usd2', (ru && isFinite(ru.anual) ? pct(ru.anual, 1) + ' por año · ' : '') + 'empezó en USD 100') +
+    kpiBoton('estUP', 'UP (unidad de participación)', e.vup, 'usd2', (ru && isFinite(ru.anual) ? pct(ru.anual, 1) + ' por año · ' : '') + 'empezó en USD 100 · tocá para ver mes a mes') +
     kpi('Patrimonio', e.patrimonio, 'usd', 'caja + inversiones + inmuebles − deudas') +
-    kpi('Inmuebles (al costo)', e.inm, 'usd', propiedadesActivas(g.id).length + ' departamento(s)' + (e.nVentas ? ' · ' + e.nVentas + ' vendido(s)' : '')) +
+    kpi('Inmuebles (al costo)', e.inm, 'usd', propiedadesActivas(g.id).length + ' departamento(s)' + (e.nVentas ? ' · ' + e.nVentas + ' vendido(s)' : '') + (propiedadesActivas(g.id).length ? ' · estimado hoy ' + usd(estimadoGrupo(g.id).sumValor) + ' sin gastos' : '')) +
     kpi('Deudas', deuda, 'usd', deuda ? 'saldo de precio en cuotas' : 'sin deudas') + '</section>' +
     '<section class="rejilla r4 seccion">' + kpi('Ingresos (con el filtro)', ing, 'usd', 'aportes, alquileres, intereses, ventas') + kpi('Egresos (con el filtro)', egr, 'usd', 'compras, gastos, impuestos, cuotas') +
     kpi('Neto', ing - egr, 'usd', lista.length + ' movimiento(s)') + kpi('TIR del grupo', null, '', 'interés anual de los aportes, a hoy', isFinite(tg) ? pct(tg) : '—') + '</section>' +
@@ -122,6 +122,7 @@ function filtrosEst(g, f, props, n) {
 function ganchoEstadisticas() {
   var g = grupoActual(); if (!g || g.estado !== 'activo') return; var f = filtroEst(g), otra = function () { guardarSesion(); render(); };
   var cambio = function (id) { SES.estCambio = id; setTimeout(function () { SES.estCambio = ''; }, 50); };
+  if ($('estUP')) $('estUP').onclick = function () { ventana(ventanaHistoriaUP); };
   if ($('estDeCero')) $('estDeCero').onclick = function () { SES.est = null; SES.estOtras = false; otra(); };
   document.querySelectorAll('[data-est-sel]').forEach(function (s) { s.onchange = function () {
     var v = s.value, id = s.dataset.estSel;
@@ -200,4 +201,82 @@ function htmlFlujo12(g) {
         '<span class="mt-neto">Queda en la caja <b class="num oro">' + usd(m.saldo) + '</b></span>' +
         (m.nuevo ? '<span class="mt-nota">Se compra el ' + m.nuevo.nombre + ': unos ' + num(m.nuevo.m2, 1) + ' m² por ' + usd(m.nuevo.precio) + ' más la escritura (5%). Queda la reserva de ' + usd(g.reserva || 0) + '; desde el mes siguiente se cuenta su alquiler (' + usd(Math.round(m.nuevo.m2 * MARKETS[g.mercado].rent24 / 24)) + ', con gastos estimados del ' + MARKETS[g.mercado].opex + '% como en la proyección).</span>' : '') + '</div>';
     }).join('') + '</div></section>';
+}
+
+/* ===== Duda 26: cómo creció la UP mes a mes y por qué =====
+   La UP vale patrimonio ÷ UP. Los aportes compran UP al valor del cierre del mes, así que un aporte (a tiempo, tarde
+   o que no llegó) NO cambia el valor de la UP: cambia cuántas UP tiene cada socio. Lo que mueve el valor es lo que gana
+   o gasta el fideicomiso: intereses, alquileres, punitorios, gastos, impuestos, honorarios y ventas. Por eso cada
+   causa, en dólares por UP, es su monto dividido por las UP que había al empezar el mes. */
+function explicarMesUP(g, k) {
+  var ci = cicloInfo(g), ult = ci.mesN - 1, mes = mesDe(sumarMeses(g.inicio, k));
+  var f1 = k === ult ? hoyISO() : finDeMes(mes), e1 = estadoGrupo(g.id, f1);
+  var e0 = k > 0 ? estadoGrupo(g.id, finDeMes(mesDe(sumarMeses(g.inicio, k - 1)))) : { aportado: 0, intereses: 0, renta: 0, punitorios: 0, gastos: 0, impuestos: 0, honorarios: 0, resultadoVentas: 0, inm: 0, patrimonio: 0, up: 0, vup: 100, nCompras: 0 };
+  estadoGrupo(g.id);
+  var d = function (c) { return e1[c] - e0[c]; };
+  var causas = [
+    ['Intereses de la inversión de espera', d('intereses')], ['Alquileres cobrados', d('renta')], ['Punitorios (mora cobrada)', d('punitorios')],
+    ['Gastos y gastos de banco', -d('gastos')], ['Impuestos', -d('impuestos')], ['Honorarios', -d('honorarios')]
+  ];
+  var A = d('aportado'), G = e1.patrimonio - e0.patrimonio - A, conocido = causas.reduce(function (t, c) { return t + c[1]; }, 0);
+  if (Math.abs(G - conocido) > 0.005) causas.push(['Ventas y otros movimientos', G - conocido]);
+  var up0 = e0.up, porUP = function (x) { return up0 > 0 ? x / up0 : 0; };
+  var x = { k: k, mes: mes, hoy: k === ult, e0: e0, e1: e1, vup0: e0.up > 0 ? e0.vup : 100, vup1: e1.vup, A: A, G: G, causas: causas.filter(function (c) { return Math.abs(c[1]) > 0.004; }), up0: up0, compras: d('nCompras'), inmNuevo: d('inm') };
+  x.causas.forEach(function (c) { c.push(porUP(c[1])); });
+  x.esperado = g.aporte * g.N;
+  return x;
+}
+function fraseMesUP(x) {
+  var dv = x.vup1 - x.vup0;
+  if (x.up0 <= 0) return 'Es el primer mes: la UP arranca en USD 100 y cada dólar aportado compra 0,01 UP. Todavía no hubo ganancia ni gasto que la mueva.';
+  var pos = x.causas.filter(function (c) { return c[1] > 0; }).map(function (c) { return c[0].toLowerCase() + ' sumaron ' + usd(c[1], 2); });
+  var neg = x.causas.filter(function (c) { return c[1] < 0; }).map(function (c) { return c[0].toLowerCase() + ' restaron ' + usd(-c[1], 2); });
+  if (!pos.length && !neg.length) return 'La UP no cambió: este mes no hubo ganancias ni gastos, solo aportes (que no mueven el valor, suman UP).';
+  return 'La UP ' + (dv >= 0 ? 'subió ' : 'bajó ') + usd(Math.abs(dv), 2) + ' porque ' + pos.concat(neg).join(' y ') + '.';
+}
+function svgHistoriaUP(S) {
+  var W = 640, H = 230, L = 56, R = 14, T = 14, B = 30, n = S.length, vs = S.map(function (x) { return x.vup; });
+  var min = Math.min.apply(null, vs), max = Math.max.apply(null, vs), pad = Math.max(0.5, (max - min) * 0.15); min -= pad; max += pad;
+  var X = function (k) { return L + (W - L - R) * (n <= 1 ? 0.5 : k / (n - 1)); }, Y = function (v) { return T + (H - T - B) * (1 - (v - min) / (max - min)); }, h = '', i;
+  for (i = 0; i <= 4; i++) { var v = min + (max - min) * i / 4; h += '<line x1="' + L + '" x2="' + (W - R) + '" y1="' + Y(v) + '" y2="' + Y(v) + '" stroke="rgba(201,211,223,.1)"/><text x="' + (L - 6) + '" y="' + (Y(v) + 4) + '" text-anchor="end">' + num(v, 2) + '</text>'; }
+  var cada = Math.max(1, Math.ceil(n / 8));
+  S.forEach(function (x, k) { if (k % cada === 0 || k === n - 1) h += '<text x="' + X(k) + '" y="' + (H - 10) + '" text-anchor="middle">' + esc(nombreMesCorto(x.mes)) + '</text>'; });
+  var dd = S.map(function (x, k) { return (k ? 'L' : 'M') + X(k).toFixed(1) + ' ' + Y(x.vup).toFixed(1); }).join(' ');
+  h += '<path d="' + dd + ' L' + X(n - 1) + ' ' + (H - B) + ' L' + X(0) + ' ' + (H - B) + ' Z" fill="#FBBF24" fill-opacity=".12"/><path class="' + (sinMovimiento() ? '' : 'trazo') + '" d="' + dd + '" fill="none" stroke="#FBBF24" stroke-width="3"/>';
+  S.forEach(function (x, k) { h += '<g class="up-punto" data-up-mes="' + k + '" tabindex="0" role="button" aria-label="' + esc(nombreMes(x.mes)) + ': UP a ' + usd(x.vup, 2) + '. Tocá para ver por qué"><circle cx="' + X(k) + '" cy="' + Y(x.vup) + '" r="14" fill="transparent"/><circle cx="' + X(k) + '" cy="' + Y(x.vup) + '" r="5" fill="#FBBF24" stroke="#0D1824" stroke-width="2"/></g>'; });
+  return '<svg class="grafico" viewBox="0 0 ' + W + ' ' + H + '" role="group" aria-label="Valor de la UP mes a mes">' + h + '</svg>';
+}
+function ventanaHistoriaUP() {
+  var g = grupoActual(), S = serieUP(g.id), ru = rendimientoUP(g.id);
+  modal('Cómo creció la UP mes a mes', '<p class="chico"><span class="chip ok">Real</span> Sale del libro del fideicomiso: los departamentos van al costo hasta que se tasan o se venden.</p>' +
+    '<p class="gris">Empezó en USD 100 y hoy vale <b class="oro">' + usd(ru.vup, 2) + '</b> (' + (ru.total >= 0 ? '+' : '') + pct(ru.total, 2) + (isFinite(ru.anual) ? ', ' + pct(ru.anual, 2) + ' por año' : '') + '). Tocá un punto o un mes para ver por qué cambió.</p>' +
+    svgHistoriaUP(S) +
+    '<div class="up-meses">' + S.map(function (x, k) { var dv = k ? x.vup - S[k - 1].vup : x.vup - 100; return '<button type="button" class="btn btn-chico" data-up-mes="' + k + '">' + esc(nombreMesCorto(x.mes)) + ' · ' + usd(x.vup, 2) + ' <span class="' + (dv >= 0 ? 'verde' : 'rojo') + '">' + (dv >= 0 ? '+' : '−') + num(Math.abs(dv), 2) + '</span></button>'; }).join('') + '</div>' +
+    '<details class="seccion"><summary>¿Un aporte atrasado baja la UP?</summary><p class="chico gris">No. El valor de la UP solo cambia por lo que gana o gasta el fideicomiso. Cada aporte compra UP al valor del cierre del mes: si un socio paga tarde o no paga, la UP vale lo mismo para todos y ese socio simplemente tiene menos UP (su parte es más chica). Los punitorios que paga sí suben la UP de todos. Y un aporte nuevo tampoco la sube: entra al mismo valor y suma UP.</p></details>', { ancho: true });
+  document.querySelectorAll('[data-up-mes]').forEach(function (b) {
+    var abrir = function () { var k = +b.dataset.upMes; ventana(function () { ventanaMesUP(k); }); };
+    b.onclick = abrir; b.onkeydown = function (e) { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); abrir(); } };
+  });
+}
+function ventanaMesUP(k) {
+  var g = grupoActual(), ci = cicloInfo(g), x = explicarMesUP(g, k), dv = x.vup1 - x.vup0;
+  var fila = function (n, v, vu, cl) { return '<tr' + (cl ? ' class="' + cl + '"' : '') + '><td>' + n + '</td><td class="num ' + (v >= 0 ? 'verde' : 'rojo') + '">' + (v >= 0 ? '+' : '−') + usd(Math.abs(v), 2) + '</td><td class="num">' + (x.up0 > 0 ? (vu >= 0 ? '+' : '−') + usd(Math.abs(vu), 4) : '—') + '</td></tr>'; };
+  var falta = x.esperado - x.A;
+  modal('La UP en ' + nombreMes(x.mes) + (x.hoy ? ' (hasta hoy)' : ''),
+    '<div class="rejilla r2"><div class="tarjeta"><small class="gris">Al empezar el mes</small><b class="num" style="display:block;font-size:1.3rem">' + usd(x.vup0, 2) + '</b></div><div class="tarjeta"><small class="gris">' + (x.hoy ? 'Hoy' : 'Al cerrar el mes') + '</small><b class="num ' + (dv >= 0 ? 'verde' : 'rojo') + '" style="display:block;font-size:1.3rem">' + usd(x.vup1, 2) + ' (' + (dv >= 0 ? '+' : '−') + usd(Math.abs(dv), 2) + ')</b></div></div>' +
+    '<p class="seccion"><b>' + fraseMesUP(x) + '</b></p>' +
+    (x.up0 > 0 ? '<table class="seccion"><tr><th>Qué pasó</th><th>En dólares</th><th>Por cada UP</th></tr>' + x.causas.map(function (c) { return fila(c[0], c[1], c[2]); }).join('') +
+      fila('<b>Ganancia neta del mes</b>', x.G, x.G / x.up0) + '</table>' +
+      '<p class="chico gris">Cuenta: ganancia neta ' + usd(x.G, 2) + ' ÷ ' + num(x.up0, 4) + ' UP que había = ' + usd(x.G / x.up0, 4) + ' por UP. ' + usd(x.vup0, 2) + ' + ' + usd(x.G / x.up0, 4) + ' = ' + usd(x.vup1, 2) + '.</p>' : '') +
+    '<div class="tarjeta seccion"><b>Lo que no mueve el valor de la UP</b><ul class="chico gris" style="padding-left:1.1em;margin:6px 0 0">' +
+    '<li>Aportes del mes: ' + usd(x.A, 2) + '. Compraron ' + num(x.A / x.vup1, 4) + ' UP a ' + usd(x.vup1, 2) + ' cada una: suman UP, no cambian su valor.</li>' +
+    (falta > 0.5 ? '<li>Entró ' + usd(falta, 2) + ' menos que la cuota completa del grupo (' + usd(x.esperado) + '). Por la cuota flexible o un atraso: no baja la UP, quien no pagó tiene menos UP.</li>' : '') +
+    (x.compras > 0 ? '<li>Se compró ' + x.compras + ' departamento(s) por ' + usd(x.inmNuevo, 2) + ': la plata pasó de la caja al departamento, el patrimonio es el mismo (el departamento cuenta al costo, con la escritura).</li>' : '') +
+    '</ul></div>' +
+    '<div class="fila entre seccion">' + (k > 0 ? '<button class="btn btn-chico" id="upAnt">← ' + esc(nombreMesCorto(mesDe(sumarMeses(g.inicio, k - 1)))) + '</button>' : '<span></span>') +
+    '<button class="btn btn-chico" id="upVolverEst" data-cerrar>Volver a estadísticas</button>' +
+    (k < ci.mesN - 1 ? '<button class="btn btn-chico" id="upSig">' + esc(nombreMesCorto(mesDe(sumarMeses(g.inicio, k + 1)))) + ' →</button>' : '<span></span>') + '</div>');
+  var ir = function (j) { PILA.pop(); ventana(function () { ventanaMesUP(j); }); };
+  if ($('upAnt')) $('upAnt').onclick = function () { ir(k - 1); };
+  if ($('upSig')) $('upSig').onclick = function () { ir(k + 1); };
 }
