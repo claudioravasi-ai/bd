@@ -859,7 +859,7 @@ function vistaGrupos(u, r) {
         (mio && (g.estado === 'abierto' || g.estado === 'propuesto') && g.creadoPor !== u.id ? '<button class="btn btn-chico" data-salir="' + g.id + '">Salir</button>' : '') +
         (fundador && (g.estado === 'abierto' || g.estado === 'propuesto' || g.estado === 'completo') ? '<button class="btn btn-chico" data-baja="' + g.id + '">Dar de baja</button>' : '') +
         (mio && gruposVisibles(u).length > 1 && cerrado ? '<button class="btn btn-chico" data-usar="' + g.id + '">Ver en Inicio</button>' : '') + '</div></div>';
-    }).join('') + '</section>' +
+    }).join('') + '</section>' + htmlRegaliaFundadores(u) +
     '<div class="aviso seccion"><b>Plazo para formarse: ' + PLAZO_FORMACION + ' días.</b> Si un fideicomiso solicitado no se completa, una semana antes la app avisa a sus integrantes para que puedan salir, y al día ' + PLAZO_FORMACION + ' lo disuelve sola (lo aceptan al firmar el pre-acuerdo). Cuando se completa, la app agenda sola una reunión virtual dentro de los primeros 5 días hábiles para arrancar la compra.</div>' +
     '<div class="aviso seccion"><b>Importante antes de abrir grupos nuevos.</b> Juntar plata de personas que no son del grupo cerrado puede ser oferta pública (CNV) y obliga a cumplir con la UIF, defensa del consumidor y datos personales. Por eso la app no publica grupos: solo entran personas invitadas, y un grupo nuevo no se activa sin dictamen de un abogado de mercado de capitales y una estructura autorizada.</div>';
 }
@@ -1207,7 +1207,7 @@ var GANCHOS = {
       if (D.grupos.some(function (g) { return g.letra === P.letra; })) { tostada('Esa letra ya está tomada.'); return; }
       var u = yo();
       D.grupos.push({ id: P.letra.toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, ''), letra: P.letra, simbolo: P.simbolo, estado: 'propuesto', N: P.N, aporte: P.aporte, ciclo: P.ciclo, mercado: P.mercado, modo: P.modo, fee: P.fee, anios: P.anios,
-        reserva: Math.max(5000, P.N * P.aporte), tasaEspera: 0.04, inicio: null, socios: [u.id], creadoPor: u.id, estructura: 'a definir con el abogado (B o C)', creado: hoyISO() });
+        regalia: REGALIA.pct, reserva: Math.max(5000, P.N * P.aporte), tasaEspera: 0.04, inicio: null, socios: [u.id], creadoPor: u.id, estructura: 'a definir con el abogado (B o C)', creado: hoyISO() });
       var ng = D.grupos[D.grupos.length - 1]; nuevoDocumento(ng, 'adhesion', 'Pre-acuerdo de adhesión al fideicomiso ' + ng.letra, textoAdhesion(ng, hoyISO()), hoyISO());
       anotar(u.id, 'Propuso el fideicomiso ' + P.letra); guardarDatos(); lluviaDorada(); tostada('Fideicomiso ' + P.letra + ' propuesto.'); ir('#/grupos');
     };

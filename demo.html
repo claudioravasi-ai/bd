@@ -38,7 +38,11 @@ h1 { font-size: clamp(2rem, 5vw, 3rem); }
 <div class="cabeza"><span class="logo-demo"><img src="logo-bd.png" alt=""><b>Building Dreams</b></span><h1>B&amp;D · Así entra cada uno</h1></div>
 <p class="sub">Cuatro celulares con la app de verdad, en modo prueba. Cada uno se maneja con el dedo o el mouse, como un teléfono. El orden es el de la vida real: primero el socio fundador, después los socios de Alfa, después quien se suma a otro fideicomiso y, por último, quien solo quiere mirar.</p>
 <div class="pasos"><span><b>1.</b> El fundador crea su cuenta</span><span><b>2.</b> Invita a los socios por correo</span><span><b>3.</b> Cada socio se da de alta con el código</span><span><b>4.</b> Para otro grupo, invita a esa gente a ese grupo</span><span><b>5.</b> A quien solo quiere conocer, le da un pase para mirar</span></div>
-<div class="probar"><b>Para probar lo nuevo (versión 0.3.6):</b>
+<div class="probar"><b>Para probar lo nuevo (versión 0.3.7):</b>
+<span>👑 Fideicomisos griegos (fundador): regalía del 10% de los grupos nuevos, en vivo y proyectada</span>
+<span>⏳ Tu ganancia → De dónde sale: «Con tiempos muertos» y «Gastos de arranque»</span>
+<span>📜 Estatuto: «Al cerrar el fideicomiso» y «Regalía de los grupos nuevos»</span>
+</div><div class="probar"><b>De la versión 0.3.6:</b>
 <span>🔔 Avisos: se borran al leerlos y «← Volver a avisos» después de «Ir»</span>
 <span>📈 Estadísticas: tocar la UP → cómo creció mes a mes y por qué</span>
 <span>🏠 Tu ganancia → De dónde sale: lo que vale hoy cada departamento (estimado), la inflación explicada fácil y «si salieras hoy»</span>
@@ -86,6 +90,6 @@ marcos.forEach(function (f, i) { setTimeout(function () { f.src = f.dataset.src;
 document.querySelectorAll('.recargar').forEach(function (b) { b.onclick = function () { var f = marcos[+b.dataset.k]; f.src = 'about:blank'; setTimeout(function () { f.src = f.dataset.src; }, 50); }; });
 window.addEventListener('resize', ajustar); ajustar();
 </script>
-<script src="js/volver-app.js?v=0.3.6"></script>
+<script src="js/volver-app.js?v=0.3.7"></script>
 </body>
 </html>

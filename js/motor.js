@@ -35,7 +35,8 @@ var DEFAULTS = applyMarket({
   members: 10, monthly: 500, contribGrowth: 0, years: 10, stopAt: 0, fee: 0,
   strategy: 'ciclo', cycle: 10, targetM2: 24, unitUSD: 50000, unitAdjust: true, mix: 0, mult: 3, furnish: 4, noBuyLast: 0,
   appreciation: 3, cashYield: 4, factor: 1,
-  usInfl: 3, saleCost: 5, cgTax: 0, reserve: 0, bench: 6
+  usInfl: 3, saleCost: 5, cgTax: 0, reserve: 0, bench: 6,
+  startup: 0, royalty: 0, royHurdle: 6
 }, 'ushuaia');
 function grossOf(p) { return p.rent24 * 12 / 24 / p.m2 * 100; }
 function netYieldOf(p) {
@@ -60,13 +61,16 @@ function simulate(p) {
   var setupE = p.setup + p.mix * p.furnish, lagE = Math.round(p.lag + p.mix);
   var ticket = p.targetM2 * p.m2 * (1 + setupE / 100);
   var feeCum = 0, cash = 0, pool = 0, bench = 0, contributed = 0, rentCum = 0, intCum = 0, lastBuy = 0, t, i;
-  var props = [], series = [], purchases = [], flows = [0];
+  var props = [], series = [], purchases = [], flows = [-(p.startup || 0) / p.members];
+  /* regalía a los fundadores (grupos nuevos, no Alfa): al cerrar cada año, un % de la ganancia neta del grupo, solo si rindió
+     más que royHurdle (6%) y sin bajarlo de ese 6%. Se paga de la caja; si no alcanza, queda debiendo para el mes siguiente */
+  var yStart = 0, yC = 0, royOwed = 0, royCum = 0, royYears = [];
   for (t = 1; t <= T; t++) {
     var intr = cash * mC;
     cash += intr; pool *= 1 + mC; bench *= 1 + mB; intCum += intr;
     for (i = 0; i < props.length; i++) props[i].value *= 1 + mG;
     var c = (p.stopAt && t > p.stopAt) ? 0 : p.members * p.monthly * Math.pow(1 + p.contribGrowth / 100, Math.floor((t - 1) / 12));
-    cash += c; bench += c; contributed += c;
+    cash += c; bench += c; contributed += c; yC += c;
     var rent = 0;
     for (i = 0; i < props.length; i++) if (t >= props[i].rentStart) rent += props[i].value * netY / 12;
     cash += rent; pool += rent; rentCum += rent;
@@ -97,6 +101,18 @@ function simulate(p) {
         }
       }
     }
+    if (p.royalty) {
+      /* ganancia NETA, como el libro: los departamentos a lo que costaron (la suba estimada del m² no es plata en mano) */
+      var tot = cash; for (i = 0; i < props.length; i++) tot += props[i].basis;
+      tot -= royOwed;
+      if (t % 12 === 0) {
+        var G = tot - yStart - yC, bse = yStart + yC / 2, rr = bse > 0 ? G / bse : 0, reg = 0;
+        if (G > 0 && rr > p.royHurdle / 100) reg = G * Math.min(p.royalty / 100, (rr - p.royHurdle / 100) / rr);
+        royOwed += reg; royYears.push({ year: t / 12, gain: G, rate: rr, roy: reg });
+        yStart = tot - reg; yC = 0;
+      }
+      var pay = Math.min(Math.max(cash, 0), royOwed); cash -= pay; royOwed -= pay; royCum += pay;
+    }
     var pv = 0, liqP = 0, by = [];
     for (i = 0; i < props.length; i++) {
       var v = props[i].value; pv += v; by.push(v);
@@ -106,12 +122,12 @@ function simulate(p) {
     var def = Math.pow(1 + p.usInfl / 100, t / 12);
     series.push({ t: t, cash: cash, pv: pv, by: by, contributed: contributed, bench: bench, rent: rent, int: intr,
       rentCum: rentCum, intCum: intCum, rentPool: pool, spent: spent, rentUsed: rentUsed, nBought: nBought, nProps: props.length,
-      feeCum: feeCum, total: cash + pv, liq: cash + liqP, liqReal: (cash + liqP) / def });
+      feeCum: feeCum, royCum: royCum, total: cash + pv - royOwed, liq: cash + liqP - royOwed, liqReal: (cash + liqP - royOwed) / def });
     flows.push(-c / p.members);
   }
   var last = series[T - 1];
   flows[T] += last.liq / p.members;
-  return { T: T, series: series, purchases: purchases, netY: netY, last: last, ticket: ticket,
+  return { T: T, series: series, purchases: purchases, netY: netY, last: last, ticket: ticket, royYears: royYears, royCum: royCum + royOwed,
     irr: irrFlows(flows, T), benchIrr: p.bench / 100 };
 }
 function windows(r, len) {

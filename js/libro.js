@@ -467,6 +467,8 @@ function parametrosDe(g) {
   applyMarket(p, g.mercado);
   p.members = g.N; p.monthly = g.aporte; p.cycle = g.ciclo; p.mix = MODE_MIX[g.modo]; p.fee = g.fee || 0; p.years = g.anios || 10;
   p.reserve = 0; p.strategy = 'ciclo';
+  /* los grupos nuevos pagan la regalía a los fundadores (Alfa no): ver REGALIA en estimado.js */
+  p.royalty = g.id === 'alfa' ? 0 : (g.regalia != null ? g.regalia : REGALIA.pct); p.royHurdle = REGALIA.piso;
   /* el valor de la parte de cada socio es sin vender nada, como la UP: el costo de vender solo existe si un día se vende */
   p.saleCost = 0;
   return p;

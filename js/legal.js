@@ -2,7 +2,7 @@
    Textos modelo según las normas argentinas y de Tierra del Fuego que alcanzan a esta clase de app.
    Los revisan un abogado y un contador matriculados de Tierra del Fuego antes de que la app entre en funciones. */
 
-var DESARROLLADOR = 'Dr. Claudio A. Ravasi';
+var DESARROLLADOR = 'Claudio A. Ravasi';
 var LUGAR_DESARROLLO = 'Ushuaia, Tierra del Fuego, Antártida e Islas del Atlántico Sur, Argentina';
 var FECHA_TEXTOS = '27 de octubre de 2026';
 

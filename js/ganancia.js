@@ -59,7 +59,7 @@ function abrirGanancia(solapa) {
         '<p class="gan-exp" id="gexp' + i + '" hidden>' + c[3] + ' Total del fideicomiso: ' + usd(Math.abs(c[1]), 2) + '.</p>';
     }).join('') : '<p class="gris">Todavía no hubo alquileres ni intereses: la ganancia empieza con la primera renta.</p>') +
     '<h3 style="margin-top:16px">Lo que pagaron los departamentos y lo que valen hoy</h3><p class="chico gris">En la contabilidad van a lo que costaron (oficial). Además, la app estima cuánto valen hoy: el precio sin gastos más la suba del m², y al final resta los gastos de compra.</p>' +
-    htmlEstimado(g, u) + htmlSalidaConstancia(g, u) + htmlInflacionFacil() + '</section>' +
+    htmlEstimado(g, u) + htmlSalidaConstancia(g, u) + htmlInflacionFacil() + htmlTiemposMuertos(g) + htmlArranque(g) + '</section>' +
 
     '<section class="gan-panel" data-gpanel="tir"' + (sol === 'tir' ? '' : ' hidden') + '><h3>Qué es la TIR</h3>' +
     '<p>La <b>TIR</b> (tasa interna de retorno) es tu ganancia <b>pasada a tasa anual</b> y teniendo en cuenta <b>la fecha de cada aporte</b>. Un dólar que pusiste hace un año trabajó doce meses; el del mes pasado, uno. La TIR es la tasa de un plazo fijo imaginario que, con tus mismos depósitos en las mismas fechas, hoy te daría exactamente lo que valen tus UP.</p>' +
